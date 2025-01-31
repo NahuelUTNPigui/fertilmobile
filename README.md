@@ -26,6 +26,16 @@ You can preview the production build with `npm run preview`.
 
 ##  Set up android app
 
+### Add capacitor.config.json in the root folfer
+This is a example
+{
+  "appId": "com.fertmob.app",
+  "appName": "fert-mob",
+  "webDir": "dist",
+  "linuxAndroidStudioPath": "/opt/android-studio-2024.2.2/android-studio/bin/studio.sh"
+}
+Sino te tira error de app sin id
+### Add android
 First, run
 
 ```
@@ -37,14 +47,7 @@ Every time you make code changes, you then run `pnpm run build && npx cap sync` 
 Install Android Studio if you haven't and open the project with 
 `npx cap open android`.
 
-## Add capacitor.config.json in the root folfer
-This is a example
-{
-  "appId": "com.fertmob.app",
-  "appName": "fert-mob",
-  "webDir": "dist",
-  "linuxAndroidStudioPath": "/opt/android-studio-2024.2.2/android-studio/bin/studio.sh"
-}
+
 
 ## Add device in android studio
 1. Click burger option
@@ -52,6 +55,11 @@ This is a example
 3. Go to tool windows
 4. Select "Device manager"
 5. Run the first option
+
+## run device in android studio
+1. Click play button in the center of the up toolbar
+
+
 
 
 ## Build to dev apk
