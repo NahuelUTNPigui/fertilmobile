@@ -113,7 +113,7 @@
             out:fade
         >
         
-            <h1 class="text-3xl font-bold text-green-700 dark:text-green-400 mb-6 text-center">Bienvenido a Fertil app</h1>
+            <h1 class="text-3xl font-bold text-green-700 dark:text-green-400 mb-6 text-center">Bienvenido a Fertil</h1>
             <div class="space-y-6">
                 <div>
                     <label for="username" 
