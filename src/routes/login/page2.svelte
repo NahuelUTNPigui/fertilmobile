@@ -1,9 +1,8 @@
 <script>
-    import {enabled} from '$lib/stores/enabled'
-    import {usuario} from '$lib/stores/usuario'
-    import { createCaber } from '$lib/stores/cab.svelte';
-    import {createPer} from "$lib/stores/permisos.svelte"
+    import { createCaber } from '$lib/stores/capacitor/capcab.svelte';
+    import {createPermiser} from "$lib/stores/capacitor/cabpermisos.svelte"
     import Swal from 'sweetalert2'
+    import {createUser} from '$lib/stores/capacitor/capuser.svelte'
     import { goto } from '$app/navigation';
     import Oscuro from "$lib/components/OscuroLogin.svelte";
     import PocketBase from 'pocketbase'
@@ -30,59 +29,65 @@
             Swal.fire('Error login', 'Contraseña vacia', 'error');
             return
         }
-        
         const pb = new PocketBase(ruta);
 
         try{
             let caber = createCaber()
-            let per = createPer()
+            let per = createPermiser()
+            let userer = createUser()
             const authData = await pb.collection('users').authWithPassword(
                 usuarioname,
                 contra,
             );
-
+            
             if(pb.authStore.isValid){
                 if(pb.authStore.model.active){
-                    
-                    usuario.set(pb.authStore.token)
-                    enabled.set("si")
-                    // Cuando te logeas, deberia revisar si tenes una cabaña
-                    
-                    try{
-                        const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
-                        caber.setCab(record.nombre,record.id)
-                        per.setPer("0,1,2,3,4,5",authData.record.id)
+                    let u = {
+                            id:authData.record.id,
+                            username:authData.record.username,
+                            email:authData.record.email,
                     }
-                    catch(err){
+                    await userer.setUser(u)
+                    try{
+                        const record = await pb.collection('cabs').getFirstListItem(`user='${u.id}' && active=true`, {});
+                        
+                        
+                        await caber.setCab({nombre:record.nombre,id:record.id,exist:true})
+                        await per.setPermisos({permisos:"0,1,2,3,4,5",id:authData.record.id})
+                    }
+                    catch(err1){
                         try{
-                            //Revisa si sos colaborador 
+                            console.error(err1)
                             const recordcab = await pb.collection('estxcolabs').getFirstListItem(`colab.user='${authData.record.id}'`, {
                                 expand: 'colab,cab,colab.user',
                             })
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
-                            per.setPer(recordper.permisos,authData.record.id)
-                            caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
+                            await per.setPermisos({permisos:recordper.permisos,id:authData.record.id})
+                            await caber.setCab({nombre:recordcab.expand.cab.nombre,id:recordcab.expand.cab.id,exist:true})
                             
                         }
-                        catch(err){
-                            caber.setDefault()
-                            per.setDefault()
+                        catch(err2){
+                            console.error(err2)
+                            await caber.setDefault()
+                            await per.setDefault()
                         }
                         
                     }
                     goto('/')
                 }
                 else{
+                    
                     Swal.fire('Error login', 'El usuario esta eliminado', 'error');
                 }
                 
             }
             else{
+                
                 Swal.fire('Error login', 'Mal puestas las credenciales', 'error');
             }
         }
         catch(e){
-            console.log(e)
+            console.error(e)
             Swal.fire('Error login', 'No se puede logear, puede que esten mal escritas las credenciales', 'error');
         }
         
@@ -105,7 +110,7 @@
     <div class="flex items-center justify-center">
         <div 
             class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 max-w-md w-full"
-            in:fly="{{ y: 50, duration: 200, easing: quintOut }}"
+            in:fly="{{ y: 50, duration: 100, easing: quintOut }}"
             out:fade
         >
         
@@ -163,7 +168,6 @@
                     ¿Olvidaste la contraseña?
                 </a>
             </div>
-            
             <div class="mt-8 border-t border-gray-200 pt-6 text-center">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
                     ¿No tienes una cuenta?

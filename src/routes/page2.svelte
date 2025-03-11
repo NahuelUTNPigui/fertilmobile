@@ -1,19 +1,13 @@
 <script>
     import { onMount } from 'svelte';
     import {enabled} from '$lib/stores/enabled'
-    //import {oscuro} from '$lib/oscuro'
-    import {createDarker} from "$lib/stores/dark.svelte.js"
+    import {createUser} from '$lib/stores/capacitor/capuser.svelte'
     import { goto } from '$app/navigation';
-    let hab = $enabled
-    onMount(()=>{        
-        
-        let darker = createDarker()
-        if(!darker.dark){
-            document.querySelector("html").setAttribute("data-theme","light") 
-        }
-        else{
-            document.querySelector("html").setAttribute("data-theme","dark") 
-        }
+    let hab = $state("no")
+    let userer = createUser()
+    onMount(async ()=>{  
+        await userer.init()
+        hab = userer.user.id==""?"no":"si"
         if(hab==="si"){
             goto("/inicio")
         }

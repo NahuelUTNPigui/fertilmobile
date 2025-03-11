@@ -1,13 +1,16 @@
 <script>
-    import {enabled} from '$lib/stores/enabled'
-    import {usuario} from '$lib/stores/usuario'
+    import {Network} from "@capacitor/network"
     import Swal from 'sweetalert2'
     import { goto } from '$app/navigation';
     import Oscuro from "$lib/components/OscuroLogin.svelte";
     import PocketBase from 'pocketbase'
     import { fade, fly } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
+    import { onMount } from "svelte";
+    import {enabled} from '$lib/stores/enabled'
+    import {usuario} from '$lib/stores/usuario'
     import { randomString } from '$lib/stringutil/lib';
+    
 
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -22,7 +25,6 @@
     let malcontra = false
     let malconfirmcontra = false
     let botonhabilitado = false
-
 
 
 
@@ -96,7 +98,6 @@
         }
     }
     async function guardar(){
-        
         if(isEmpty(usuarioemail)){
             Swal.fire('Error guardar', 'Nombre usuario vacio', 'error');
             return
@@ -162,6 +163,12 @@
             return false
         }
     }
+    onMount(async ()=>{
+        let status = await Network.getStatus()
+        if(status.connected){
+            conInternet = true
+        }
+    })
 </script>
 <svelte:window on:keydown={keyEvent}></svelte:window>   
 <div class="min-h-screen bg-gradient-to-br from-green-400 to-green-700  dark:from-gray-900 dark:to-gray-800 p-4">

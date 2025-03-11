@@ -19,7 +19,7 @@
         let csvData = [{
             caravana:"AAA",
             peso:"0",
-            fecha:"DD/MM/AAAA"
+            fecha:"MM/DD/AAAA"
         }].map(item=>({
             CARAVANA:item.caravana,
             PESO:item.peso,
@@ -50,6 +50,7 @@
         }
 
         let sheetpesajes = wkbk.Sheets.Pesajes
+        
         if(!sheetpesajes){
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
@@ -57,6 +58,7 @@
         let pesajes = []
         let pesajeshashmap = {}
         loading = true
+        let errores = false
         for (const [key, value ] of Object.entries(sheetpesajes)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
@@ -71,7 +73,7 @@
                     pesajeshashmap[tail].peso = value.v
                 }
                 if(firstLetter=="C"){
-                    pesajeshashmap[tail].fecha = new Date(value.w).toISOString().split("T")[0]
+                    pesajeshashmap[tail].fecha = value.w?new Date(value.w):""
                 }
                 
             }
@@ -86,7 +88,7 @@
                     pesajeshashmap[tail].peso = value.v
                 }
                 if(firstLetter=="C"){
-                    pesajeshashmap[tail].fecha = new Date(value.w).toISOString().split("T")[0]
+                    pesajeshashmap[tail].fecha = value.w?new Date(value.w):""
                 }                
             }
         }
@@ -99,7 +101,7 @@
             let datapesaje = {
                 pesonuevo:pe.peso,
                 cab:cab.id,
-                fecha:pe.fecha
+                fecha:pe.fecha?pe.fecha.toISOString().split("T")[0]:""
             }
 
             let datamod = {
@@ -107,23 +109,31 @@
             }
 
             try{
-                let recordanimal = await pb.collection("animales").getFirstListItem(`caravana="${an.caravana}" && cab='${cab.id}' && active = True`)
+                let recordanimal = await pb.collection("animales").getFirstListItem(`caravana="${pe.caravana}" && cab='${cab.id}' && active = True`)
                 datapesaje.animal = recordanimal.id
                 datapesaje.pesoanterior  = recordanimal.peso
-                const record = await pb.collection('pesajes').create(datapesaje);
+                const record = await pb.collection('pesaje').create(datapesaje);
                 await guardarHistorial(pb,recordanimal.id)
-                await pb.collection('animales').update(recordanimal, datamod);
+                await pb.collection('animales').update(recordanimal.id, datamod);
 
                 
             }
             catch(err){
                 console.error(err)
+                errores = true
             }
+        }
+        if(errores){
+            Swal.fire("Error importar","Hubo algún pesaje con errores","error")
+
+        }
+        else{
+            Swal.fire("Éxito importar","Se lograron importar los datos","success")
         }
         filename = ""
         wkbk = null
         loading = false
-        Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        
         
     }
 </script>

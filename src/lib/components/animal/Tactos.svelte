@@ -15,7 +15,7 @@
     const today = new Date();
     let tactos=$state([])
     let id = $state("")
-    let {cabid} = $props()
+    let {cabid,prenadaori=$bindable(0),categoria} = $props()
     //Datos tacto
     let tacto = $state(null)
     let idtacto = $state("")
@@ -23,7 +23,7 @@
     let observacion = $state("")
     let animal = $state("")
     //Tipo animal
-    let categoria = $state("vaca")
+    
     let prenada = $state(0)
     //tipo tacto
     let tipo = $state("tacto")
@@ -32,8 +32,6 @@
         fecha = ""
         observacion =  ""
         animal = ""
-        categoria = "vaca"
-        prenada = 0
         tipo = "tacto"
         nombreveterinario = ""
         nuevoTactoAnimal.showModal()
@@ -53,9 +51,11 @@
             }
             const record = await pb.collection('tactos').create(data);
             await guardarHistorial(pb,id)
+            prenadaori = prenada
             await pb.collection('animales').update(id,{
                 prenada
             })
+
             tactos.push(record)
         }
         catch(err){
@@ -65,11 +65,24 @@
         nuevoTactoAnimal.close()
     }
     function getTipoNombre(tipo){
-        return tipostacto.filter(t=>t.id==tipo)[0].nombre
+        let tp = tipostacto.filter(t=>t.id==tipo)[0]
+        if(tp){
+            return tp.nombre
+        }
+        else{
+            return ""
+        }
+        
     }
     function getCategoriaNombre(cat){
+        let tp = tiposanimal.filter(c=>c.id==cat)[0]
+        if(tp){
+            return tp.nombre
+        }
+        else{
+            return ""
+        }
         
-        return tiposanimal.filter(c=>c.id==cat)[0].nombre
     }
     async function getTactos(){
         const recordst = await pb.collection('tactos').getFullList({
@@ -82,6 +95,8 @@
     
     onMount(async ()=>{
         id = $page.params.slug
+        prenada = prenadaori
+        console.log(categoria)
         await getTactos()
     })
 
@@ -247,20 +262,7 @@
                 </label>
 
                 <RadioButton class="m-1 my-3" bind:option={prenada} deshabilitado={false}/>
-                <label class="input-group hidden">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={prenada}>
-                        {#each estados as e}
-                            <option value={e.id}>{e.nombre}</option>    
-                        {/each}
-                    </select>
-                </label>
+                
             </div>
             <label for = "fecha" class="label">
                 <span class="label-text text-base">Fecha </span>

@@ -18,7 +18,7 @@
         let csvData = [{
             caravana:"AAA",
             categoria:"",
-            fecha:"AAAA/MM/DD",
+            fecha:"MM/DD/AAAA",
             observacion:""
         }].map(item=>({
             CARAVANA: item.caravana,
@@ -69,10 +69,10 @@
                     observacioneshashmap[tail].caravana = value.v
                 }
                 if(firstLetter=="B"){
-                    observacioneshashmap[tail].categoria = value.v
+                    observacioneshashmap[tail].categoria = value.v.toLocaleLowerCase()
                 }
                 if(firstLetter=="C"){
-                    observacioneshashmap[tail].fecha = new Date(value.w).toISOString().split("T")[0]
+                    observacioneshashmap[tail].fecha = value.w?new Date(value.w).toISOString().split("T")[0]:""
                 }
                 if(firstLetter=="D"){
                     observacioneshashmap[tail].observacion = value.v
@@ -86,10 +86,10 @@
                     observacioneshashmap[tail].caravana = value.v
                 }
                 if(firstLetter=="B"){
-                    observacioneshashmap[tail].categoria = value.v
+                    observacioneshashmap[tail].categoria = value.v.toLocaleLowerCase()
                 }
                 if(firstLetter=="C"){
-                    observacioneshashmap[tail].fecha = new Date(value.w).toISOString().split("T")[0]
+                    observacioneshashmap[tail].fecha = value.w?new Date(value.w).toISOString().split("T")[0]:""
                 }
                 if(firstLetter=="D"){
                     observacioneshashmap[tail].observacion = value.v

@@ -1,11 +1,15 @@
 <script>
-    import {createDarker} from '$lib/stores/capacitor/capdark.svelte'
+    import { draw } from "svelte/transition";
+
+    //import {oscuro} from '$lib/oscuro'
+    import { createDarker } from "$lib/stores/dark.svelte";
     import { onMount } from "svelte";
+    
     let darker = createDarker()
-    let classtextnav="text-white dark:text-gray-700"
-    onMount(async ()=>{
-        await darker.init()
-        if(!darker.modo.dark){
+    $: dark = darker
+    onMount(()=>{
+        let light = !darker.dark
+        if(light){
             document.querySelector("html").setAttribute("data-theme","light")     
             document.documentElement.classList.remove('dark');
         }
@@ -16,25 +20,35 @@
             
         }
     })
-    async function cambiar(){
-        if(!darker.modo.dark){
+    function cambiar(){
+        //let darker = createDarker()
+        //let osc = $oscuro
+        //let light = osc === "no"
+        let light = !darker.dark
+        if(light){
             document.querySelector("html").setAttribute("data-theme","dark")   
-            await darker.setDark(true)
+            //oscuro.set("si")
+            darker.setDark(true)
             document.documentElement.classList.add('dark');
 
             
         }
         else{
+            
             document.querySelector("html").setAttribute("data-theme","light")   
-            await darker.setDark(false)
+            //oscuro.set("no")
+            darker.setDark(false)
             document.documentElement.classList.remove('dark');
+            
         }   
     }
     
 </script>
 
-<label class={`swap swap-rotate ${classtextnav}`}>
-    <input type="checkbox" bind:checked={darker.modo.dark} onclick={cambiar}/>
+<!--<label for="" class={`${darker.dark?"text-gray-100":"text-gray-800"}`}>cola</label>-->
+<label class="swap swap-rotate text-gray-800 dark:text-gray-300">
+    <!-- this hidden checkbox controls the state -->
+    <input type="checkbox" bind:checked={dark} on:click={cambiar}/>
   
     <!-- sun icon -->
     <svg

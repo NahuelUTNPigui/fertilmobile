@@ -10,8 +10,8 @@
     import RadioBadges from "$lib/components/RadioBadges.svelte";
     import StatCard from "$lib/components/StatCard.svelte";
     let opciones = [
-        {id:0,nombre:"Stock"},
-        {id:1,nombre:"Pesajes"}
+        {id:0,nombre:"General"},
+        {id:1,nombre:"Stock"}
     ]
     //eventos animales,tactos,nacimientos,rodeos,lotes,tratamientos,inseminaciones ,observaciones,pesajes
 
@@ -131,6 +131,7 @@
             }
             ds.push(d)
         }
+        console.log(ds)
         chartPersonalizadoRodeos = new Chart(ctxPersonalizadoRodeos, {
             type: "bar",
             data: {
@@ -444,7 +445,15 @@
             ]
 
             for (let j = 0;j<animales.length;j++){
-                pesoRodeo += animales[j].peso
+                console.log(animales[j].rodeo)
+                console.log(rodeos[i].id)
+                if(animales[j].rodeo == rodeos[i].id){
+                
+                    pesoRodeo += animales[j].peso
+                    console.log(animales[j])
+                }
+                
+                
                 if (animales[j].categoria == "vaca" && animales[j].rodeo == rodeos[i].id){
                     rodeos[i].categoriasrodeos[0].total += 1
                     pesoVaca += animales[j].peso

@@ -1,7 +1,12 @@
 <script>
+    import { goto } from "$app/navigation";
     import estilos from "$lib/stores/estilos";
     import {isEmpty} from "$lib/stringutil/lib"
-    let {colabs = $bindable(),mostrarcolab,guardarColab} = $props()
+    import { randomString } from "$lib/stringutil/lib";
+    import { PenBox } from "lucide-svelte";
+    import Swal from "sweetalert2";
+    
+    let {colabs = $bindable(),mostrarcolab,guardarColab,desasociar,asociado} = $props()
     let titulo = $state("Colaboradores")
     
     //Nuevo colaborador
@@ -19,12 +24,14 @@
     let malconfirmcontra = $state(false)
     let botonhabilitadocolab = $state(false)
     async function guardarColaborador(){
+        
         let data = {
             nombre,
             apellido,
             contra,
             telefono,
-            email
+            email,
+            
         }
         await guardarColab(data)
     }
@@ -102,9 +109,23 @@
     function openNewModalColaborador(){
         modalNuevoColaborador.show()
     }
+    async function confirmDesasociar() {
+        Swal.fire({
+            title: 'Desasociar',
+            text: `¿Seguro que desasociarte del establecimiento?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result=>{
+            if(result.value){
+                await desasociar()
+            }
+        })
+    }
 </script>
 <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">{titulo}</h1>
-<div class="grid grid-cols-3 lg:grid-cols-4 gap-1">
+<div class="grid grid-cols-3 lg:grid-cols-4 gap-2">
     <div>
         <button class={estilos.mediumsolidgreen}
         onclick={openNewModalColaborador}
@@ -113,10 +134,19 @@
         </button>
     </div>
     <div>
-        <button class={estilos.mediumsolidgreen}>
+        <button class={estilos.mediumsolidgreen} onclick={()=>goto("/colaboradores/asociar")}>
             Asociar
         </button>
     </div>
+    {#if asociado}
+        <div>
+            <button class={estilos.mediumsolidred}
+            onclick={confirmDesasociar}
+            >
+                Desasociar
+            </button>
+        </div>
+    {/if}
 </div>
 <dialog id="modalNuevoColaborador" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 
@@ -154,11 +184,11 @@
                     </div>
                 {/if}
             </label>
-            <label for = "nombre" class="label">
+            <label for = "ape" class="label">
                 <span class="label-text text-base">Apellido</span>
             </label>
             <label class="input-group">
-                <input id ="nombre" type="text"  
+                <input id ="ape" type="text"  
                     class={`
                         input input-bordered 
                         w-full
@@ -177,11 +207,11 @@
                     </div>
                 {/if}
             </label>
-            <label for = "nombre" class="label">
+            <label for = "email" class="label">
                 <span class="label-text text-base">Correo</span>
             </label>
             <label class="input-group">
-                <input id ="nombre" type="text"  
+                <input id ="email" type="text"  
                     class={`
                         input input-bordered 
                         w-full
@@ -200,28 +230,31 @@
                     </div>
                 {/if}
             </label>
-            <label for = "nombre" class="label">
-                <span class="label-text text-base">Teléfono</span>
-            </label>
-            <label class="input-group">
-                <input id ="nombre" type="text"  
-                    class={`
-                        input input-bordered 
-                        w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2}   
-                    `}
-                    bind:value={telefono}
-                />
-            </label>
-            <label for = "nombre" class="label">
+            <div class="hidden">
+                <label for = "tel" class="label">
+                    <span class="label-text text-base">Teléfono</span>
+                </label>
+                <label class="input-group">
+                    <input id ="tel" type="text"  
+                        class={`
+                            input input-bordered 
+                            w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 
+                            focus:border-green-500
+                            ${estilos.bgdark2}   
+                        `}
+                        bind:value={telefono}
+                    />
+                </label>
+            </div>
+            
+            <label for = "pass" class="label">
                 <span class="label-text text-base">Contraseña</span>
             </label>
             <label class="input-group">
-                <input id ="nombre" type="password"  
+                <input id ="pass" type="password"  
                     class={`
                         input input-bordered 
                         w-full
@@ -240,11 +273,11 @@
                     </div>
                 {/if}
             </label>
-            <label for = "nombre" class="label">
+            <label for = "confpass" class="label">
                 <span class="label-text text-base">Confirmar contraseña</span>
             </label>
             <label class="input-group">
-                <input id ="nombre" type="password"  
+                <input id ="confpass" type="password"  
                     class={`
                         input input-bordered 
                         w-full
@@ -273,3 +306,4 @@
         
     </div>
 </dialog>
+

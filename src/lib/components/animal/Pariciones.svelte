@@ -5,7 +5,7 @@
     import estilos from "$lib/stores/estilos";
     import PocketBase from 'pocketbase'
     import Swal from "sweetalert2";
-    let {cabid,sexoanimal} = $props()
+    let {cabid,sexoanimal,prenada=$bindable(0)} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -75,19 +75,8 @@
             }
             let recorda = await pb.collection('animales').create(data); 
             Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
-            let item = {
-                caravana,
-                observacion,
-                cab:cabid,
-                nombremadre,
-                nombrepadre,
-                madre,
-                padre,
-                fecha:fecha +" 03:00:00",
-                animalid:recorda.id
-
-            }
-            pariciones.sort(item)
+            prenada = 0
+            await getPariciones()
         }
         catch(err){
             console.error(err)

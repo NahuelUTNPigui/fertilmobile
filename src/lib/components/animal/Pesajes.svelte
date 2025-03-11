@@ -9,7 +9,7 @@
     let ruta = import.meta.env.VITE_RUTA
     const HOY = new Date().toISOString().split("T")[0]
     const pb = new PocketBase(ruta);
-    let {pesoanterior,caravana} = $props()
+    let {pesoanterior,caravana,peso=$bindable("")} = $props()
 
     let id = $state("")
     //Pesajes
@@ -45,6 +45,9 @@
             await pb.collection("animales").update(id,dataupdate)
 
             await getPesajes()
+            
+            peso = pesonuevo
+            
             nuevoPesaje.close()
         }
         catch(err){

@@ -1,18 +1,21 @@
 <script>
-    import { goto } from "$app/navigation";
-    import Navbarr from "$lib/components/Navbarr.svelte";
+    import { goto } from '$app/navigation';   
+    import Navbarr from '$lib/components/Navbarr.svelte';
+    import Exportar from '$lib/components/Exportar.svelte';
     import PocketBase from 'pocketbase'
-    import Swal from 'sweetalert2';
-    import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
-    import estilos from '$lib/stores/estilos';
-    import estados from "$lib/stores/estados";
+    import Swal from 'sweetalert2';
+    import sexos from '$lib/stores/sexos';
+    import { onMount } from 'svelte';
     import { createCaber } from '$lib/stores/cab.svelte';
-    import categorias from "$lib/stores/categorias";
-    import sexos from "$lib/stores/sexos";
-    import {capitalize} from "$lib/stringutil/lib"
-    import {guardarHistorial} from "$lib/historial/lib"
-    import tipostacto from '$lib/stores/tipostacto';
+    import { createUserer } from '$lib/stores/user.svelte';
+    import tiposanimal from '$lib/stores/tiposanimal';
+    import permisos from "$lib/stores/permisos";
+    import estilos from '$lib/stores/estilos';
+    import { guardarHistorial } from '$lib/historial/lib';
+    import { isEmpty,getWholeWordButLastLetter,addDays } from '$lib/stringutil/lib';
+    import MultipleToros from "$lib/components/MultipleToros.svelte";
+    import PredictSelect from "$lib/components/PredictSelect.svelte";
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -21,327 +24,293 @@
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     let caber = createCaber()
+    let userer = createUserer()
     let cab = caber.cab
-    //Datos animales
-    let animales = $state([])
-    let animalesrows = $state([])
-    //Filtros
-    let buscar = $state("")
-    let lote = $state("")
-    let rodeo = $state("")
+    let usuarioid = userer.userid
+    let caravana = $state("")
+    let cargado = $state(false)
+    let esservicio = $state(false)
+    let esinseminacion = $state(false)
+    let filtroservicio = $state(0)
+    let opcionservicio = [{id:0,nombre:"Todos"},{id:1,nombre:"Solo servicios"},{id:2,nombre:"Solo inseminaciones"}]
+    // Datos para mostrar
+    let inseminaciones = $state([])
+    let totalInseminacionesEncontradas = $state(0)
+    //Datos inseminaciones
+    let idins = $state("")
+    let listapadres = $state([])
+    // La inseminacion es a un animal hembra que luego sera un nacimiento
+    let padre = $state("")
+    let pajuela = $state("")
+    //Seria la fecha del parto
+    //Datos de la inseminacion
     let categoria = $state("")
-    let sexo = $state("H")
-
-    let lotes = $state([])
-    let rodeos = $state([])
+    let fechainseminacion = $state("")
+    // Datos para mostrar
+    let servicios = $state([])
+    let serviciosrow = $state([])
+    let buscar = $state("")
     let isOpenFilter = $state(false)
-
-    //Seleccionados
-    let selectanimales = $state([])
-    let selecthashmap = $state({})
-    let todos = $state(false)
-    let algunos = $state(false)
-    let ninguno = $state(true)
-
-    //movimiento
-    let tipotactoselect = $state("")
-    let fecha = $state("")
-    let observaciongeneral = $state("")
-    //validacion
-    let malfecha = $state(false)
-    let botonhabilitado = $state(false)
+    let totalServicios = $state(0)
+    //Validaciones
+    let malanimal = $state(false) 
+    let malpadre = $state(false)
+    let malfechainseminacion = $state(false)
+    let malfechaparto = $state(false)
+    //SERVICIO
+    //Datos servicios
+    let idserv = $state("")
+    let padreslist = $state([])
+    let padresserv = $state("")
+    let pajuelasserv = $state("")
+    //Seria la fecha del parto
+    let fechaparto = $state("")
+    let fechadesdeserv = $state("")
+    let fechahastaserv = $state("")
+    let madre = $state("")
+    let observacion = $state("")
+    //Filtro de serv
+    let fechaservhastafiltro = $state("")
+    let fechaservdesdefiltro = $state("")
+    let fechapartodesde = $state("")
+    let fechapartohasta = $state("")
+    let buscarpadre = $state("")
+    let madres = $state([])
+    let padres = $state([])
+    let idanimal = $state("")
+    //Validaciones
+    let botonhabilitado = $state(true)
     
-
+    //No se que poner
     function clickFilter(){
         isOpenFilter = !isOpenFilter
     }
-    function onchangeTipoTacto(){
-        for(let i = 0;i<selectanimales.length;i++ ){
-            selectanimales[i].tipotacto = tipotactoselect
+    function openEditModal(id){
+        esservicio = true
+        idserv = id
+        let ser = servicios.filter(s=>s.id == id)[0]
+        if(ser){
+            madre = ser.madre
+            fechadesdeserv = ser.fechadesde.split(" ")[0]
+            fechahastaserv = ser.fechahasta.split(" ")[0]
+            fechaparto = ser.fechaparto.split(" ")[0]
+            observacion = ser.observacion
+            padreslist = ser.padres.split(",")
+            nuevoModal.showModal()
         }
     }
-    function limpiar(){
-        selectanimales = []
-        let lista = []
-        for (const [key, value ] of Object.entries(selecthashmap)) {
-            lista.push(key)
-        }
-        for(let i = 0;i<lista.length;i++){
-            selecthashmap[lista[i]] = null
-        }
-        algunos = false
-        todos = false
-        ninguno = true
-    }
-    function filterUpdate(){
+    function openEditModalIns(id){
+        esinseminacion = true
+        idserv = id
         
-        animalesrows = animales
-        if(buscar != ""){
-            animalesrows = animalesrows.filter(a=>a.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
-        }
-        if(sexo != ""){
-            animalesrows = animalesrows.filter(a=>a.sexo == sexo)
-        }
-        if(rodeo != ""){
-            animalesrows = animalesrows.filter(a=>a.rodeo == rodeo)
-        }
-        if(lote != ""){
-            animalesrows = animalesrows.filter(a=>a.lote == lote)
-        }
-        if(categoria != ""){
-            animalesrows = animalesrows.filter(a=>a.categoria == categoria)
-        }
-
-    }
-    function ordenarNombre(lista){
-        lista.sort((r1,r2)=>r1.nombre.toLocaleLowerCase()>r2.nombre.toLocaleLowerCase()?1:-1)
-    }
-
-    function clickAnimal(id){
         
-        if(selecthashmap[id]){
-            if(todos){
-                todos = false
-                algunos = true
-            }
-            selecthashmap[id] = null
-        }
-        else{
-            if(ninguno){
-                algunos = true
-                ninguno =  false
-            }
-            let a = animales.filter(an=>an.id==id)[0]
-            selecthashmap[id] = {
-                ...a
-            }
-        }
+        let ser = serviciosrow.filter(s=>s.id == id)[0]
         
-    }
-    function clickTodos(){
-        if(todos){
-            todos = false
-            ninguno = true
-            algunos = false
-            selecthashmap = {}
+        if(ser){
+            idanimal = ser.animal
+            fechainseminacion = ser.fechainseminacion.split(" ")[0]
+            padre = ser.padre
+            pajuela = ser.pajuela
+            fechaparto = ser.fechaparto.split(" ")[0]
+            observacion = ser.observacion
+            categoria = ser.categoria
+            nuevoModalIns.showModal()
         }
-        else if(ninguno){
-            ninguno = false
-            todos = true
-            for(let i = 0;i<animalesrows.length;i++){
-                let a = animalesrows[i]
-                selecthashmap[animalesrows[i].id] = {
-                    ...a
+    }
+    async function editar(){
+        if(esservicio){
+            try{
+                let dataser = {
+                    fechadesde : fechadesdeserv + " 03:00:00",
+                    fechaparto: fechaparto + " 03:00:00",
+                    observacion: observacion,
+                    madre:madre,
+                    padres:padreslist.join()
                 }
+                if(fechahastaserv != ""){
+                    dataser.fechahasta = fechahastaserv + " 03:00:00"
+                }
+                await pb.collection("servicios").update(idserv,dataser)
+                await getServicios()
+                esservicio = false
+                filterUpdate()
+            }
+            catch(err){
+                esservicio = false
+                console.error(err)
             }
         }
-        else if (algunos){
-            selecthashmap = {}
-            algunos = false
-            todos = false
-            ninguno = true
+        if(esinseminacion){
+            try {
+                let data = {
+                    fechaparto: fechaparto +' 03:00:00',
+                    fechainseminacion: fechainseminacion + ' 03:00:00',
+                    padre,
+                    pajuela,
+                    observacion,
+                    categoria
+                }
+                const record = await pb.collection('inseminacion').update(idserv, data);
+                await getInseminaciones()
+                
+                
+                
+                filterUpdate()
+                Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
+                esinseminacion = false
+            }catch(err){
+                console.error(err)
+                esinseminacion = false
+                Swal.fire("Error editar","Hubo un error para editar la inseminación","error")
+            }
         }
         
     }
-    async function getLotes(){
-        const records = await pb.collection('lotes').getFullList({
-            filter:`active = true && cab ~ '${cab.id}'`,
-            sort: 'nombre',
-        });
-        lotes = records
-        ordenarNombre(lotes)
+    async function eliminar(id){
+        try{
+            await pb.collection("servicios").update(id,{active:false})
+            await getServicios()
+        }
+        catch(err){
+            console.error(err)
+        }
     }
-    async function getRodeos(){
-        const records = await pb.collection('rodeos').getFullList({
-            filter:`active = true && cab ~ '${cab.id}'`,
-            sort: 'nombre',
+    function cerrarModal(){
+        
+        madre = ""
+        fechadesdeserv = ""
+        fechahastaserv = ""
+        fechaparto = ""
+        observacion = ""
+        padreslist = []
+        nuevoModal.close()
+    }
+    async function getInseminaciones(){
+        // you can also fetch all records at once via getFullList
+        const records = await pb.collection('inseminacion').getFullList({
+            sort: '-fechainseminacion ',
+            filter :`cab = '${cab.id}' && active = true`,
+            expand:"animal"
         });
-        rodeos = records
-        //ordenarNombre(rodeos)
+        inseminaciones = records
+        //inseminacionesrow = inseminaciones
+    }
+    async function getServicios(){
+        const records = await pb.collection('servicios').getFullList({
+            sort: '-fechadesde ',
+            filter :`cab = '${cab.id}' && active = true`,
+            expand:"madre"
+        });
+        servicios = records
+        serviciosrow = servicios
     }
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
-            filter:`active=true && delete=false && cab='${cab.id}' && sexo = 'H'`,
-            expand:"rodeo,lote"
+            filter:`active=true && cab='${cab.id}' && delete=False`
         })
-        
-        animales = recordsa
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-        animalesrows = animales
-    }
-    function openNewModal(){
-        tipotactoselect = "tacto"
-        if(ninguno){
-            Swal.fire("Error tacto","No hay animales seleccionados","error")
-            return
-        }
-        selectanimales = []
-        for (const [key, value ] of Object.entries(selecthashmap)) {
-            if(value != null){
-                selectanimales.push({
-                ...value,
-                estadonuevo:0,
-                tipotacto:"tacto",
-                observacion:""})
+        madres = recordsa.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = recordsa.filter(a=>a.sexo == "M")
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,
+                nombre:item.caravana
             }
+        })
+        cargado = true
+
+    }
+    function validarBoton(){
+    }
+    function oninput(campo){
+        
+    }
+    function onelegir(id){
+        
+    }
+    function onwrite(){
+        
+    }
+    function filterUpdate(){
+        serviciosrow = []
+        if(filtroservicio == 0){
+            serviciosrow = servicios
+            serviciosrow = serviciosrow.concat(inseminaciones)
+        }
+        else if(filtroservicio == 1){
+            serviciosrow = servicios
             
         }
-        tactoMasivo.showModal()
-    }
-    function getEstadoName(est) {
-        let estado = estados.filter(e=>e.id==est)[0]
-        return estado.nombre
-    }
-    async function crearBulkTactos() {
-        if(fecha == ""){
-            Swal.fire("Error tactos","Debe seleccionar una fecha","error")
-            return 
-        }
-        let errores = false
-        let bulkdata = []
-        for(let i = 0;i<selectanimales.length;i++){
-            let tactoanimal = selectanimales[i]
-            let dataupdate = {
-                prenada:tactoanimal.estadonuevo
-            }
-            let datatacto={
-                fecha:fecha +" 03:00:00" ,
-                observacion:tactoanimal.observacion,
-                animal:tactoanimal.id,
-                categoria:tactoanimal.categoria,
-                prenada:tactoanimal.estadonuevo,
-                tipo:tactoanimal.tipotacto,
-                nombreveterinario:"",
-                cab:cab.id,
-                active:true
-            }
-            let fila = {
-                dataupdate,
-                datatacto
-            }
-            bulkdata.push(fila)
-        }
-        console.log(JSON.stringify(bulkdata))
-        let token = JSON.parse(localStorage["pocketbase_auth"]).token
-        let bulkdatos = await fetch(`${ruta}/api/bulk/tactos`,{
-            method:'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body:JSON.stringify({data:bulkdata})
-        })
-        let resp = await bulkdatos.json()
-        console.log(resp)
-        fecha = ""
-        botonhabilitado = false
-        malfecha = false
-        selecthashmap = {}
-        selectanimales = []
-    }
-    async function crearTactos() {
-        if(fecha == ""){
-            Swal.fire("Error tactos","Debe seleccionar una fecha","error")
-            return 
-        }
-        let errores = false
-
-        for(let i = 0;i<selectanimales.length;i++){
-            let tactoanimal = selectanimales[i]
-            try{
-                let dataupdate = {
-                    prenada:tactoanimal.estadonuevo
-                }
-                let datatacto={
-                    fecha:fecha +" 03:00:00" ,
-                    observacion:tactoanimal.observacion,
-                    animal:tactoanimal.id,
-                    categoria:tactoanimal.categoria,
-                    prenada:tactoanimal.estadonuevo,
-                    tipo:tactoanimal.tipotacto,
-                    nombreveterinario:"",
-                    cab:cab.id,
-                    active:true
-                }
-                
-                await guardarHistorial(pb,selectanimales[i].id)
-                let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                await pb.collection('tactos').create(datatacto);
-                
-            }
-            catch(err){
-                console.error(err)
-                errores = true
-            }
-        }
-        if(errores){
-            Swal.fire("Error tactos","Hubo algun error en algun tacto","error")
-        }
         else{
-            Swal.fire("Éxito tactos","Se lograron registrar todos los tactos","success")
+            serviciosrow = inseminaciones
+            
         }
-        await getAnimales()
-        filterUpdate()
-        fecha = ""
-        botonhabilitado = false
-        malfecha = false
-        selecthashmap = {}
-        selectanimales = []
+        serviciosrow = serviciosrow.sort((s1,s2)=>new Date(s1.fechaparto)>new Date(s2.fechaparto)?-1:1)
+        
+        
+        totalServicios = serviciosrow.length
     }
-    function inputObsGeneral(){
-        for(let i = 0;i<selectanimales.length;i++){
-            selectanimales[i].observacion = observaciongeneral
+    function prepararData(item){
+        return {
+            MADRE:item.expand.madre.caravana,
+            PADRES:getNombrePadres(item.padres),
+            FECHA_DESDE:item.fechadesde?new Date(item.fechadesde).toLocaleDateString():"",
+            FECHA_HASTA:item.fechahasta?new Date(item.fechahasta).toLocaleDateString():"",
+            FECHA_PARTO:item.fechaparto?new Date(item.fechaparto).toLocaleDateString():"",
+            OBSERVACION:item.observacion
+
         }
+    }
+    function getNombrePadres(p_padres){
+        let ids = p_padres.split(",")
+        
+        let nombres = ids.reduce(
+            (acc,valor)=>padres.filter(p=>p.id==valor)[0].caravana + " , " +acc,
+            ""
+        )
+
+        return getWholeWordButLastLetter(nombres)
+
     }
     onMount(async ()=>{
         await getAnimales()
-        await getRodeos()
-        await getLotes()
-        
+        await getServicios()
+        await getInseminaciones()
+        filterUpdate()
     })
 </script>
 <Navbarr>
-    <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
+    <div class="grid grid-cols-1 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
-            <button
-                    class="bg-transparent border-none flex"
-                    aria-label="volver"
-                    onclick={()=>goto("/tactos/cab")}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mt-1">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                    </svg>
-                    <h1 class="text-2xl">
-                        Tactos
-                    </h1>
-                
-                </button>
-            
+            <h1 class="text-2xl">Servicios</h1>
         </div>
-        <div class="flex col-span-2 gap-1 justify-end">
-            <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={()=>openNewModal()}>
-                <span  class="text-xl">{capitalize("nuevo")}</span>
-            </button>
-            <button
-                onclick={()=>goto("/tactos/cab")}
-                class={`
-                    hidden
-                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                    ${estilos.btnsecondary}
-                    rounded-full
-                    px-4 pt-2 pb-3
-                `} 
-                aria-label="volver"
-            >
-            <span  class="text-xl font-semibold ">Volver</span>
-                
-            </button>
-
+        <div class="flex col-span-2 gap-1 justify-start lg:justify-end">
+            <div>
+                <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={()=>goto("/servicios/movimiento")}>
+                    <span  class="text-lg">Nuevos</span>
+                </button>
+            </div>
+            <div>
+                <Exportar
+                    titulo={"Servicios"}
+                    filtros={[]}
+                    confiltros={false}
+                    data = {serviciosrow}
+                    {prepararData}
+                />
+            </div>
         </div>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2  m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10" >
-        <div class="w-11/12">
-            <label class={`input input-bordered flex items-center gap-2 ${estilos.bgdark2}`}>
+    <div class="grid grid-cols-1 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12" >
+        <div class="w-full lg:w-1/2">
+            <label 
+                class={`
+                    input 
+                    input-bordered 
+                    flex 
+                    items-center gap-2
+                    ${estilos.bgdark2}
+                `}
+            >
                 <input type="text" class="grow" placeholder="Buscar..." bind:value={buscar} oninput={filterUpdate} />
             </label>
         </div>
@@ -362,327 +331,424 @@
                 </svg>
             </div> 
         </button>
+        <div>
+            <span class = "text-lg mx-1">Total de servicios encontrados: {totalServicios}</span>
+        </div>
         {#if isOpenFilter}
-            <div transition:slide class="grid grid-cols-2 lg:grid-cols-4  m-1 gap-2 w-11/12" >
-                
-                <div>
-                    <label for = "rodeos" class="label">
-                        <span class="label-text text-base">Rodeos</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
+            <div transition:slide>
+                <div class="grid grid-cols-2 lg:grid-cols-4" >
+                    <div class="">
+                        <label class="block tracking-wide text-base font-medium mb-2" for="grid-first-name">
+                        Servicio desde
+                        </label>
+                        <input id ="fechainseminaciondesde" type="date"  
                             class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
+                                input input-bordered
                                 ${estilos.bgdark2}
                             `} 
-                            bind:value={rodeo}
-                            onchange={filterUpdate}
-                        >
-                                <option value="">Todos</option>
-                                {#each rodeos as r}
-                                    <option value={r.id}>{r.nombre}</option>    
-                                {/each}
-                        </select>
-                    </label>
-                </div>
-                <div>
-                    <label for = "lotes" class="label">
-                        <span class="label-text text-base">Lotes</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
+                            bind:value={fechaservdesdefiltro} onchange={filterUpdate}
+                        />
+                    </div>
+                    <div class="">
+                        <label class="block tracking-wide text-base font-medium mb-2" for="grid-first-name">
+                            Servicio hasta
+                        </label>
+                        <input id ="fechainseminacionhasta" type="date"  
                             class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
+                                input input-bordered
                                 ${estilos.bgdark2}
                             `} 
-                            bind:value={lote}
-                            onchange={filterUpdate}
-                        >
-                                <option value="">Todos</option>
-                                {#each lotes as r}
-                                    <option value={r.id}>{r.nombre}</option>    
-                                {/each}
-                        </select>
-                    </label>
-                </div>
-                <div>
-                    <label for = "categorias" class="label">
-                        <span class="label-text text-base">Categorias</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
+                            bind:value={fechaservhastafiltro} onchange={filterUpdate}
+                        />
+                    </div>
+                    <div class="">
+                        <label class="block tracking-wide text-base font-medium mb-2" for="grid-first-name">
+                        Parto desde
+                        </label>
+                        <input id ="fechainseminaciondesde" type="date"  
                             class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
+                                input input-bordered
                                 ${estilos.bgdark2}
                             `} 
-                            bind:value={categoria}
+                            bind:value={fechapartodesde} onchange={filterUpdate}
+                        />
+                    </div>
+                    <div class="">
+                        <label class="block tracking-wide text-base font-medium mb-2" for="grid-first-name">
+                            Parto hasta
+                        </label>
+                        <input id ="fechainseminacionhasta" type="date"  
+                            class={`
+                                input input-bordered
+                                ${estilos.bgdark2}
+                            `} 
                             onchange={filterUpdate}
-                        >
-                                <option value="">Todos</option>
-                                {#each categorias as r}
-                                    <option value={r.id}>{r.nombre}</option>    
-                                {/each}
-                        </select>
-                    </label>
+                            bind:value={fechapartohasta} 
+                        />
+                    </div>
+                    <div class="">
+                        <label for = "tiposer" class="tracking-wide label">
+                            <span class="label-text text-base">Tipo servicio</span>
+                        </label>
+                        <label class="input-group ">
+                            <select 
+                                class={`
+                                    select select-bordered
+                                    rounded-md
+                                    focus:outline-none focus:ring-2 
+                                    focus:ring-green-500 
+                                    focus:border-green-500
+                                    ${estilos.bgdark2}
+                                `}
+                                bind:value={filtroservicio}
+                                onchange={filterUpdate}
+                                
+                            >
+                                
+                                    {#each opcionservicio as s}
+                                        <option value={s.id}>{s.nombre}</option>
+                                    {/each}
+                              </select>
+                        </label>  
+                    </div>
+                    <div class="">
+                        <label for = "nombrepadre" class="label">
+                            <span class="label-text text-base">Pajuela</span>
+                        </label>
+                        <label class="input-group">
+                            <input 
+                                id ="nombrepadre" 
+                                type="text"  
+                                class={`
+                                    input 
+                                    input-bordered 
+                                    border border-gray-300 rounded-md
+                                    focus:outline-none 
+                                    focus:ring-2 focus:ring-green-500 
+                                    focus:border-green-500
+                                    w-full 
+                                    ${estilos.bgdark2} 
+                                `}
+                                bind:value={buscarpadre}
+                                oninput={filterUpdate}
+                            />
+                        </label>
+                    </div>
                 </div>
-                <div class="mt-3">
-                    <br>
-                    <button
-                        class=" btn btn-neutral"
-                        onclick={limpiar}
-                    >
-                        Limpiar
-                    </button>
-                </div>
-                
             </div>
         {/if}
     </div>
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10  lg:w-3/4 overflow-x-auto">
-        <table class="table table-lg w-full " >
+    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+        <table class="table table-lg w-full" >
             <thead>
                 <tr>
-                    <th class="px-1 py-0 m-0">
-                        <button    
-                            aria-label="Todos"
-                            onclick={clickTodos}
-                            class={`
-                                text-base bg-transparent rounded-lg
-                                p-1 text-base
-                                ${estilos.secundario}
-                            `}
-                        >
-                            {#if todos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            {/if}
-                            {#if ninguno}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 3 3m0 0 3-3m-3 3v-7.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            {/if}
-                            {#if algunos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>      
-                            {/if}                        
-                          
-                        </button>
-                    </th>
-                    <th class="text-base mx-1 px-1">Caravana</th>
-                    <th class="text-base mx-1 px-1">Estado</th>
-                    <th class="text-base mx-1 px-1">Categoria</th>
-                    <th class="text-base mx-1 px-1">Peso</th>
-                    <th class="text-base mx-1 px-1">Rodeo</th>
-                    <th class="text-base mx-1 px-1">Lote</th>
-                    
+                    <th class="text-base ml-3 pl-3 mr-1 pr-1 border-b dark:border-gray-600">Fecha</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Fecha Hasta</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Fecha Parto</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Madre</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Padres</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Tipo</th>
                 </tr>
             </thead>
             <tbody>
-                {#each animalesrows as a}
-                <tr>
-                    <td class="px-1 py-0 m-0">
-                        <button
-                            aria-label="fila"
-                            onclick={()=>clickAnimal(a.id)}
-                            class={`
-                                font-medium bg-transparent rounded-lg
-                                px-3 py-3 text-base
-                                ${selecthashmap[a.id]?estilos.danger:estilos.primario}
-                            `}
-                        >
-                            {#if selecthashmap[a.id]}
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>                                  
-                            {:else}             
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                            {/if}
-                        </button>
+                {#each serviciosrow as s}
+                <tr class="hover:bg-gray-200 dark:hover:bg-gray-900" onclick={()=>s.fechadesde?openEditModal(s.id):openEditModalIns(s.id)}>
+                    <td 
+                        class="text-base ml-3 pl-3 mr-1 pr-1 border-b dark:border-gray-600"
+                    >
+                        {
+                            s.fechadesde?new Date(s.fechadesde).toLocaleDateString():
+                            s.fechainseminacion?new Date(s.fechainseminacion).toLocaleDateString():
+                            ""
+                        }
                     </td>
-                    <td class="text-base mx-1 px-1">{a.caravana}</td>
-                    <td class="text-base mx-1 px-1">{getEstadoName(a.prenada)}</td>
-                    <td class="text-base mx-1 px-1">{a.categoria}</td>
-                    <td class="text-base mx-1 px-1">{a.peso}</td>
-                    <td class="text-base mx-1 px-1">{a.expand?.rodeo?.nombre||''}</td>
-                    <td class="text-base mx-1 px-1">{a.expand?.lote?.nombre||''}</td>
-                    
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechahasta?new Date(s.fechahasta).toLocaleDateString():""}</td>
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechaparto?new Date(s.fechaparto).toLocaleDateString():"   "}</td>
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
+                        {   s.fechadesde?
+                            s.expand.madre.caravana:
+                            s.expand.animal.caravana
+                        }
+                    </td>
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
+                        {
+                            s.fechadesde?
+                            getNombrePadres(s.padres):
+                            s.pajuela
+                        }
+                    </td>
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
+                        {
+                            s.fechadesde?
+                            "Natural":
+                            "Artificial"
+                        }
+                    </td>
                 </tr>
                 {/each}
             </tbody>
         </table>
     </div>
 </Navbarr>
-<dialog id="tactoMasivo" class="modal modal-middle rounded-xl">
-    <div 
-        class="
-            modal-box w-11/12 max-w-6xl
-            bg-gradient-to-br from-white to-gray-100 
-            dark:from-gray-900 dark:to-gray-800
-            "
+<dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+    <div class="
+        modal-box w-11/12 max-w-xl
+        bg-gradient-to-br from-white to-gray-100 
+        dark:from-gray-900 dark:to-gray-800
+    "
     >
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        <h3 class="text-lg font-bold">Tactos múltiples</h3>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
-            <div>
-                <label for = "fechatacto" class="label">
-                    <span class="label-text text-base">Fecha </span>
-                </label>
-                <label class="input-group ">
-                    <input id ="fechatacto" type="date" max={HOY}  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={fecha}
-                        onchange={
-                            ()=>{
-                                if(fecha == ""){
-                                    malfecha = true
-                                    botonhabilitado = false
-                                }
-                                else{
-                                    malfecha = false
-                                    botonhabilitado = true
-                                }
-                            }
-                        }
-                    />
-                    {#if malfecha}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe seleccionar la fecha del tacto</span>                    
-                        </div>
-                    {/if}
-                </label>
-            </div>
-            <div>
-                <label for = "tipotacto" class="tracking-wide label">
-                    <span class="label-text text-base">Tipo</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={tipotactoselect}
-                        onchange={onchangeTipoTacto}
-                    >
-                            
-                            {#each tipostacto as s}
-                                <option value={s.id}>{s.nombre}</option>
-                            {/each}
-                      </select>
-                </label>
-            </div>
-            <div>
-                <label for = "obs" class="label">
-                    <span class="label-text text-base">Observación </span>
-                </label>
+        <h3 class="text-lg font-bold">Ver servicio</h3>  
+        <div class="form-control">
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Madre</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={madre}
+                    
+                >
+                    
+                    {#each madres as a}
+                        <option value={a.id}>{a.caravana}</option>    
+                    {/each}
+                </select>
+            </label>
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Fecha desde</span>
+            </label>
+            <label class="input-group ">
+                <input id ="fecha" type="date" 
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `} 
+                    bind:value={fechadesdeserv}
+                    s
+                />
+                
+            </label>
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Fecha hasta</span>
+            </label>
+            <label class="input-group ">
+                <input id ="fecha" type="date" 
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `} 
+                    bind:value={fechahastaserv}
+                    
+                />
+                
+            </label>
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Fecha parto</span>
+            </label>
+            <label class="input-group ">
+                <input id ="fecha" type="date" 
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `} 
+                    bind:value={fechaparto}
+                />
+            </label>
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Padres</span>
+            </label>
+            <label class="input-group ">
+                {#if cargado}
+                    <MultipleToros toros={padres} bind:valor={padresserv} bind:listavalores={padreslist} />
+                    
+                {/if}
+            </label>
+            
+            <label class="form-control">
+                <div class="label">
+                    <span class="label-text">Observacion</span>                    
+                </div>
                 <input 
-                        id ="observacion" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={observaciongeneral}
-                        oninput={inputObsGeneral}
-                    />
-            </div>
-        </div>
-        <div class="w-full grid grid-cols-1 justify-items-start " >
-            <div class="flex overflow-x-auto">
-                <table class="table table-lg w-full w-11/12" >
-                    <thead>
-                        <tr>
-                            <th class="text-base ">Caravana</th>
-                            <th class="text-base "><span>Estado</span><br> anterior</th>
-                            <th class="text-base ">Estado Nuevo</th>
-                            <th class="text-base ">Observación</th>
-                            
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each selectanimales as a,i}
-                            <tr>
-                                <td class="text-base">{a.caravana}</td>
-                                <td class="text-base ">{getEstadoName(a.prenada)}</td>
-                                <td>
-                                    <label class="input-group ">
-                                        <select 
-                                            class={`
-                                                select select-bordered w-full
-                                                rounded-md
-                                                focus:outline-none focus:ring-2 
-                                                focus:ring-green-500 
-                                                focus:border-green-500
-                                                ${estilos.bgdark2}
-                                            `}
-                                            bind:value={selectanimales[i].estadonuevo}
-                                        >
-                                                
-                                            {#each estados as e}
-                                                <option value={e.id}>{e.nombre}</option>
-                                            {/each}
-                                        </select>
-                                    </label>
-                                </td>
-                                <td class="">
-                                    <input
-                                    bind:value={selectanimales[i].observacion}
-                                    class={`
-                                        h-12 border border-gray-300 
-                                        w-full
-                                        rounded-md
-                                        focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 
-                                        focus:border-green-500
-                                        ${estilos.bgdark2}
-                                    `}
-                                    />
-                                </td>
-                                
-                                
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
+                    id ="observacion" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={observacion}
+                />
+            </label>
+            
+
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >
-                <button class="btn btn-success text-white" disabled={!botonhabilitado} onclick={crearBulkTactos} >Crear Tactos</button>
-                <button class="btn btn-error text-white" >Cancelar</button>
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idserv)}>Eliminar</button>
+                <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
+            </form>
+        </div>
+    </div>
+</dialog>
+<dialog id="nuevoModalIns" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+    <div class="
+            modal-box w-11/12 max-w-xl
+            bg-gradient-to-br from-white to-gray-100 
+            dark:from-gray-900 dark:to-gray-800
+        "
+    >
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
+        </form>
+        <h3 class="text-lg font-bold">Ver inseminación</h3>  
+        <div class="form-control">
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Caravana</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={idanimal}
+                    onchange={()=>oninput("ANIMAL")}
+                >
+                    <option value="agregar">Agregar</option>
+                    {#each madres as m}
+                        <option value={m.id}>{m.caravana}</option>    
+                    {/each}
+                </select>
+                {#if malanimal}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar el animal</span>                    
+                    </div>
+                {/if}
+            </label>
+            <label for = "tipo" class="label">
+                <span class="label-text text-base">Categoria</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    disabled
+                    bind:value={categoria}
+                >
+                    {#each tiposanimal as t}
+                        <option value={t.id}>{t.nombre}</option>    
+                    {/each}
+                  </select>
+            </label>
+            {#if cargado}
+                <PredictSelect {onwrite} {onelegir} bind:valor={padre} etiqueta = {"Padre"} bind:cadena={pajuela} lista = {listapadres}  size="w-1/2"/>
+            {/if}
+            <label for = "fechainseminacion" class="label">
+                <span class="label-text text-base">Fecha de inseminacion</span>
+            </label>
+            <label class="input-group ">
+                <input id ="fechainseminacion" type="date" 
+                    class={`
+                        input input-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={fechainseminacion}
+                    onchange={()=>oninput("FECHAINSEMINACION")}
+                />
+                {#if malfechainseminacion}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha de inseminacion</span>                    
+                    </div>
+                {/if}
+            </label>
+            <label for = "fechaparto" class="label">
+                <span class="label-text text-base">Fecha estimada de parto</span>
+            </label>
+            <label class="input-group ">
+                <input disabled id="fechaparto" type="date" 
+                    class={`
+                        input input-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={fechaparto}
+                    onchange={()=>oninput("FECHAPARTO")}
+                />
+                {#if malfechaparto}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha aproximada de parto</span>                    
+                    </div>
+                {/if}
+            </label>
+            <label class="form-control">
+                <div class="label">
+                    <span class="label-text">Observacion</span>                    
+                </div>
+                <input 
+                    id ="observacion" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={observacion}
+                />
+            </label>
+        </div>
+        <div class="modal-action justify-start ">
+            <form method="dialog" >
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idins)}>Eliminar</button>
+                <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
             </form>
         </div>
     </div>

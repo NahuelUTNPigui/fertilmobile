@@ -21,9 +21,36 @@ const config = {
 				"/inicio/cab",
 				"/inicio/vet",
 				"/login",
-				"/establecimiento",
+				"/nacimientos",
+				"/rodeos",
+				"/tactos/cab",
+				"/tactos/cab/movimiento",
+				
+				"/user/config",
+				"/inseminaciones",
+				"/observaciones",
+				"/tratamientos",
+				"/importar",
+				"/lotes",
+				"/movimientos",
 				"/user/new",
-				"/user/config"]
+				"/recover",
+				"/reportes",
+				"/pesajes",
+				"/establecimiento",
+				"/pesajes/lista",
+				"/colaboradores/asociar",
+				"/colaboradores/1",
+				"/establecimientos",
+				"/establecimientos/nuevo",
+				"/inseminaciones/movimiento",
+				"/tratamientos/movimiento",
+				
+				"/user/nivel",
+				"/servicios",
+				"/servicios/movimiento"
+
+			]
 		}
 	}
 };

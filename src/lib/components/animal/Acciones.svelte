@@ -5,18 +5,22 @@
     import Swal from "sweetalert2";
     import CardCabana from "./CardCabana.svelte";
     import CardBase from "../CardBase.svelte";
+    import motivos from '$lib/stores/motivos';
     import { onMount } from "svelte";
+    import tiponoti from '$lib/stores/tiponoti';
     
 
-    let {caravana,bajar,eliminar,transferir,fechafallecimiento} = $props()
+    let {caravana,bajar,eliminar,transferir,fechafallecimiento=$bindable(""),motivo = $bindable("fallecimiento")} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let nombredel = $state("")
     let nombretrans = $state("")
-    //let fechafallecimiento = $state("")
     let buscar = $state("")
     let cabanas = $state([])
     let cabanasrow = $state([])
+    let codigo = $state("")
+    let malcodigo = $state(false)
+    
     let id = $state("")
     
     function darBaja(){
@@ -30,7 +34,7 @@
                 cancelButtonText: 'No'
             }).then(result=>{
                 if(result.value){
-                    bajar(fechafallecimiento)
+                    bajar(fechafallecimiento,motivo)
                 }
             })
         }
@@ -56,22 +60,32 @@
     }
     function openModal(){
         if(nombretrans == caravana){
+            codigo= ""
             transferModal.showModal()
+            
         }
         
     }
-    function transfer(id,name){
+    async function transfer(){
+        const resultList = await pb.collection('cabs').getList(1, 1, {
+            filter: `active = true && codigo = '${codigo}'`,
+        });
+        if(resultList.items.length == 0){
+            malcodigo = true
+            return
+        }
         transferModal.close()
+        
         Swal.fire({
             title: 'Transferir animal',
-            text: `¿Seguro que deseas transferir el animal a ${name}?`,
+            text: `¿Seguro que deseas transferir el animal a ${caravana}?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Si',
             cancelButtonText: 'No'
         }).then(result=>{
             if(result.value){
-                transferir(id)
+                transferir(codigo)
                 
             }
         })
@@ -100,6 +114,7 @@
         }
 
     }
+    
     onMount(async ()=>{
         id = $page.params.slug
         await getCabañas()
@@ -151,6 +166,30 @@
                             `} 
                             bind:value={fechafallecimiento}
                         />
+                    </div>
+                    <div class="mt-2 col-span-1">
+                        <label for = "motivo" class="label">
+                            <span class="label-text text-base">Motivo</span>
+                        </label>
+                    </div>
+                    <div class="mt-2 col-span-3">
+                        <select 
+                            class={`
+                                select select-bordered w-full
+                                border border-gray-300 rounded-md
+                                focus:outline-none focus:ring-2 
+                                focus:ring-green-500 
+                                focus:border-green-500
+                                ${estilos.bgdark2}
+                            `}
+                            bind:value={motivo}
+                            
+                        >
+                            
+                            {#each motivos as m}
+                                <option value={m.id}>{m.nombre}</option>    
+                            {/each}
+                        </select>
                     </div>
                     
                 </div>
@@ -257,29 +296,29 @@
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
         <!--<h3 class="text-lg font-bold">Buscar cabañas</h3> -->
-        <div class="flex items-center form-control ">
-            <input
-                type="text"
-                placeholder="Buscar"
-                oninput={filterUpdateCabs}
-                bind:value={buscar}
-                class="
-                    w-11/12 p-2 mb-1 bg-white dark:bg-gray-800 
-                    text-white border border-gray-300 
-                    dark:border-gray-700 
-                    rounded-lg 
-                    placeholder-gray-400
-                    dark:placeholder-gray-300
-                    focus:outline-none 
-                    focus:ring-2 
-                    focus:ring-gray-300 dark:focus:ring-gray-600
-                "
+        <div 
+            class="form-control bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 w-fullmax-w-xl"
+        >
+            <h2 class="text-xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">Código de transferencia</h2>
+            <input 
+                id ="token" 
+                type="text"  
+                class={`
+                    input 
+                    input-bordered 
+                    border border-gray-300 rounded-md
+                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                    flex-grow
+                    ${estilos.bgdark2}
+                `}
+                bind:value={codigo}
             />
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                {#each cabanasrow as ca}
-                    <CardCabana nombre={ca.nombre} direccion={ca.direccion} contacto={ca.contacto} id={ca.id} transferir={(id)=>transfer(id,ca.nombre)}/>
-                {/each}
-            </div>
+            {#if malcodigo}
+                <div class="label">
+                    <span class="label-text-alt text-red-500">No existe un establecimiento con ese codigo</span>                    
+                </div>
+            {/if}
+            <button class="mt-1 btn btn-success text-white text-xl " onclick={transfer} >Transferir</button>
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >

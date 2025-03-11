@@ -4,9 +4,10 @@
     import estilos from "$lib/stores/estilos";
     import PocketBase from 'pocketbase'
     import tiposanimal from '$lib/stores/tiposanimal';
+    import { guardarHistorial } from "$lib/historial/lib";
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
-    let{cabid} = $props()
+    let{cabid,categoria,prenadaori = $bindable(0)} = $props()
     let id = $state("")
     let inseminaciones = $state([])
     // La inseminacion es a un animal mujer que luego sera un nacimiento
@@ -16,13 +17,12 @@
     let fecha = $state("")
     let padres = $state([])
     //Datos de la inseminacion
-    let categoria = $state("")
     let fechadesdeins = $state("")
     let fechahastains = $state("")
     function openNewModal(){
         fecha = ""
         padre = ""
-        categoria = ""
+        
         fechadesdeins = ""
         fechahastains = ""
         pajuela = ""
@@ -43,6 +43,9 @@
             }
             const record = await pb.collection('inseminacion').create(data);
             let item = record
+            prenadaori = 3
+            guardarHistorial(pb,id)
+            await pb.collection('animales').update(id,{prenada:3})
             inseminaciones.push(item)
         }
         catch(err){
@@ -70,7 +73,13 @@
         pajuela = p.caravana
     }
     function getCategoriaNombre(cat){
-        return tiposanimal.filter(c=>c.id==cat)[0].nombre
+        let tp = tiposanimal.filter(c=>c.id==cat)[0]
+        if(tp){
+            return tp.nombre
+        }
+        else{
+            return ""
+        }
     }
     onMount(async ()=>{
         id = $page.params.slug
@@ -79,19 +88,7 @@
     })
 </script>
 <div class="w-full flex justify-items-start gap-2">
-    <div class="hidden">
-        <button
-            aria-label="Expandir"
-            onclick={()=>expandirInseminacion.showModal()}
-            class={`
-                ${estilos.basico} ${estilos.chico} ${estilos.primario}
-                ${inseminaciones.length == 0?estilos.deshabilitado:""}
-            `}
-            disabled = {inseminaciones.length == 0}
-        >
-            Expandir                
-        </button>
-    </div>
+    
     <div>
         <button
             aria-label="Nuevo"
@@ -114,7 +111,7 @@
                 <th class="text-base ml-3 pl-3 mr-1 pr-1 ">Fecha parto</th>
                 <th class="text-base mx-1 px-1">Pajuela</th>
                 <th class="text-base mx-1 px-1">Categoria</th>
-                <th class="text-base mx-1 px-1">Fechas</th>
+                <th class="text-base mx-1 px-1">Fecha inseminacion</th>
             </tr>
         </thead>
         <tbody>
@@ -128,7 +125,7 @@
                     {`${i.categoria}`}
                 </td>
                 <td class="text-base mx-1 px-1">
-                    {`${new Date(i.fechadesde).toLocaleDateString()} - ${new Date(i.fechahasta).toLocaleDateString()}`}
+                    {`${new Date(i.fechainseminacion).toLocaleDateString()}`}
                 </td>
             </tr>
             {/each}
