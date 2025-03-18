@@ -46,7 +46,8 @@ Every time you make code changes, you then run `pnpm run build && npx cap sync` 
 
 Install Android Studio if you haven't and open the project with 
 `npx cap open android`.
-
+si quiero tener el logo y el splahs screen
+npx capacitor-assets generate --android
 
 
 ## Add device in android studio
