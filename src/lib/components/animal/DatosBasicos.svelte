@@ -14,6 +14,7 @@
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
     import { guardarHistorial } from "$lib/historial/lib";
+    import PredictSelect from "../PredictSelect.svelte";
     let {
         caravana,
         rodeo,
@@ -40,6 +41,7 @@
     let nombrerodeo = $state("")
     let nombrelote = $state("")
     let modoedicion = $state(false)
+    let cargadoanimales = $state(false)
     //Datos edicion
     let pesoviejo = $state("")
     let sexoviejo = $state("")
@@ -48,6 +50,7 @@
     let loteviejo = $state("")
     let categoriavieja = $state("")
     let prenadaviejo = $state(false)
+
     //Nacimiento
     let fechaviejo = $state("")
     let nombremadreviejo = $state("")
@@ -65,13 +68,20 @@
     let fecha = $state("")
     let madres = $state([])
     let padres = $state([])
+    let listamadres = $state([])
+    let listapadres = $state([])
     let tipomadre = $state("")
     
     let observacion = $state("") 
     let rodeos = $state([])
     let lotes = $state([])
     
+    function onwrite(){
 
+    }
+    function onelegir(){
+        
+    }
     //rodeos
     async function getRodeos(){
         const records = await pb.collection('rodeos').getFullList({
@@ -108,6 +118,17 @@
         })
         madres = recordsa.filter(a=>a.sexo == "H" && a.delete==false)
         padres = recordsa.filter(a=>a.sexo == "M" && a.delete==false)
+        listamadres = madres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        cargadoanimales = true
     }
     function getSexo(sex){
         let obj = sexos.filter(s => s.id == sex)[0]
@@ -220,6 +241,7 @@
                 animal:id
             }
             const record = await pb.collection('animales').update(id, datanimal);
+            //NO va porque tengo que evaluar las fechas
             await pb.collection("historialanimales").create(datahistorial)
             await guardarHistorial(pb,madre)
             let datamadre = {
@@ -371,6 +393,7 @@
             nombrepadre = nacimiento.nombrepadre
             padre = nacimiento.padre
             madre = nacimiento.madre
+
             observacion = nacimiento.observacion
         }
     })
@@ -685,7 +708,7 @@
 <div class="grid grid-cols-3 mx-0  mt-1 ">
     
     <div class="flex col-span-2 gap-1 justify-start">
-        <button aria-label="historiaclinica" class={` btn btn-primary rounded-lg ${estilos.basico} ${estilos.primario} px-2 mx-1`} onclick={()=>modohistoria = !modohistoria}>
+        <button aria-label="historiaclinica" class={` btn rounded-lg ${estilos.basico} ${estilos.primario} px-2 mx-1`} onclick={()=>modohistoria = !modohistoria}>
             <span  class="text-lg m-1">{modohistoria?"Ocultar":"Mostrar"} historia clinica</span>      
         </button>
     </div>  
@@ -724,86 +747,94 @@
                     bind:value={fecha}
                 />
             </label>
-            <label for = "nombremadre" class="label">
-                <span class="label-text text-base">Nombre madre</span>
-            </label>
-            <label class="input-group">
-                <input 
-                    id ="nombremadre" 
-                    type="text"  
-                    class={`
-                        input 
-                        input-bordered 
-                        border border-gray-300 rounded-md
-                        focus:outline-none 
-                        focus:ring-2 focus:ring-green-500 
-                        focus:border-green-500
-                        w-full 
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={nombremadre}
-                />
-            </label>
-            <label for = "madre" class="label">
-                <span class="label-text text-base">Madre</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={madre}
-                    onchange={getNombreMadre}
-                >
-                    {#each madres as m}
-                        <option value={m.id}>{m.caravana}</option>    
-                    {/each}
-                </select>
-            </label>
-            <label for = "nombrepadre" class="label">
-                <span class="label-text text-base">Nombre padre</span>
-            </label>
-            <label class="input-group">
-                <input 
-                    id ="nombrepadre" 
-                    type="text"  
-                    class={`
-                        input 
-                        input-bordered 
-                        border border-gray-300 rounded-md
-                        focus:outline-none 
-                        focus:ring-2 focus:ring-green-500 
-                        focus:border-green-500
-                        w-full 
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={nombrepadre}
-                />
-            </label>
-            <label for = "padre" class="label">
-                <span class="label-text text-base">Padre</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={padre}
-                    onchange={getNombrePadre}
-                >
-                    {#each padres as p}
-                        <option value={p.id}>{p.caravana}</option>    
-                    {/each}
-                </select>
-            </label>
+            <div class="hidden">
+                <label for = "nombremadre" class="label">
+                    <span class="label-text text-base">Nombre madre</span>
+                </label>
+                <label class="input-group">
+                    <input 
+                        id ="nombremadre" 
+                        type="text"  
+                        class={`
+                            input 
+                            input-bordered 
+                            border border-gray-300 rounded-md
+                            focus:outline-none 
+                            focus:ring-2 focus:ring-green-500 
+                            focus:border-green-500
+                            w-full 
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={nombremadre}
+                    />
+                </label>
+                <label for = "madre" class="label">
+                    <span class="label-text text-base">Madre</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 focus:border-green-500
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={madre}
+                        onchange={getNombreMadre}
+                    >
+                        {#each madres as m}
+                            <option value={m.id}>{m.caravana}</option>    
+                        {/each}
+                    </select>
+                </label>
+            </div>
+            <div class="hidden">
+                <label for = "nombrepadre" class="label">
+                    <span class="label-text text-base">Nombre padre</span>
+                </label>
+                <label class="input-group">
+                    <input 
+                        id ="nombrepadre" 
+                        type="text"  
+                        class={`
+                            input 
+                            input-bordered 
+                            border border-gray-300 rounded-md
+                            focus:outline-none 
+                            focus:ring-2 focus:ring-green-500 
+                            focus:border-green-500
+                            w-full 
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={nombrepadre}
+                    />
+                </label>
+                <label for = "padre" class="label">
+                    <span class="label-text text-base">Padre</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 focus:border-green-500
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={padre}
+                        onchange={getNombrePadre}
+                    >
+                        {#each padres as p}
+                            <option value={p.id}>{p.caravana}</option>    
+                        {/each}
+                    </select>
+                </label>
+            </div>
+            {#if cargadoanimales}
+                <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} {onelegir} {onwrite}/>
+                <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} {onelegir} {onwrite}/>
+            {/if}
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>                    
@@ -821,16 +852,7 @@
                     `}
                     bind:value={observacion}
                 />
-                <!--
-                <textarea style="line-height: 1.3;" 
-                    class={`
-                        textarea textarea-bordered h-24
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                    `} 
-                    bind:value={n.observacion} placeholder=""
-                ></textarea>
-                -->
+                
             </label>
         </div>
         <div class="modal-action justify-start ">

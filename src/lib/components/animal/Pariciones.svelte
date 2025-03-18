@@ -5,6 +5,7 @@
     import estilos from "$lib/stores/estilos";
     import PocketBase from 'pocketbase'
     import Swal from "sweetalert2";
+    import PredictSelect from "../PredictSelect.svelte";
     let {cabid,sexoanimal,prenada=$bindable(0)} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -17,6 +18,7 @@
     let fechahasta = $state("")
     let pariciones = $state([])
     let id = $state("")
+    let cargado = $state(false)
     //Datos nacimiento
     let nacimiento = $state(null)
     let idnacimiento = $state("")
@@ -28,13 +30,14 @@
     let nombremadre = $state("")
     let nombrepadre = $state("")
     let fecha = $state("")
-
-
-    let madres = $state([])
     let padres = $state([])
+    let madres = $state([])
+    let listapadres = $state([])
     let idanimal = $state("")
     let observacion = $state("")
     
+    function onelegir(){}
+    function onwrite(){}
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`delete=false && cab='${cabid}'`,
@@ -42,6 +45,8 @@
         })
         madres = recordsa.filter(a=>a.sexo == "H" || a.sexo == "F")
         padres = recordsa.filter(a=>a.sexo == "M")
+        listapadres = padres.map(p=>({id:p.id,nombre:p.caravana}))
+        cargado = true
     }
 
     async function getPariciones(){
@@ -369,46 +374,53 @@
                     </select>
                 </label>
             {:else}
-                <label for = "nombrepadre" class="label">
-                    <span class="label-text text-base">Nombre padre</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombrepadre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none 
-                            focus:ring-2 focus:ring-green-500 
-                            focus:border-green-500
-                            w-full 
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombrepadre}
-                    />
-                </label>
-                <label for = "padre" class="label">
-                    <span class="label-text text-base">Padre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={padre}
-                        onchange={getNombrePadre}
-                    >
-                        {#each padres as p}
-                            <option value={p.id}>{p.caravana}</option>    
-                        {/each}
-                    </select>
-                </label>
+                <div class="hidden">
+                    <label for = "nombrepadre" class="label">
+                        <span class="label-text text-base">Nombre padre</span>
+                    </label>
+                    <label class="input-group">
+                        <input 
+                            id ="nombrepadre" 
+                            type="text"  
+                            class={`
+                                input 
+                                input-bordered 
+                                border border-gray-300 rounded-md
+                                focus:outline-none 
+                                focus:ring-2 focus:ring-green-500 
+                                focus:border-green-500
+                                w-full 
+                                ${estilos.bgdark2} 
+                            `}
+                            bind:value={nombrepadre}
+                        />
+                    </label>
+                    <label for = "padre" class="label">
+                        <span class="label-text text-base">Padre</span>
+                    </label>
+                    <label class="input-group ">
+                        <select 
+                            class={`
+                                select select-bordered w-full
+                                border border-gray-300 rounded-md
+                                focus:outline-none focus:ring-2 
+                                focus:ring-green-500 focus:border-green-500
+                                ${estilos.bgdark2} 
+                            `}
+                            bind:value={padre}
+                            onchange={getNombrePadre}
+                        >
+                            {#each padres as p}
+                                <option value={p.id}>{p.caravana}</option>    
+                            {/each}
+                        </select>
+                    </label>
+                </div>
+                {#if cargado}
+                    <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} {onelegir} {onwrite}/>
+                {/if}
+
+                
             {/if}
             <div class="label">
                 <span class="label-text">Observacion</span>                    

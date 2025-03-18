@@ -1,6 +1,5 @@
 export default [
-    {id:3,nombre:"En servicio"},
-    {id:2,nombre:"Preñada"},
-    {id:1,nombre:"Dudosa"},
-    {id:0,nombre:"Vacia"}
+    {id:3,nombre:"En servicio",color:"warning"},
+    {id:2,nombre:"Preñada",color:"success"},
+    {id:0,nombre:"Vacia",color:"default"}
 ]

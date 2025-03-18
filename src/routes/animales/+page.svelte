@@ -17,9 +17,10 @@
     import {createPer} from "$lib/stores/permisos.svelte"
     import { getPermisosList } from '$lib/permisosutil/lib';
     import RadioButton from '$lib/components/RadioButton.svelte';
-    import { getEstadoNombre } from '$lib/components/estadosutils/lib';
+    import { getEstadoNombre,getEstadoColor } from '$lib/components/estadosutils/lib';
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
+    import { getSexoNombre } from '$lib/stringutil/lib';
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -335,7 +336,7 @@
     }
     onMount(async()=>{
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.model.id
+        usuarioid = pb_json.record.id
         await getAnimales()
         await getRodeos()
         await getLotes()
@@ -645,7 +646,7 @@
                 </div>
             {/if}
     </div>
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr >
@@ -709,7 +710,68 @@
                 {/each}
         </table>
     </div>
-    <dialog id="nuevoModal" 
+    <div class="block  md:hidden justify-items-center mx-1">
+        {#each animalesrows as a}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <button  onclick={()=>goto(`/animales/${a.id}`)}>
+                <div class="block p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-medium">{a.caravana}</h3>
+                        {#if a.sexo == "H" && a.prenada != 1}
+                            <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
+                        {/if}
+                    </div>
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start">
+                          <span class="font-semibold">{getSexoNombre(a.sexo)}</span>
+                        </div>
+                        <div class="flex items-start">
+                          <span >Categoría:</span> 
+                          <span class="font-semibold">
+                            {a.categoria}
+                          </span>
+                          
+                        </div>
+                        <div class="flex items-start">
+                          <span >Lote:</span>
+                          <span class="font-semibold">
+                            {
+                                a.expand?
+                                a.expand.lote?
+                                a.expand.lote.nombre
+                                :""
+                                :""
+  
+                            }
+                          </span> 
+                        </div>
+                        <div class="flex items-start">
+                            
+                          <span >Rodeo:</span> 
+                          <span class="font-semibold">
+                            {
+                                a.expand?
+                                a.expand.rodeo?
+                                a.expand.rodeo.nombre
+                                :""
+                                :""
+  
+                            }
+                          </span>
+                          
+                        </div>
+                    </div>
+                </div>
+            </button>
+        </div>
+            
+        {/each}
+        
+    </div>
+    
+    
+</Navbarr>
+<dialog id="nuevoModal" 
         class="
             modal modal-top mt-10 ml-5 
             lg:items-start 
@@ -1019,16 +1081,7 @@
                                 `}
                                 bind:value={observacion}
                             />
-                            <!--
-                            <textarea style="line-height: 1.3;" 
-                                class={`
-                                    textarea textarea-bordered h-24
-                                    border border-gray-300 rounded-md
-                                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                `} 
-                                bind:value={n.observacion} placeholder=""
-                            ></textarea>
-                            -->
+                            
                         </label>
                     {/each}
                 {/if}
@@ -1049,5 +1102,3 @@
             </div>
         </div>
     </dialog>
-    
-</Navbarr>

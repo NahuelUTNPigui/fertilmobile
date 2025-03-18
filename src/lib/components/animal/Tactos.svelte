@@ -96,7 +96,6 @@
     onMount(async ()=>{
         id = $page.params.slug
         prenada = prenadaori
-        console.log(categoria)
         await getTactos()
     })
 

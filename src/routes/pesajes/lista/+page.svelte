@@ -148,11 +148,11 @@
                 }
             }
         }
-        console.log(tablapesajes)
+        
         for (const [key, value] of Object.entries(tablapesajes)) {
             pesajesprocesados.push(value)
         }
-        console.log(pesajesprocesados)
+        
 
     }
     function procesarPesajes(){
@@ -301,41 +301,8 @@
             </div>
         {/if}
     </div>
-    <div class="hidden w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
-        <table class="table table-lg w-full" >
-            <thead>
-                <tr>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
-                    {#each columnas as c}
-                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">{new Date(c).toLocaleDateString()}</th>
-                    {/each}
-                </tr>
-            </thead>
-            <tbody>
-                {#each filas as f}
-                <tr>
-                    
-                        <td class="text-base mx-1 px-1">
-                            {f}
-                        </td>
-                        {#each columnas as c}
-                            {#if tablapesaje[c][f]}
-                                <td onclick={()=>openDetalle(tablapesaje[c][f].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
-                                    {tablapesaje[c][f].pesonuevo}
-                                </td>
-                            {:else}
-                                <td class="text-base mx-1 px-1">
-                                    {"-"}
-                                </td>
-                            {/if}
-                        {/each}
-                    
-                </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr>
@@ -354,7 +321,44 @@
                         <td class="text-base mx-1 px-1">
                             {f.animal}
                         </td>
-                        {#each Array(ultimos) as _,idx}
+                        {#each Array(5) as _,idx}
+                            {#if f.pesajes.length < ultimos - idx}
+                                <td>
+                                    {"-"}
+                                </td>
+                            {:else}
+                                <td onclick={()=>openDetalle(f.pesajes[ultimos - idx - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
+                                    {new Date(f.pesajes[ultimos - idx - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - idx - 1].peso}
+                                </td>
+                            {/if}
+                                
+                        {/each}
+                        
+                        
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    </div>
+    <div class="w-full md:hidden justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+        <table class="table table-lg w-full" >
+            <thead>
+                <tr>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
+                    
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">3</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">2</th>
+                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">1</th>
+                </tr>
+                
+            </thead>
+            <tbody>
+                {#each pesajesprocesados as f}
+                    <tr>
+                        <td class="text-base mx-1 px-1">
+                            {f.animal}
+                        </td>
+                        {#each Array(3) as _,idx}
                             {#if f.pesajes.length < ultimos - idx}
                                 <td>
                                     {"-"}

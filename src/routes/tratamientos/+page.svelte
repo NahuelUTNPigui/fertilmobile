@@ -13,6 +13,7 @@
     import estilos from '$lib/stores/estilos';
     import { goto } from "$app/navigation";
     
+    
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -592,7 +593,7 @@
         {/if}
     </div>
    
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr>
@@ -621,6 +622,42 @@
                 {/each}
             </tbody>
         </table>
+    </div>
+    <div class="block w-full md:hidden justify-items-center mx-1">
+        {#each tratamientosrow as t}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <button onclick={()=>openEditModal(t.id)}>
+                <div class="block p-4">
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start">
+                            <span >Fecha:</span> 
+                            <span class="mx-1 font-semibold">
+                                {new Date(t.fecha).toLocaleDateString()}
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Caravana:</span> 
+                            <span class="mx-1 font-semibold">
+                                {`${t.expand.animal.caravana}`}
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Tipo:</span> 
+                            <span class="mx-1 font-semibold">
+                                {`${t.expand.tipo.nombre}`}
+                            </span>
+                        </div>
+                        <div class="col-span-2 flex items-start">
+                            <span >{`${t.observacion}`}</span> 
+                            
+                        </div>
+                    </div>
+                </div>
+            </button>
+        </div>
+        {/each}
     </div>
     
     

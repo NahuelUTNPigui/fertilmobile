@@ -4,28 +4,28 @@
     import estilos from "$lib/stores/estilos";
     import PocketBase from 'pocketbase'
     import categorias from "$lib/stores/categorias";
-    let{cabid} = $props()
+    let{cabid,categoria} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let id = $state("")
     let tratamientos = $state([])
     let tipotratamientos = $state([])
-    //Datos tratamiento
-    let categoria = $state("")
     let fecha = $state("")
     let tipo = $state("")
+    let observacion = $state("")
+
     async function getTiposTratamientos(){
         const records = await pb.collection('tipotratamientos').getFullList({
             filter : `cab='${cabid}' && active = true`,
-            sort: '-created',
+            sort: '-nombre',
         });
         tipotratamientos = records
         tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
     async function getTratamientos(){
         const records = await pb.collection('tratamientos').getFullList({
-            sort: '-created ',
+            sort: '-fecha ',
             filter :`animal = '${id}' && active=true`,
             expand:"tipo"
             
@@ -33,7 +33,6 @@
         tratamientos = records
     }
     function openNewModal(){
-        categoria = ""
         tipo = ""
         fecha = ""
         nuevoTratamiento.showModal()
@@ -47,17 +46,12 @@
                 tipo,
                 fecha:fecha +" 03:00:00",
                 active : true,
+                observacion,
                 cab:cabid
             }
+            
             const  record = await pb.collection("tratamientos").create(data)
-            let nombretipo = tipotratamientos.filter(tp=>tp.id==tipo)[0].nombre
-            let item={
-                ...record,
-                expand:{
-                    tipo:{nombre:nombretipo}
-                }
-            }
-            tratamientos.push(item)
+            await getTratamientos()
         }
         catch(err){
             console.error(err)
@@ -191,29 +185,10 @@
                     bind:value={fecha}
                 />
             </label>
-            <label for = "categoria" class="label">
-                <span class="label-text text-base">Categoria</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={categoria}
-                >
-                    {#each categorias as c}
-                        <option value={c.id}>{c.nombre}</option>    
-                    {/each}
-                  </select>
-            </label>
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Tipo tratamiento</span>
             </label>
+            
             <label class="input-group ">
                 <select 
                     class={`
@@ -231,6 +206,22 @@
                     {/each}
                   </select>
             </label>
+            <div class="label">
+                <span class="label-text">Observacion</span>                    
+            </div>
+            <input 
+                id ="observacion" 
+                type="text"  
+                class={`
+                    input 
+                    input-bordered 
+                    border border-gray-300 rounded-md
+                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                    w-full
+                    ${estilos.bgdark2}
+                `}
+                bind:value={observacion}
+            />
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog">

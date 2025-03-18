@@ -19,6 +19,7 @@
     import permisos from "$lib/stores/permisos";
     import { goto } from "$app/navigation";
     import MultiSelect from "$lib/components/MultiSelect.svelte";
+    import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     
 
     let caber = createCaber()
@@ -67,12 +68,7 @@
     let malvet = $state("")
     let botonhabilitado=$state(false)
     let botonhabilitadoAnimal=$state(false)
-    function getNombreEstado(e){
-        
-        let ess = estados.filter(est=>est.id==e)[0]
-        
-        return ess.nombre
-    }
+    
     //Funciones
     function clickFilter(){
         isOpenFilter = !isOpenFilter
@@ -226,7 +222,7 @@
     }
     onMount(async ()=>{
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.model.id
+        usuarioid = pb_json.record.id
         await getTactos()
         filterUpdate()
         await getAnimales()
@@ -563,7 +559,7 @@
         {/if}
     </div>
     
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr>
@@ -589,7 +585,7 @@
                             {`${capitalizeFirstLetter(t.expand.animal.categoria)}`}
                         </td>
                         <td class="text-base p-3 "> {
-                            getNombreEstado(t.prenada)
+                            getEstadoNombre(t.prenada)
                         }</td>
                         <td class="text-base ">
                             {`${t.tipo=="eco"?"Ecografía":"Tacto"}`}
@@ -602,207 +598,96 @@
             </tbody>
         </table>
     </div>
-    
-    <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
-        <div 
-            class="
-                modal-box w-11/12 max-w-xl
-                bg-gradient-to-br from-white to-gray-100 
-                dark:from-gray-900 dark:to-gray-800
-            "
-        >
-            <form method="dialog">
-                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-            </form>
-            {#if idtacto == ""}
-                <h3 class="text-lg font-bold">Nuevo tacto</h3>  
-            {:else}
-                <h3 class="text-lg font-bold">Editar tacto</h3>  
-            {/if}
-            <div class="form-control">
-                <label for = "animal" class="label">
-                    <span class="label-text text-base">Animal</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={animal}
-                        onchange={()=>oninput("ANIMAL")}
-                    >
-                        <option value="agregar">Agregar</option>    
-                        {#each animales as a}
-                            <option value={a.id}>{a.caravana}</option>    
-                        {/each}
-                    </select>
-                </label>
-                {#if animal == "agregar"}
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-                    </form>
-                    <label for = "nombre" class="label">
-                        <span class="label-text text-base">Caravana</span>
-                    </label>
-                    <label class="input-group">
-                        <input 
-                            id ="nombre" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                w-full
-                                ${estilos.bgdark2} 
-                                ${malcaravana?"input-error":""}
-                            `}
-                            bind:value={caravana}
-                            oninput={()=>oninput("NOMBRE")}
-                        />
-                        <div class={`label ${malcaravana?"":"hidden"}`}>
-                            <span class="label-text-alt text-red-400">Error debe escribir la caravana del animal</span>
-                        </div>
-                    </label>
-                    <label for = "sexo" class="label">
-                        <span class="label-text text-base">Sexo</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} bind:value={sexo}>
-                            {#each sexos as s}
-                                <option value={s.id}>{s.nombre}</option>    
-                            {/each}
-                          </select>
-                    </label>
-                    <label for = "peso" class="label">
-                        <span class="label-text text-base">Peso (KG)</span>
-                    </label>
-                    <label class="input-group">
-                        <input id ="peso" type="number"  
-                            class={`
-                                input input-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={peso}
-                        />
-                    </label>
-                    <div class="modal-action justify-start ">
-                        <form method="dialog" >
-                            <button class="btn btn-success text-white" disabled='{!botonhabilitadoAnimal}' onclick={guardarAnimal} >Guardar Animal</button>
-                        </form>
+    <div class="block w-full md:hidden justify-items-center mx-1">
+        {#each tactosrow as t}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <button onclick={()=>openModalEdit(t.id) }>
+                <div class="block p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-medium">{`${new Date(t.fecha).toLocaleDateString()}`}</h3>
+                        {#if t.prenada != 1}
+
+                            <div class={`badge badge-outline badge-${getEstadoColor(t.prenada)}`}>{getEstadoNombre(t.prenada)}</div>
+                        {/if}
+                        
                     </div>
-                {/if}
-                <label for = "tipo" class="label">
-                    <span class="label-text text-base">Categoria</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={categoria}
-                    >
-                        {#each tiposanimal as t}
-                            <option value={t.id}>{t.nombre}</option>    
-                        {/each}
-                      </select>
-                </label>
-                <div class="form-group">
-                    <label for = "prenada" class="label">
-                        <span class="label-text text-base">Estado</span>
-                    </label>
-    
-                    <RadioButton class="m-1 my-3" bind:option={prenada} deshabilitado={false}/>
-                </div>
-                
-                <label for = "fecha" class="label">
-                    <span class="label-text text-base">Fecha </span>
-                </label>
-                <label class="input-group ">
-                    <input id ="fecha" type="date" max={HOY}  
-                        class={`
-                            input input-bordered 
-                            w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} 
-                        bind:value={fecha}
-                        onchange={()=>oninput("FECHA")}
-                    />
-                    {#if malfecha}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe seleccionar la fecha del tacto</span>                    
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start">
+                            <span >Caravana:</span> 
+                            <span class="mx-1 font-semibold">
+                              {t.expand.animal.caravana}
+                            </span>
+                            
                         </div>
-                    {/if}
-                </label>
-                <label for = "tipo" class="label">
-                    <span class="label-text text-base">Tacto/Ecografia</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={tipo}
-                    >
-                        {#each tipostacto as t}
-                            <option value={t.id}>{t.nombre}</option>    
-                        {/each}
-                      </select>
-                </label>
-                <div class="hidden">
-                <label for = "vete" class="label">
-                    <span class="label-text text-base">Veterinario</span>
+                        <div class="flex items-start">
+                            <span >Tipo:</span> 
+                            <span class="mx-2 font-semibold">
+                                {`${t.tipo=="eco"?"Ecografía":"Tacto"}`}
+                            </span>
+                            
+                        </div>
+                        <div class="col-span-2 flex items-start">
+                            <span >{`${t.observacion}`}</span> 
+                            
+                        </div>
+                    </div>
+                </div>
+            </button>
+        </div>
+
+        {/each}
+    </div>
+    
+</Navbarr>
+<dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+    <div 
+        class="
+            modal-box w-11/12 max-w-xl
+            bg-gradient-to-br from-white to-gray-100 
+            dark:from-gray-900 dark:to-gray-800
+        "
+    >
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
+        </form>
+        {#if idtacto == ""}
+            <h3 class="text-lg font-bold">Nuevo tacto</h3>  
+        {:else}
+            <h3 class="text-lg font-bold">Editar tacto</h3>  
+        {/if}
+        <div class="form-control">
+            <label for = "animal" class="label">
+                <span class="label-text text-base">Animal</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={animal}
+                    onchange={()=>oninput("ANIMAL")}
+                >
+                    <option value="agregar">Agregar</option>    
+                    {#each animales as a}
+                        <option value={a.id}>{a.caravana}</option>    
+                    {/each}
+                </select>
+            </label>
+            {#if animal == "agregar"}
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
+                </form>
+                <label for = "nombre" class="label">
+                    <span class="label-text text-base">Caravana</span>
                 </label>
                 <label class="input-group">
                     <input 
-                        id ="vete" 
-                        type="text"  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={nombreveterinario}
-                    />
-                </label>
-                </div>
-                <label class="form-control">
-                    <div class="label">
-                        <span class="label-text">Observacion</span>                    
-                    </div>
-                    <input 
-                        id ="observacion" 
+                        id ="nombre" 
                         type="text"  
                         class={`
                             input 
@@ -810,27 +695,177 @@
                             border border-gray-300 rounded-md
                             focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                             w-full
+                            ${estilos.bgdark2} 
+                            ${malcaravana?"input-error":""}
+                        `}
+                        bind:value={caravana}
+                        oninput={()=>oninput("NOMBRE")}
+                    />
+                    <div class={`label ${malcaravana?"":"hidden"}`}>
+                        <span class="label-text-alt text-red-400">Error debe escribir la caravana del animal</span>
+                    </div>
+                </label>
+                <label for = "sexo" class="label">
+                    <span class="label-text text-base">Sexo</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 focus:border-green-500
+                            ${estilos.bgdark2}
+                        `} bind:value={sexo}>
+                        {#each sexos as s}
+                            <option value={s.id}>{s.nombre}</option>    
+                        {/each}
+                      </select>
+                </label>
+                <label for = "peso" class="label">
+                    <span class="label-text text-base">Peso (KG)</span>
+                </label>
+                <label class="input-group">
+                    <input id ="peso" type="number"  
+                        class={`
+                            input input-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 focus:border-green-500
                             ${estilos.bgdark2}
                         `}
-                        bind:value={observacion}
+                        bind:value={peso}
                     />
                 </label>
-                
-                
+                <div class="modal-action justify-start ">
+                    <form method="dialog" >
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitadoAnimal}' onclick={guardarAnimal} >Guardar Animal</button>
+                    </form>
+                </div>
+            {/if}
+            <label for = "tipo" class="label">
+                <span class="label-text text-base">Categoria</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={categoria}
+                >
+                    {#each tiposanimal as t}
+                        <option value={t.id}>{t.nombre}</option>    
+                    {/each}
+                  </select>
+            </label>
+            <div class="form-group">
+                <label for = "prenada" class="label">
+                    <span class="label-text text-base">Estado</span>
+                </label>
+
+                <RadioButton class="m-1 my-3" bind:option={prenada} deshabilitado={false}/>
             </div>
-            <div class="modal-action justify-start ">
-                <form method="dialog" >
-                  <!-- if there is a button, it will close the modal -->
-                  {#if idtacto==""}
-                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
-                  {:else}
-                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editarTacto} >Editar</button>
-                    <button class="btn btn-error text-white" onclick={()=>eliminar(idtacto)}>Eliminar</button>
-                  {/if}
-                  <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
-                  
-                </form>
+            
+            <label for = "fecha" class="label">
+                <span class="label-text text-base">Fecha </span>
+            </label>
+            <label class="input-group ">
+                <input id ="fecha" type="date" max={HOY}  
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `} 
+                    bind:value={fecha}
+                    onchange={()=>oninput("FECHA")}
+                />
+                {#if malfecha}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha del tacto</span>                    
+                    </div>
+                {/if}
+            </label>
+            <label for = "tipo" class="label">
+                <span class="label-text text-base">Tacto/Ecografia</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={tipo}
+                >
+                    {#each tipostacto as t}
+                        <option value={t.id}>{t.nombre}</option>    
+                    {/each}
+                  </select>
+            </label>
+            <div class="hidden">
+            <label for = "vete" class="label">
+                <span class="label-text text-base">Veterinario</span>
+            </label>
+            <label class="input-group">
+                <input 
+                    id ="vete" 
+                    type="text"  
+                    class={`
+                        input input-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={nombreveterinario}
+                />
+            </label>
             </div>
+            <label class="form-control">
+                <div class="label">
+                    <span class="label-text">Observacion</span>                    
+                </div>
+                <input 
+                    id ="observacion" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={observacion}
+                />
+            </label>
+            
+            
         </div>
-    </dialog>
-</Navbarr>
+        <div class="modal-action justify-start ">
+            <form method="dialog" >
+              <!-- if there is a button, it will close the modal -->
+              {#if idtacto==""}
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
+              {:else}
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editarTacto} >Editar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idtacto)}>Eliminar</button>
+              {/if}
+              <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
+              
+            </form>
+        </div>
+    </div>
+</dialog>

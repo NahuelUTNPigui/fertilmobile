@@ -125,7 +125,7 @@
                         cab:cab.id,
                         observacion:ins.observacion
                     }
-                    //console.log(datains)
+                    
                     const record = await pb.collection("inseminacion").create(datains)
                     await guardarHistorial(pb,recordmadre.id)
                     await pb.collection("animales").update(recordmadre.id,{prenada:3})

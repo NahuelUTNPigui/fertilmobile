@@ -295,11 +295,11 @@
         botonhabilitado = true
         if(isEmpty(fechainseminacion)){
             botonhabilitado = false
-            console.log("mal feca")
+            
         }
         if(isEmpty(pajuela)){
             botonhabilitado = false
-            console.log("mal pajuela")
+            
             
         }
     }

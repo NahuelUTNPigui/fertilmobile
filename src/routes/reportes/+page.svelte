@@ -131,7 +131,6 @@
             }
             ds.push(d)
         }
-        console.log(ds)
         chartPersonalizadoRodeos = new Chart(ctxPersonalizadoRodeos, {
             type: "bar",
             data: {
@@ -445,15 +444,7 @@
             ]
 
             for (let j = 0;j<animales.length;j++){
-                console.log(animales[j].rodeo)
-                console.log(rodeos[i].id)
-                if(animales[j].rodeo == rodeos[i].id){
-                
-                    pesoRodeo += animales[j].peso
-                    console.log(animales[j])
-                }
-                
-                
+                pesoRodeo += animales[j].peso
                 if (animales[j].categoria == "vaca" && animales[j].rodeo == rodeos[i].id){
                     rodeos[i].categoriasrodeos[0].total += 1
                     pesoVaca += animales[j].peso

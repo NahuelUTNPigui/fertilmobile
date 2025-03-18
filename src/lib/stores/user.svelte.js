@@ -4,7 +4,7 @@ export function createUserer(){
     
     if(browser){
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
-        userid = pb_json.model.id
+        userid = pb_json.record.id
     }
     return{
         get userid(){return userid}

@@ -3,22 +3,22 @@
     
     let options = [
         {id:0,nombre:"Vacia"},
-        {id:1,nombre:"Dudosa"},
         {id:2,nombre:"Preñada"},
         {id:3,nombre:"En servicio"}
     ]
     function select(id){
+        
         option = id
     }
     
 </script>
-<div class="bg-transparent grid grid-cols-2 lg:grid-cols-4 ">
+<div class="bg-transparent grid grid-cols-3 lg:grid-cols-4 ">
     {#each options as op}
         
         <button id={op.id} onclick={()=>select(op.id)} 
             disabled={deshabilitado}
             class={`
-                flex-1 m-1 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ease-in-out
+                flex-1 m-1 py-2 px-2 rounded-lg font-medium text-sm transition-all duration-200 ease-in-out
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500
                 ${option==op.id?
                     "bg-green-600 text-white shadow-lg transform scale-105":

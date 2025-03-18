@@ -5,30 +5,47 @@
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
-    import { createPer } from "$lib/stores/permisos.svelte";
-    import { getPermisosList } from "$lib/permisosutil/lib";
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
-    let per = createPer()
-    let userpermisos = getPermisosList(per.per.permisos)
+    let loading = $state(false)
 
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
     let lotes = $state([])
-    let loading = $state(false)
+    let rodeos = $state([])
+    let animales = $state([])
+    let padres = $state([])
+    let madres = $state([])
+
     function exportarTemplate(){
         let csvData = [{
-            nombre:"",
+            caravana:"AAA",
+            peso:"0",
+            sexo:"H/M",
+            rodeo:"",
+            lote:"",
+            fechanacimiento:"MM/DD/AAAA",
+            nombremadre:"",
+            nombrepadre:"",
+            observaciones:""
         }].map(item=>({
-            NOMBRE_LOTE:item.nombre,
+            CARAVANA: item.caravana,
+            PESO: item.peso,
+            SEXO: item.sexo,
+            RODEO: item.rodeo,
+            LOTE: item.lote,
+            FECHANACIMIENTO: item.fechanacimiento,
+            CARAVANA_MADRE: item.nombremadre,
+            CARAVANA_PADRE: item.nombrepadre,
+            OBSERVACIONES:item.observaciones
         }))
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(csvData);
-        XLSX.utils.book_append_sheet(wb, ws, 'Lotes');
+        XLSX.utils.book_append_sheet(wb, ws, 'Animales');
         
-        XLSX.writeFile(wb, 'Modelo lotes.xlsx');
+        XLSX.writeFile(wb, 'Modelo nacimientos.xlsx');
     }
     function importarArchivo(event){
         let file = event.target.files[0];
@@ -44,85 +61,186 @@
         reader.readAsBinaryString(file);
     }
     async function procesarArchivo(){
-        if(!userpermisos[2]){
-            Swal.fire("Error","No tienes permisos de importar","error")
-            return
-        }
         if(filename == ""){
             Swal.fire("Error","Seleccione un archivo","error")
-            return
         }
 
-        let sheetlotes = wkbk.Sheets.Lotes
-        
-        if(!sheetlotes){
+        let sheetanimales = wkbk.Sheets.Animales
+        if(!sheetanimales){
             Swal.fire("Error","Debe subir un archivo válido","error")
-            return
         }
         
-        let lotes = []
-        let loteshashmap = {}
+        let animales = []
+        let animaleshashmap = {}
         loading = true
-        for (const [key, value ] of Object.entries(sheetlotes)) {
+        for (const [key, value ] of Object.entries(sheetanimales)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
             if(key == "!ref" || key == "!margins" || tail == "1"){
                 continue
             }
-            if(loteshashmap[tail]){
+            if(animaleshashmap[tail]){
                 if(firstLetter=="A"){
-                    loteshashmap[tail].nombre = value.v
+                    animaleshashmap[tail].caravana = value.v
                 }
-                
+                if(firstLetter=="B"){
+                    animaleshashmap[tail].peso = value.v
+                }
+                if(firstLetter=="C"){
+                    animaleshashmap[tail].sexo = value.v
+                }
+                if(firstLetter=="D"){
+                    animaleshashmap[tail].rodeo = value.v
+                }
+                if(firstLetter=="E"){
+                    animaleshashmap[tail].lote = value.v
+                }
+                if(firstLetter=="F"){
+                    animaleshashmap[tail].fechanacimiento = value.w?new Date(value.w):""
+                }
+                if(firstLetter=="G"){
+                    animaleshashmap[tail].nombremadre = value.v
+                }
+                if(firstLetter=="H"){
+                    animaleshashmap[tail].nombrepadre = value.v
+                }
+                if(firstLetter=="I"){
+                    animaleshashmap[tail].observaciones = value.v
+                }
             }
             else{
-                loteshashmap[tail]={
-                    nombre:''
+                animaleshashmap[tail]={
+                    caravana:'',peso:'',sexo:'',rodeo:'',lote:"",fechanacimiento:"",nombremadre:"",nombrepadre:"",observaciones:""
                 }
                 if(firstLetter=="A"){
-                    loteshashmap[tail].nombre = value.v
+                    animaleshashmap[tail].caravana = value.v
                 }
-                
+                if(firstLetter=="B"){
+                    animaleshashmap[tail].peso = value.v
+                }
+                if(firstLetter=="C"){
+                    animaleshashmap[tail].sexo = value.v
+                }
+                if(firstLetter=="D"){
+                    animaleshashmap[tail].rodeo = value.v
+                }
+                if(firstLetter=="E"){
+                    animaleshashmap[tail].lote = value.v
+                }
+                if(firstLetter=="F"){
+                    animaleshashmap[tail].fechanacimiento = value.w?new Date(value.w):""
+                }
+                if(firstLetter=="G"){
+                    animaleshashmap[tail].nombremadre = value.v
+                }
+                if(firstLetter=="H"){
+                    animaleshashmap[tail].nombrepadre = value.v
+                }
+                if(firstLetter=="I"){
+                    animaleshashmap[tail].observaciones = value.v
+                }          
             }
         }
-        for (const [key, value ] of Object.entries(loteshashmap)) {
-            lotes.push(value)
+        for (const [key, value ] of Object.entries(animaleshashmap)) {
+            animales.push(value)
         }
-        for(let i = 0;i<lotes.length;i++){
-            let lo = lotes[i]
-
+        for(let i = 0;i<animales.length;i++){
+            let an = animales[i]
+            let conlote = false
+            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
+            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
+            let padre = animales.filter(p=>p.caravana==an.nombrepadre)[0]
+            let madre = animales.filter(m=>m.caravana==an.nombremadre)[0]
+            
+            // Agregar animal si no existe y nacimiento
             let dataadd = {
-                nombre:lo.nombre,
+                caravana:an.caravana,
                 active:true,
                 delete:false,
+                sexo:an.sexo,
+                peso:an.peso,
+                fechanacimiento: an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+                nombremadre: an.nombremadre,
+                nombrepadre: an.nombrepadre,
                 cab:cab.id
             }
-
-            let datamod = {
-                nombre:lo.nombre 
+            //Modificar nacimiento cuando existe
+            let datanacimiento = {
+                fecha:an.fechanacimiento + " 03:00:00",
+                nombremadre: an.nombremadre,
+                nombrepadre: an.nombrepadre,
+                observacion:an.observaciones,
+                cab:cab.id
+            }
+            
+            if(lote){
+                dataadd.lote = lote.id
+            }
+            if(rodeo){
+                dataadd.rodeo = rodeo.id
             }
 
+            if(padre){
+                datanacimiento.padre=padre.id
+            }
+            if(madre){
+                datanacimiento.madre = madre.id
+            }
+            
             try{
-                const record = await pb.collection('lotes').getFirstListItem(`nombre="${lo.nombre}"`,{});
-                console.log("mod")
-                await pb.collection('lotes').update(record.id, datamod);               
+                
+                const record = await pb.collection('animales').getFirstListItem(`caravana="${an.caravana}"`,{});
+                if(record.nacimiento != ""){
+                    try{
+                        await pb.collection('nacimientos').update(record.nacimiento,datanacimiento)
+                    }
+                    catch(err){
+                        console.error(err)
+                    }
+                    
+                }
+                else{
+                    try{
+                        
+                        const recordnacimiento = await pb.collection('nacimientos').create(datanacimiento)
+                        await pb.collection('animales').update(record.id,{
+                            fechanacimiento: an.fechanacimiento+ " 03:00:00",
+                            nacimiento : recordnacimiento.id
+                        })
+                    }
+                    catch(err){
+                        console.error(err)
+                    }
+                    
+                }
             }
             catch(err){
-                console.log("Add")
-                await pb.collection('lotes').create(dataadd);
-
+                const recordnacimiento = await pb.collection('nacimientos').create( datanacimiento);
+                dataadd.nacimiento = recordnacimiento.id
+                await pb.collection('animales').create(dataadd);
             }
         }
         filename = ""
         loading = false
         wkbk = null
         Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        
     }
     onMount(async ()=>{
+        rodeos = await pb.collection('rodeos').getFullList({
+            filter:`active = true && cab ='${cab.id}'`,
+            sort: '-nombre',
+        });
+        
         lotes = await pb.collection('lotes').getFullList({
             filter:`active = true && cab ='${cab.id}'`,
             sort: '-nombre',
+        });
+        animales = await pb.collection('animales').getFullList({
+            filter:`delete = false && cab ='${cab.id}'`,
         })
+
+        
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
@@ -133,7 +251,7 @@
         `}
         onclick={exportarTemplate}
     >
-       Descargar Plantilla
+        Descargar Plantilla
     </button>
     <div class={`
         w-full
@@ -143,11 +261,11 @@
             type="file"
             accept=".xlsx, .xls"  
             class="sr-only"
-            id="lotes-upload"
+            id="nacimiento-upload"
             onchange={(e)=>importarArchivo(e)}
         />
         <label
-              for="lotes-upload"
+              for="nacimiento-upload"
               class={`
                 w-full flex items-center justify-center px-4 py-4 
                 border border-green-300 dark:border-green-600 rounded-md shadow-sm text-lg

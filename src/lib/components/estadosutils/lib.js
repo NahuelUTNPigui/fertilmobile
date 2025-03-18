@@ -8,3 +8,12 @@ export function getEstadoNombre(id){
         return ""
     }
 }
+export function getEstadoColor(id){
+    let e = estados.filter(est=>est.id==id)[0]
+    if(e){
+        return e.color
+    }
+    else{
+        return "neutral"
+    }
+}

@@ -251,12 +251,13 @@
     }
     function prepararData(item){
         return {
-            MADRE:item.expand.madre.caravana,
-            PADRES:getNombrePadres(item.padres),
-            FECHA_DESDE:item.fechadesde?new Date(item.fechadesde).toLocaleDateString():"",
+            FECHA:item.fechadesde?new Date(item.fechadesde).toLocaleDateString():item.fechainseminacion?new Date(item.fechainseminacion).toLocaleDateString():"",
             FECHA_HASTA:item.fechahasta?new Date(item.fechahasta).toLocaleDateString():"",
+            MADRE:item.fechadesde?item.expand.madre.caravana:item.expand.animal.caravana,
+            PADRES:item.fechadesde?getNombrePadres(item.padres):item.pajuela,
             FECHA_PARTO:item.fechaparto?new Date(item.fechaparto).toLocaleDateString():"",
-            OBSERVACION:item.observacion
+            OBSERVACION:item.observacion,
+            TIPO:item.fechadesde?"Servicio":"Artificial"
 
         }
     }
@@ -438,7 +439,7 @@
             </div>
         {/if}
     </div>
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr>
@@ -463,7 +464,7 @@
                         }
                     </td>
                     <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechahasta?new Date(s.fechahasta).toLocaleDateString():""}</td>
-                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechaparto?new Date(s.fechaparto).toLocaleDateString():"   "}</td>
+                    <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechaparto?new Date(s.fechaparto).toLocaleDateString():""}</td>
                     <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
                         {   s.fechadesde?
                             s.expand.madre.caravana:
@@ -488,6 +489,82 @@
                 {/each}
             </tbody>
         </table>
+    </div>
+    <div class="block w-full md:hidden justify-items-center mx-1">
+        {#each serviciosrow as s}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <button onclick={()=>s.fechadesde?openEditModal(s.id):openEditModalIns(s.id)}>
+                <div class="block p-4">
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start">
+                            <span >Tipo:</span> 
+                            <span class="mx-1 font-semibold">
+                                {
+                                    s.fechadesde?
+                                    "Natural":
+                                    "Artificial"
+                                }
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Fecha parto:</span> 
+                            <span class="mx-1 font-semibold">
+                                {s.fechaparto?new Date(s.fechaparto).toLocaleDateString():""}
+                            </span>
+                            
+                        </div>
+                        <div class={`flex items-start ${s.fechadesde?"":"col-span-2"}`}>
+                            <span >Fecha {s.fechadesde?"desde":"de inseminación"}:</span> 
+                            <span class="mx-1 font-semibold">
+                                {
+                                    s.fechadesde?new Date(s.fechadesde).toLocaleDateString():
+                                    s.fechainseminacion?new Date(s.fechainseminacion).toLocaleDateString():
+                                    ""
+                                }
+                            </span>
+                        </div>
+                        {#if s.fechadesde}
+                            <div class="flex items-start">
+                                <span >Fecha hasta:</span> 
+                                <span class="mx-1 font-semibold">
+                                    {
+                                        s.fechadesde?new Date(s.fechadesde).toLocaleDateString():
+                                        s.fechainseminacion?new Date(s.fechainseminacion).toLocaleDateString():
+                                        ""
+                                    }
+                                </span>
+                            </div>
+                        {/if}
+                        <div class="flex items-start">
+                            <span >Madre:</span> 
+                            <span class="mx-1 font-semibold">
+                                {   s.fechadesde?
+                                    s.expand.madre.caravana:
+                                    s.expand.animal.caravana
+                                }
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Padres:</span> 
+                            <span class="mx-1 font-semibold">
+                                {
+                                    s.fechadesde?
+                                    getNombrePadres(s.padres):
+                                    s.pajuela
+                                }
+                            </span>
+                        </div>
+                        <div class="col-span-2 flex items-start">
+                            <span >{`${s.observacion}`}</span>     
+                        </div>
+                    </div>
+                </div>
+            </button>
+            
+        </div>
+        {/each}
     </div>
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
@@ -539,7 +616,7 @@
                         ${estilos.bgdark2}
                     `} 
                     bind:value={fechadesdeserv}
-                    s
+                    
                 />
                 
             </label>

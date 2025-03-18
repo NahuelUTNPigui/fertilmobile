@@ -22,7 +22,7 @@
     import Pesajes from "$lib/components/animal/Pesajes.svelte";
     import HistoriaClinica from "$lib/components/animal/HistoriaClinica.svelte";
     import tiponoti from "$lib/stores/tiponoti";
-    
+    import Servicios from "$lib/components/animal/Servicios.svelte";    
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let caber = createCaber()
@@ -46,6 +46,7 @@
     let nacimientoobj = $state({})
     let tactos = $state([])
     let prenada = $state(0)
+    
     let modohistoria = $state(false)
     
     async function  getPariciones(id){
@@ -88,6 +89,7 @@
         try{
             const data = {
                 delete: true,
+                active:false
             };
 
             const record = await pb.collection('animales').update(slug, data);  
@@ -116,7 +118,7 @@
 
             let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         
-            let origenusuarioid =  pb_json.model.id
+            let origenusuarioid =  pb_json.record.id
             let datatrans = {
                 texto:"Se transfirió a "+caravana,
                 titulo:"Transferencia de 1 animal",
@@ -157,7 +159,7 @@
                 rodeo = recorda.rodeo
                 lote = recorda.lote
                 categoria = recorda.categoria
-                prenada = recorda.prenada
+                prenada = recorda.prenada==1?0:recorda.prenada
                 if(recorda.fechafallecimiento != ""){
                     fechafall = recorda.fechafallecimiento.split(" ")[0]
                     motivobaja = recorda.motivobaja
@@ -173,9 +175,6 @@
 
         }
     })
-    $effect(()=>{
-        console.log(prenada)
-    })
 </script>
 <Navbarr>
     <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
@@ -185,17 +184,21 @@
         <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
             <Pesajes pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
         </CardAnimal>
-        
+        {#if cargado}
         <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-            <Tratamientos cabid={cab.id}></Tratamientos>
+            <Tratamientos cabid={cab.id} {categoria} ></Tratamientos>
         </CardAnimal>
         <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-            <Observaciones cabid={cab.id} />
+            <Observaciones cabid={cab.id} {categoria}/>
         </CardAnimal>
+        {/if}
+        
         {#if sexo=="H"}
+            {#if cargado}
             <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
                 <Pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
             </CardAnimal>
+            
             <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
                 
                 <Tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
@@ -204,6 +207,12 @@
             <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
                 <Inseminaciones cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
             </CardAnimal>
+
+            <!--<CardAnimal cardsize="max-w-7xl" titulo="Servicios">
+                <Servicios cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
+            </CardAnimal>
+            -->
+            {/if}
         {/if}
         <CardAnimal cardsize="max-w-7xl" titulo="Historial">
             <Historial  />

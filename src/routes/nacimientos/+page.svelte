@@ -145,19 +145,7 @@
             }
             
             Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
-            //let item = {
-            //    caravana,
-            //    observacion,
-            //    cab,
-            //    nombremadre,
-            //    nombrepadre,
-            //    madre,
-            //    padre,
-            //    fecha:fecha +" 03:00:00",
-            //    animalid:recorda.id
-            //}
-            //nacimientos.push(item)
-            //nacimientos.sort((n1,n2)=>new Date(n1.fecha)>new Date(n2.fecha)?-1:1)
+            
             await getNacimientos()
             filterUpdate()
 
@@ -330,7 +318,7 @@
     }
     onMount(async ()=>{
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.model.id
+        usuarioid = pb_json.record.id
         await getNacimientos()
         filterUpdate()
         await getAnimales()
@@ -579,7 +567,7 @@
             </div>
         {/if}
     </div> 
-    <div class="w-full grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr>
@@ -613,122 +601,226 @@
             </tbody>
         </table>
     </div>
-    <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
-        <div class="
-                modal-box w-11/12 max-w-xl
-                bg-gradient-to-br from-white to-gray-100 
-                dark:from-gray-900 dark:to-gray-800
-            "
-        >
-            <form method="dialog">
-                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-            </form>
+    <div class="block w-full md:hidden justify-items-center mx-1">
+        {#each nacimientosrow as n}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <button onclick={()=>openEditModal(n.id)}>
+                <div class="block p-4">
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start">
+                            <span >Fecha:</span> 
+                            <span class="mx-1 font-semibold">
+                                {new Date(n.fecha).toLocaleDateString()}
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Caravana:</span> 
+                            <span class="mx-1 font-semibold">
+                                {`${n.caravana}`}
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Madre:</span> 
+                            <span class="mx-1 font-semibold">
+                                {`${n.nombremadre}`}
+                            </span>
+                            
+                        </div>
+                        <div class="flex items-start">
+                            <span >Padre:</span> 
+                            <span class="mx-1 font-semibold">
+                                {`${n.nombrepadre}`}
+                            </span>
+                            
+                        </div>
+                        <div class="col-span-2 flex items-start">
+                            <span >{`${n.observacion}`}</span> 
+                            
+                        </div>
+                    </div>
+                    
+                </div>
+            </button>
+        </div>
+        {/each}
+    </div>
+</Navbarr>
+<dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+    <div class="
+            modal-box w-11/12 max-w-xl
+            bg-gradient-to-br from-white to-gray-100 
+            dark:from-gray-900 dark:to-gray-800
+        "
+    >
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
+        </form>
+        {#if idnacimiento == ""}
+            <h3 class="text-lg font-bold">Nuevo nacimiento</h3>  
+        {:else}
+            <h3 class="text-lg font-bold">Ver nacimiento</h3>  
+        {/if}
+        <div class="form-control">
+            <label for = "nombre" class="label">
+                <span class={estilos.labelForm}>Caravana</span>
+            </label>
+            <label class="input-group">
+                <input id ="nombre" type="text"  
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                        
+                    `}
+                    disabled={idnacimiento!=""}
+                  
+                    bind:value={caravana}
+                    oninput={()=>onchange("CARAVANA")}
+                />
+                {#if malcaravana}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe escribir la caravana del animal por nacer</span>                    
+                    </div>
+                {/if}
+            </label>
+            
             {#if idnacimiento == ""}
-                <h3 class="text-lg font-bold">Nuevo nacimiento</h3>  
-            {:else}
-                <h3 class="text-lg font-bold">Ver nacimiento</h3>  
-            {/if}
-            <div class="form-control">
-                <label for = "nombre" class="label">
-                    <span class={estilos.labelForm}>Caravana</span>
+                <label for = "sexo" class="label">
+                    <span class={estilos.labelForm}>Sexo</span>
                 </label>
-                <label class="input-group">
-                    <input id ="nombre" type="text"  
+                <label class="input-group ">
+                    <select 
                         class={`
-                            input input-bordered 
-                            w-full
+                            select select-bordered w-full
                             border border-gray-300 rounded-md
                             focus:outline-none focus:ring-2 
                             focus:ring-green-500 
                             focus:border-green-500
                             ${estilos.bgdark2} 
-                            
                         `}
-                        disabled={idnacimiento!=""}
-                      
-                        bind:value={caravana}
-                        oninput={()=>onchange("CARAVANA")}
-                    />
-                    {#if malcaravana}
+                        bind:value={sexo}
+                        onchange={()=>onchange("SEXO")}
+                    >
+                        {#each sexos as s}
+                            <option value={s.id}>{s.nombre}</option>    
+                        {/each}
+                    </select>
+                    {#if malsexo}
                         <div class="label">
-                            <span class="label-text-alt text-red-500">Debe escribir la caravana del animal por nacer</span>                    
+                            <span class="label-text-alt text-red-500">Debe seleccionar el sexo del animal</span>                    
                         </div>
                     {/if}
                 </label>
-                
-                {#if idnacimiento == ""}
-                    <label for = "sexo" class="label">
-                        <span class={estilos.labelForm}>Sexo</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 
-                                focus:border-green-500
-                                ${estilos.bgdark2} 
-                            `}
-                            bind:value={sexo}
-                            onchange={()=>onchange("SEXO")}
-                        >
-                            {#each sexos as s}
-                                <option value={s.id}>{s.nombre}</option>    
-                            {/each}
-                        </select>
-                        {#if malsexo}
-                            <div class="label">
-                                <span class="label-text-alt text-red-500">Debe seleccionar el sexo del animal</span>                    
-                            </div>
-                        {/if}
-                    </label>
 
-                    <label for = "peso" class="label">
-                        <span class={estilos.labelForm}>Peso (KG)</span>
-                    </label>
-                    <label class="input-group">
-                        <input id ="peso" type="number"  
-                            class={`
-                                input input-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2} 
-                            `} 
-                            bind:value={peso}
-                        />
-                    </label>
-                {/if}
-                <label for = "fechanacimiento" class="label">
-                    <span class={estilos.labelForm}>Fecha nacimiento</span>
+                <label for = "peso" class="label">
+                    <span class={estilos.labelForm}>Peso (KG)</span>
                 </label>
-                <label class="input-group ">
-                    <input id ="fechanacimiento" type="date" max={HOY}  
+                <label class="input-group">
+                    <input id ="peso" type="number"  
                         class={`
                             input input-bordered w-full
                             border border-gray-300 rounded-md
                             focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
+                            focus:ring-green-500 focus:border-green-500
                             ${estilos.bgdark2} 
-                        `}
-                        bind:value={fecha}
-                        onchange={()=>onchange("FECHA")}
+                        `} 
+                        bind:value={peso}
                     />
-                    {#if malfecha}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe seleccionar la fecha del nacimiento</span>                    
-                        </div>
-                    {/if}
                 </label>
-                <div class="hidden">
-                <label for = "nombremadre" class="label">
-                    <span class="label-text text-base">Caravana madre</span>
-                </label>
+            {/if}
+            <label for = "fechanacimiento" class="label">
+                <span class={estilos.labelForm}>Fecha nacimiento</span>
+            </label>
+            <label class="input-group ">
+                <input id ="fechanacimiento" type="date" max={HOY}  
+                    class={`
+                        input input-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={fecha}
+                    onchange={()=>onchange("FECHA")}
+                />
+                {#if malfecha}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha del nacimiento</span>                    
+                    </div>
+                {/if}
+            </label>
+            <div class="hidden">
+            <label for = "nombremadre" class="label">
+                <span class="label-text text-base">Caravana madre</span>
+            </label>
+            <label class="input-group">
+                <input 
+                    id ="nombremadre" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none 
+                        focus:ring-2 focus:ring-green-500 
+                        focus:border-green-500
+                        w-full 
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={nombremadre}
+                    oninput={()=>onchange("MADRE")}
+                    
+                />
+                {#if malmadre}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe escribir el nombre de la madre</span>                    
+                    </div>
+                {/if}
+            </label>
+            <label for = "madre" class="label">
+                <span class="label-text text-base">Madre</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={madre}
+                    onchange={getNombreMadre}
+                >
+                    {#each madres as m}
+                        <option value={m.id}>{m.caravana}</option>    
+                    {/each}
+                  </select>
+            </label>
+            <label for = "nombrepadre" class="label">
+                <span class="label-text text-base">Caravana padre</span>
+            </label>
+            
+            </div>
+            {#if cargadoanimales}
+                <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} onelegir={onelegirMadre} onwrite={onwriteMadre}/>
+                <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} onelegir={onelegirPadre} onwrite={onwritePadre}/>
+            {/if}
+            
+            
+            
+            
+            <div class="hidden">
                 <label class="input-group">
                     <input 
-                        id ="nombremadre" 
+                        id ="nombrepadre" 
                         type="text"  
                         class={`
                             input 
@@ -740,127 +832,68 @@
                             w-full 
                             ${estilos.bgdark2} 
                         `}
-                        bind:value={nombremadre}
-                        oninput={()=>onchange("MADRE")}
-                        
+                        bind:value={nombrepadre}
+                        oninput={()=>onchange("PADRE")}
                     />
                     {#if malmadre}
                         <div class="label">
-                            <span class="label-text-alt text-red-500">Debe escribir el nombre de la madre</span>                    
+                            <span class="label-text-alt text-red-500">Debe escribir el nombre del padre</span>                    
                         </div>
                     {/if}
                 </label>
-                <label for = "madre" class="label">
-                    <span class="label-text text-base">Madre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={madre}
-                        onchange={getNombreMadre}
-                    >
-                        {#each madres as m}
-                            <option value={m.id}>{m.caravana}</option>    
-                        {/each}
-                      </select>
-                </label>
-                <label for = "nombrepadre" class="label">
-                    <span class="label-text text-base">Caravana padre</span>
-                </label>
-                
+            <label for = "padre" class="label">
+                <span class="label-text text-base">Padre</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={padre}
+                    onchange={getNombrePadre}
+                >
+                    {#each padres as p}
+                        <option value={p.id}>{p.caravana}</option>    
+                    {/each}
+                  </select>
+            </label>
+            </div>
+            <label class="form-control">
+                <div class="label">
+                    <span class="label-text">Observacion</span>                    
                 </div>
-                {#if cargadoanimales}
-                    <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} onelegir={onelegirMadre} onwrite={onwriteMadre}/>
-                    <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} onelegir={onelegirPadre} onwrite={onwritePadre}/>
-                {/if}
-                
-                
-                
-                
-                <div class="hidden">
-                    <label class="input-group">
-                        <input 
-                            id ="nombrepadre" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none 
-                                focus:ring-2 focus:ring-green-500 
-                                focus:border-green-500
-                                w-full 
-                                ${estilos.bgdark2} 
-                            `}
-                            bind:value={nombrepadre}
-                            oninput={()=>onchange("PADRE")}
-                        />
-                        {#if malmadre}
-                            <div class="label">
-                                <span class="label-text-alt text-red-500">Debe escribir el nombre del padre</span>                    
-                            </div>
-                        {/if}
-                    </label>
-                <label for = "padre" class="label">
-                    <span class="label-text text-base">Padre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={padre}
-                        onchange={getNombrePadre}
-                    >
-                        {#each padres as p}
-                            <option value={p.id}>{p.caravana}</option>    
-                        {/each}
-                      </select>
-                </label>
-                </div>
-                <label class="form-control">
-                    <div class="label">
-                        <span class="label-text">Observacion</span>                    
-                    </div>
-                    <input 
-                        id ="observacion" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={observacion}
-                    />
-                </label>
+                <input 
+                    id ="observacion" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={observacion}
+                />
+            </label>
 
-            </div>
-            <div class="modal-action justify-start ">
-                <form method="dialog" >
-                  <!-- if there is a button, it will close the modal -->
-                  {#if idnacimiento == ""}
-                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
-                    {:else}
-                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
-                    <button class="btn btn-error text-white" onclick={()=>eliminar(idnacimiento)}>Eliminar</button>
-                  {/if}
-                  <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
-                  
-                </form>
-            </div>
         </div>
-    </dialog>
-</Navbarr>
+        <div class="modal-action justify-start ">
+            <form method="dialog" >
+              <!-- if there is a button, it will close the modal -->
+              {#if idnacimiento == ""}
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
+                {:else}
+                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idnacimiento)}>Eliminar</button>
+              {/if}
+              <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
+              
+            </form>
+        </div>
+    </div>
+</dialog>

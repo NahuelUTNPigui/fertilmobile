@@ -4,14 +4,13 @@
     import estilos from "$lib/stores/estilos";
     import PocketBase from 'pocketbase'
     import categorias from "$lib/stores/categorias";
-    let {cabid} = $props()
+    let {cabid,categoria} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const HOY = new Date().toISOString().split("T")[0]
     const pb = new PocketBase(ruta);
     let id = $state("")
     let observaciones = $state([])
     //datos observacion
-    let categoria = $state("")
     let fecha = $state("")
     let observacion = $state("")
     async function guardarObservacion(){
@@ -38,13 +37,12 @@
     }
     function openNewModal(){
         observacion = ""
-        categoria = ""
         fecha = ""
         nuevaObservacion.showModal()
     }
     async function getObservaciones(){
         const records = await pb.collection('observaciones').getFullList({
-            sort: '-created',
+            sort: '-fecha',
             filter :`animal = '${id}' && active=true`,
         });
         observaciones = records
@@ -165,26 +163,7 @@
         </form>
         <h3 class="text-lg font-bold">Nueva observacion</h3>  
         <div class="form-control">
-            <label for = "categoria" class="label">
-                <span class="label-text text-base">Categoria</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2}
-                    `}
-                    bind:value={categoria}
-                >
-                    {#each categorias as c}
-                        <option value={c.id}>{c.nombre}</option>    
-                    {/each}
-                </select>
-            </label>
+            
             <label for = "fecha" class="label">
                 <span class="label-text text-base">Fecha </span>
             </label>

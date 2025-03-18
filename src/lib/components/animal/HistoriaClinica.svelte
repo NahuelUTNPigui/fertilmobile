@@ -8,6 +8,7 @@
     import categorias from "$lib/stores/categorias";
     import estados from "$lib/stores/estados";
     import {capitalize} from "$lib/stringutil/lib"
+    import { getEstadoNombre } from "../estadosutils/lib";
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id = $state("")
@@ -18,6 +19,7 @@
     let observaciones = $state([])
     let pariciones = $state([])
     let pesajes = $state([])
+    let servicios = $state([])
     let historialeventos = $state([])
 
     async function getHistorial(){
@@ -26,10 +28,16 @@
             sort:"-created",
         })
     }
+    async function getServicios() {
+        inseminaciones = await pb.collection("servicios").getFullList({
+            filter:`madre='${id}'`,
+            sort:"-fechadesde"
+        })
+    }
     async function getInseminaciones() {
         inseminaciones = await pb.collection("inseminacion").getFullList({
             filter:`animal='${id}'`,
-            sort:"-created"
+            sort:"-fechainseminacion"
         })
     }
     async function getObservaciones() {
@@ -41,25 +49,26 @@
     async function getPesajes() {
         pesajes = await pb.collection("pesaje").getFullList({
             filter:`animal='${id}'`,
-            sort:"-created"
+            sort:"-fecha"
         })
     }
     async function getTratamientos() {
         tratamientos = await pb.collection("tratamientos").getFullList({
             filter:`animal='${id}'`,
-            sort:"-created"
+            sort:"-fecha",
+            expand:"tipo"
         })
     }
     async function getTactos() {
         tactos = await pb.collection("tactos").getFullList({
             filter:`animal='${id}'`,
-            sort:"-created"
+            sort:"-fecha"
         })
     }
     async function getPariciones() {
         pariciones = await pb.collection("nacimientos").getFullList({
             filter:`madre='${id}'`,
-            sort:"-created"
+            sort:"-fecha"
         })
     }
 
@@ -70,7 +79,18 @@
                 return{
                     fecha:i.fechainseminacion,
                     nombre:"Inseminación",
-                    info: "",
+                    info: i.observacion,
+                    caravana: historial[0].caravana
+                }
+            }))
+            //historialeventos.push(inseminaciones)
+        }
+        if (servicios.length != 0) {
+            historialeventos = historialeventos.concat(servicios.map(i=>{
+                return{
+                    fecha:i.fecha,
+                    nombre:"Servicio",
+                    info: i.observacion,
                     caravana: historial[0].caravana
                 }
             }))
@@ -81,7 +101,7 @@
                 return{
                     fecha:i.fecha,
                     nombre:"Parición",
-                    info: "",
+                    info: i.observacion,
                     caravana: historial[0].caravana
                 }
             }))
@@ -102,7 +122,7 @@
                 return{
                     fecha:i.fecha,
                     nombre:"Tratamiento",
-                    info: i.tipo.nombre,
+                    info: i.expand.tipo.nombre,
                     caravana: historial[0].caravana
                 }
             }))
@@ -127,34 +147,7 @@
                 }
             }))
         }
-        /*
-        for (let i = 0; i < historialeventos.length; i++) {
-            if (inseminaciones.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Inseminación"
-            }
-            if (pariciones.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Parición"
-            }
-            if (tactos.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Tacto"
-            }
-            if (tratamientos.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Tratamiento"
-            }
-            if (pesajes.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Pesaje"
-            }
-            if (observaciones.includes(historialeventos[i])) {
-                historialeventos[i].nombre = "Observación"
-            }
-        }
-            */
         historialeventos.sort((h1,h2)=>new Date(h1.fecha)< new Date(h2.fecha)?1:-1)
-    }
-
-    function getEstadoNombre(estado){
-        let e = estados.filter(est=>est.id==estado)[0]
-        return e.nombre
     }
 
     function prepararData(item){
@@ -174,11 +167,12 @@
         await getObservaciones()
         await getPesajes()
         await getPariciones()
+        await getServicios()
         getHistorialEventos(inseminaciones, pariciones, tactos, tratamientos, observaciones, pesajes)
     })
 </script>
 
-<div class="w-full flex justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
+<div class="hidden w-full md:block justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
     {#if historialeventos.length == 0}
         <p class="mt-5 text-lg">No se encontraron eventos asociados</p>
     {:else}
@@ -186,9 +180,8 @@
             <thead>
                 <tr>
                     <th class="text-base mx-1 px-1"  >Fecha</th>
-                    <th class="text-base mx-1 px-1"  >Caravana</th>
                     <th class="text-base mx-1 px-1"  >Evento</th>
-                    <th class="text-base mx-1 px-1"  >Info</th>
+                    <th class="text-base mx-1 px-1"  >Informacion</th>
                 </tr>
             </thead>
             <tbody>
@@ -196,9 +189,6 @@
                     <tr>
                         <td class="text-base">
                             {new Date(h.fecha).toLocaleDateString()}
-                        </td>
-                        <td class="text-base">
-                            {h.caravana}
                         </td>
                         <td class="text-base">
                             {h.nombre}
@@ -220,4 +210,39 @@
         {prepararData}
     />
     </div>
+</div>
+<div class="block  md:hidden justify-items-center mx-1">
+    {#if historialeventos.length == 0}
+        <p class="mt-5 text-lg">No se encontraron eventos asociados</p>
+    {:else}
+        {#each historialeventos as h}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <div class="block p-4">
+                <div class="grid grid-cols-2 gap-y-2">
+                    <div class="flex items-start">
+                        <span >Fecha:</span> 
+                        <span class="font-semibold">
+                            {new Date(h.fecha).toLocaleDateString()}
+                        </span>
+                        
+                    </div>
+                    <div class="flex items-start">
+                        <span >Evento:</span> 
+                        <span class="font-semibold">
+                            {h.nombre}
+                        </span>
+                        
+                    </div>
+                    <div class="flex items-start">
+                        <span >Información:</span> 
+                        <span class="font-semibold">
+                            {h.info}
+                        </span>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        {/each}
+    {/if}
 </div>

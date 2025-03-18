@@ -1,3 +1,4 @@
+import sexos from "$lib/stores/sexos";
 export function isEmpty(str){
     return (!str || str.length === 0 );
 }
@@ -24,4 +25,14 @@ export function randomString(len, an) {
 export function getWholeWordButLastLetter(word){
     let newword = word.slice(0,word.length - 2)
     return newword
+}
+export function getSexoNombre(s){
+    let sex = sexos.filter(se=>se.id == s)[0]
+    if(sex){
+        return sex.nombre
+    }
+    else{
+        return ""
+    }
+    
 }

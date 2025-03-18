@@ -13,6 +13,8 @@
     import {capitalize} from "$lib/stringutil/lib"
     import {guardarHistorial} from "$lib/historial/lib"
     import { isEmpty,addDays } from "$lib/stringutil/lib";
+    import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
+    import { getSexoNombre } from '$lib/stringutil/lib';
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
 
@@ -139,7 +141,7 @@
                 todos = false
                 algunos = true
             }
-            selecthashmap[id] = null
+            delete selecthashmap[id]
         }
         else{
             if(ninguno){
@@ -197,9 +199,9 @@
         //ordenarNombre(rodeos)
     }
     async function getAnimales(){
-        const recordsa = await pb.collection("animales").getFullList({
-            filter:`active=true && delete=false && cab='${cab.id}'`,
-            expand:"rodeo,lote"
+        const recordsa = await pb.collection("Animalestacto").getFullList({
+            filter:`active=true && cab='${cab.id}'`,
+            expand:"rodeo,lote,cab"
         })
         
         animales = recordsa
@@ -251,10 +253,7 @@
         fechainseminacion = ""
         inseminacionMasiva.showModal()
     }
-    function getEstadoName(est) {
-        let estado = estados.filter(e=>e.id==est)[0]
-        return estado.nombre
-    }
+    
     function seleccionarPadre(){
         validarBoton()
         if(padreslist.length == 0){
@@ -304,6 +303,190 @@
     function onInput(campo){
         input(campo)
     }
+    async function guardarBulk() {
+       if(esservicio){
+            if(listapadres.length == 0){
+                Swal.fire("Sin padres","No hay padres seleccionados","error")
+            }
+            let bulksers = []
+            let bulkcambios = []
+            for(let i = 0;i<selectanimales.length;i++){
+                let servicio = selectanimales[i]
+                let dataser = {
+                        fechadesde : fechadesdeserv + " 03:00:00",
+                        fechaparto: fechaparto + " 03:00:00",
+                        observacion: servicio.observacion,
+                        madre:servicio.id,
+                        padres:padreslist.join(),
+                        active:true,
+                        cab:cab.id
+                }
+                if(fechahastaserv != ""){
+                    dataser.fechahasta = fechahastaserv + " 03:00:00"
+                }
+                bulksers.push(dataser)
+                let ft = servicio.fechatacto
+                let fi = servicio.fechains
+                let fs = servicio.fechaser
+                let maximafecha = null
+                const valor1 = ft || "";
+                const valor2 = fi || "";
+                const valor3 = fs || "";
+                if (valor1 >= valor2 && valor1 >= valor3) {
+                    maximafecha = ft;
+                } else if (valor2 >= valor1 && valor2 >= valor3) {
+                    maximafecha = fi;
+                } else {
+                    maximafecha = fs;
+                }
+                if(maximafecha == null || fechadesdeserv > maximafecha){
+                    let dataupdate = {
+                        prenada:3,
+                        id:servicio.id
+                    }
+                    bulkcambios.push(dataupdate)
+                    let datahistorial = {
+                        animal:servicio.id,
+                        caravana:servicio.caravana,
+                        user:servicio.user,
+                        active:true,
+                        delete:false,
+                        fechanacimiento:servicio.fechanacimiento,
+                        sexo:servicio.sexo,
+                        peso:servicio.peso,
+                        lote:servicio.lote,
+                        rodeo:servicio.rodeo,
+                        categoria:servicio.categoria,
+                        prenada:servicio.prenada
+                    }
+                    bulkhistoriales.push(datahistorial)
+                }
+            }
+            try{
+                const batch = pb.createBatch();
+                for(let i = 0 ; i<bulksers.length;i++){
+                    let bs = bulksers[i]
+                    batch.collection('servicios').create(bs);
+                }
+                for(let i = 0 ; i<bulkcambios.length;i++){
+                    let bc = bulkcambios[i]
+                    batch.collection('animales').update(bc.id,{prenada:bc.prenada});
+                    
+                }
+                for(let i = 0 ; i<bulkhistoriales.length;i++){
+                    let bh = bulkhistoriales[i]
+                    batch.collection('historialanimales').create(bh);
+                }
+                const result = await batch.send();
+                
+            }
+            catch(err){
+                console.error(err)
+            }
+            await getAnimales()
+            selectanimales = []
+            selecthashmap = {}
+            fechadesdeserv = ""
+            fechahastaserv = ""
+            padreslist = []
+            padresserv = ""
+            esservicio = false
+            servicioMasivo.close()
+       }
+       if(esinseminacion){
+            if(fechainseminacion == ""){
+                Swal.fire("Error inseminaciones","Debe seleccionar una fecha","error")
+                esinseminacion = false
+                return 
+            }
+            let bulkins = []
+            let bulkcambios = []
+            let bulkhistoriales = []
+            for(let i = 0;i<selectanimales.length;i++){
+                let inseminacion = selectanimales[i]
+                let data = {
+                    cab:cab.id,
+                    animal: inseminacion.id,
+                    fechaparto: fechaparto +' 03:00:00',
+                    fechainseminacion: fechainseminacion + ' 03:00:00',
+                    active:true,
+                    padre:inseminacion.padre,
+                    pajuela:inseminacion.pajuela,
+                    categoria:inseminacion.categoria,
+                    observacion:inseminacion.observacion
+                }
+                bulkins.push(data)
+                let ft = servicio.fechatacto
+                let fi = servicio.fechains
+                let fs = servicio.fechaser
+                let maximafecha = null
+                const valor1 = ft || "";
+                const valor2 = fi || "";
+                const valor3 = fs || "";
+                if (valor1 >= valor2 && valor1 >= valor3) {
+                    maximafecha = ft;
+                } else if (valor2 >= valor1 && valor2 >= valor3) {
+                    maximafecha = fi;
+                } else {
+                    maximafecha = fs;
+                }
+                if(maximafecha == null || fechainseminacion > maximafecha){
+                    let dataupdate = {
+                        prenada:3,
+                        id:tactoanimal.id
+                    }
+                    bulkcambios.push(dataupdate)
+                    let datahistorial = {
+                        animal:inseminacion.id,
+                        caravana:inseminacion.caravana,
+                        user:inseminacion.user,
+                        active:true,
+                        delete:false,
+                        fechanacimiento:inseminacion.fechanacimiento,
+                        sexo:inseminacion.sexo,
+                        peso:inseminacion.peso,
+                        lote:inseminacion.lote,
+                        rodeo:inseminacion.rodeo,
+                        categoria:inseminacion.categoria,
+                        prenada:inseminacion.prenada
+                    }
+                    bulkhistoriales.push(datahistorial)
+                }
+            }
+            try{
+                const batch = pb.createBatch();
+                for(let i = 0 ; i<bulkins.length;i++){
+                    let bi = bulkins[i]
+                    batch.collection('inseminaciones').create(bi);
+                }
+                for(let i = 0 ; i<bulkhistoriales.length;i++){
+                    let bh = bulkhistoriales[i]
+                    batch.collection('historialanimales').create(bh);
+                }
+                for(let i = 0 ; i<bulkcambios.length;i++){
+                    let bc = bulkcambios[i]
+                    batch.collection('animales').update(bc.id,{prenada:bc.prenada});
+                }
+                
+                const result = await batch.send();
+                
+            }
+            catch(err){
+                console.error(err)
+            }
+            await getAnimales()
+            fechainseminacion = ""
+            fechaparto = ""
+            pajuela = ""
+            padre = ""
+            botonhabilitado = false
+            malfecha = false
+            malpadre = false
+            selecthashmap = {}
+            selectanimales = []
+            esinseminacion = false
+       } 
+    }
     async function guardar() {
         if(esservicio){
             if(listapadres.length == 0){
@@ -337,10 +520,10 @@
                 }
             }
             if(errores){
-                Swal.fire("Error tratamientos","Hubo algun error en algun tratamiento","error")
+                Swal.fire("Error servicios","Hubo algun error en algun servico","error")
             }
             else{
-                Swal.fire("Éxito tratamientos","Se lograron registrar todos los tratamientos","success")
+                Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
             }
             selectanimales = []
             selecthashmap = {}
@@ -398,8 +581,6 @@
             selectanimales = []
             esinseminacion = false
         }
-        
-
     }
     function validarBoton(){
         botonhabilitado = true
@@ -578,7 +759,7 @@
             </div>
         {/if}
     </div>
-    <div class="w-full grid justify-items-center mx-1  lg:w-3/4 overflow-x-auto">
+    <div class="hidden w-full md:grid justify-items-center mx-1  lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full " >
             <thead>
                 <tr>
@@ -644,7 +825,7 @@
                         </button>
                     </td>
                     <td class="text-base">{a.caravana}</td>
-                    <td class="text-base">{getEstadoName(a.prenada)}</td>
+                    <td class="text-base">{getEstadoNombre(a.prenada)}</td>
                     <td class="text-base">{a.categoria}</td>
                     <td class="text-base">{a.peso}</td>
                     <td class="text-base">{a.expand?.rodeo?.nombre||''}</td>
@@ -654,6 +835,115 @@
                 {/each}
             </tbody>
         </table>
+    </div>
+    <div class="block  md:hidden justify-items-center mx-1">
+        <div class="w-full flex justify-start">
+            <button    
+                aria-label="Todos"
+                onclick={clickTodos}
+                class={`
+                    text-base bg-transparent rounded-lg
+                    p-1 text-base flex flex-row
+                    ${estilos.secundario}
+                `}
+            >
+                {#if todos}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                {/if}
+                {#if ninguno}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 3 3m0 0 3-3m-3 3v-7.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                {/if}
+                {#if algunos}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>      
+                {/if}
+                                 
+                <span class="mt-1">
+                    Seleccionar todos 
+                </span>
+            </button>
+            
+           
+        </div>
+        
+        {#each animalesrows as a}
+        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <div class="block p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-medium">
+                        <button
+                            aria-label="fila"
+                            onclick={()=>clickAnimal(a.id)}
+                            class={`
+                                font-medium bg-transparent rounded-lg
+                                px-3 py-3 text-base
+                                ${selecthashmap[a.id]?estilos.danger:estilos.primario}
+                            `}
+                        >
+                            {#if selecthashmap[a.id]}
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>                                  
+                            {:else}             
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                            {/if}
+                        </button>
+                        {a.caravana}
+                    </h3>
+                    {#if a.sexo == "H" && a.prenada != 1}
+                        <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
+                    {/if}
+                </div>
+                <div class="grid grid-cols-2 gap-y-2">
+                    <div class="flex items-start">
+                      <span class="font-semibold">{getSexoNombre(a.sexo)}</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span >Categoría:</span> 
+                      <span class="font-semibold">
+                        {a.categoria}
+                      </span>
+                      
+                    </div>
+                    <div class="flex items-start">
+                      <span >Lote:</span>
+                      <span class="font-semibold">
+                        {
+                            a.expand?
+                            a.expand.lote?
+                            a.expand.lote.nombre
+                            :""
+                            :""
+
+                        }
+                      </span> 
+                    </div>
+                    <div class="flex items-start">
+                        
+                      <span >Rodeo:</span> 
+                      <span class="font-semibold">
+                        {
+                            a.expand?
+                            a.expand.rodeo?
+                            a.expand.rodeo.nombre
+                            :""
+                            :""
+
+                        }
+                      </span>
+                      
+                    </div>
+                </div>
+            </div>
+        </div>
+        {/each}
     </div>
 </Navbarr>
 <dialog id="servicioMasivo" class="modal modal-middle rounded-xl">
@@ -767,7 +1057,7 @@
                     oninput={inputObsGeneral}
                 />
             </div>
-            <div class="w-full grid grid-cols-1 justify-items-start " >
+            <div class="hidden w-full grid grid-cols-1 justify-items-start " >
                 <div class="flex overflow-x-auto">
                     <table class="table table-lg w-full" >
                         <thead>
@@ -802,6 +1092,39 @@
 
                     </table>
                 </div>
+            </div>
+            <div class="block  justify-items-center mx-1">
+                {#each selectanimales as a,i}
+                <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+                    <div class="block p-4">
+                        <div class="grid grid-cols-2 gap-y-2">
+                            <div class="flex items-start col-span-2">
+                                <span >Caravana:</span> 
+                                <span class="font-semibold">
+                                  {a.caravana}
+                                </span>
+                            </div>
+                            <div class="flex items-start col-span-2">
+                            
+                                <input
+                                    bind:value={selectanimales[i].observacion}
+                                    placeholder="Observación"
+                                    class={`
+                                        h-12 border border-gray-300
+                                        px-2 
+                                        w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        ${estilos.bgdark2}
+                                    `}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {/each}
             </div>
         </div>
         <div class="modal-action justify-start ">
@@ -893,7 +1216,7 @@
                     />
             </div>
         </div>
-        <div class="w-full grid grid-cols-1 justify-items-start " >
+        <div class="hidden w-full grid grid-cols-1 justify-items-start " >
             <div class="flex overflow-x-auto">
                 <table class="table table-lg w-full w-11/12" >
                     <thead>
@@ -965,6 +1288,44 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+        <div class="block  justify-items-center mx-1">
+            {#each selectanimales as a,i}
+            <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+                <div class="block p-4">
+                    <div class="grid grid-cols-2 gap-y-2">
+                        <div class="flex items-start col-span-2">
+                            <span >Caravana:</span> 
+                            <span class="font-semibold">
+                              {a.caravana}
+                            </span>
+                        </div>
+                        <div class="flex items-start col-span-2">
+                            {#if cargadoanimales}
+                                <PredictSelect {onwrite} {onelegir} bind:valor={selectanimales[i].padre} etiqueta = {"Padre"} bind:cadena={selectanimales[i].pajuela} lista = {listapadres} />
+                            {/if}
+                        </div>
+                        <div class="flex items-start col-span-2">
+                            
+                            <input
+                                bind:value={selectanimales[i].observacion}
+                                placeholder="Observación"
+                                class={`
+                                    h-12 border border-gray-300
+                                    px-2 
+                                    w-full
+                                    rounded-md
+                                    focus:outline-none focus:ring-2 
+                                    focus:ring-green-500 
+                                    focus:border-green-500
+                                    ${estilos.bgdark2}
+                                `}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/each}
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >

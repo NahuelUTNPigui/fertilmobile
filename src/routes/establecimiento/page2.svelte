@@ -1,23 +1,23 @@
 <script>
     import Navbarr from '$lib/components/Navbarr.svelte';
+    import {Network} from "@capacitor/network"
     import Swal from 'sweetalert2'
     import PocketBase from 'pocketbase'
     import { createRoler } from '$lib/stores/defaultrol.svelte';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { createCaber } from "$lib/stores/cab.svelte";
+    import { createCaber } from "$lib/stores/capacitor/capcab.svelte";
+    import {managerCab} from "$lib/stores/capacitor/offlinecab.svelte";
     import {createPer} from "$lib/stores/permisos.svelte"
     import CardBase from '$lib/components/CardBase.svelte';
     import Colaboradores from '$lib/components/establecimiento/Colaboradores.svelte';
     import ListaColabs from '$lib/components/establecimiento/ListaColabs.svelte';
     import { usuario } from '$lib/stores/usuario';
-    import { codigoSinRepetir,codigoSinRepetirEstablecimiento } from '$lib/pbutils/lib';
-    import provincias from '$lib/stores/geo/provincias';
-    import localidades from '$lib/stores/geo/localidades';
-    import estilos from '$lib/stores/estilos';
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let usuarioid = ""
+    let manager = managerCab()
+    let conInternet = $state(false)
     let cab = $state({
         exist:false,
         nombre:"",
@@ -31,32 +31,13 @@
     let nombre = $state("")
     let direccion = $state("")
     let contacto = $state("")
-    let codigo = $state("")
-    let renspa = $state("")
-    let provincia = $state("")
-    let localidad = $state("")
-    let localidadesProv = $state([])
-    let telefono = $state("")
-    let mail = $state("")
-    let titular = $state("")
-    //Desasociar
-    let asociado = $state(false)
-    let idestxcolab = $state("")
     async function getCabaña(){
         try{
             const record = await pb.collection('cabs').getFirstListItem(`id='${cab.id}' && active=true`, {});
             nombre = record.nombre
             direccion = record.direccion
             contacto = record.contacto
-            codigo = record.codigo
-            contacto = record.contacto
-            renspa = record.renspa
-            localidad = record.localidad
-            provincia = record.provincia
-            telefono = record.telefono
-            mail = record.mail
-            localidadesProv = localidades.filter(lo => lo.idProv == provincia)
-            caber.setCab(record.nombre,record.id)
+            //caber.setCab(record.nombre,record.id)
         }
         catch(err){
             
@@ -64,13 +45,6 @@
             nombre = ""
             direccion = ""
             contacto = ""
-            codigo = ""
-            contacto=""
-            renspa=""
-            localidad=""
-            provincia=""
-            telefono=""
-            mail=""
             goto("/")
         }
         
@@ -83,9 +57,7 @@
         });
         colabs = records
     }
-    
     async function guardarColab(data){
-        let codigo = await codigoSinRepetir(pb)
         try{
             let userdata = {
                 username:data.email.split("@")[0],
@@ -94,7 +66,6 @@
                 password:data.contra,
                 passwordConfirm:data.contra,
                 name:data.email,
-                codigo:codigo,
                 active:true
 
             }
@@ -125,22 +96,16 @@
         }
     }
     async function guardarCabaña(){
-        let codigo = await codigoSinRepetirEstablecimiento(pb)
         const data = {
             nombre,
             direccion,
             user: usuarioid,
             active: true,
-            contacto,
-            renspa,
-            localidad,
-            provincia,
-            telefono,
-            mail,
-            codigo
+            contacto
         };
 
         try{
+            
             const record = await pb.collection('cabs').create(data);
             Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
             caber.setCab(nombre,record.id)
@@ -157,18 +122,18 @@
         const data = {
             nombre,
             direccion,
-            contacto,
-            contacto,
-            renspa,
-            localidad,
-            provincia,
-            telefono,
-            mail
+            contacto
         };
         try{
-            const record = await pb.collection('cabs').update(cab.id, data);
+            manager.updateCab(data)
+            //const record = await pb.collection('cabs').update(cab.id, data);
+            
+            caber.setCab({
+                nombre:nombre,
+                exist:true,
+                id:caber.cab.id
+            })
             Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
-            caber.setCab(nombre,cab.id)
             
         }
         catch(err){
@@ -176,84 +141,23 @@
             Swal.fire("Error modificar","No se pudo modificar la cabaña con éxito","error")
         }
     }
-    async function desasociar() {
-        
-        await pb.collection('estxcolabs').delete(idestxcolab);
-        try{
-            const record = await pb.collection('cabs').getFirstListItem(`user='${usuarioid}' && active=true`, {});
-            caber.setCab(record.nombre,record.id)
-            per.setPer("0,1,2,3,4,5",usuarioid)
-        }
-        catch(err){
-            try{
-                //Revisa si sos colaborador 
-                const recordcab = await pb.collection('estxcolabs').getFirstListItem(`colab.user='${usuarioid}'`, {
-                    expand: 'colab,cab,colab.user',
-                })
-                const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
-                per.setPer(recordper.permisos,usuarioid)
-                caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
-                
-            }
-            catch(err){
-                caber.setDefault()
-                per.setDefault()
-            }
-            
-        }
-        goto('/')
-    }
     function mostrarcolab(data){
         console.log("padre: "+data)
     }
-    function getNombreProvincia(id){
-        let p = provincias.filter(pro=>pro.id == id)[0]
-        if(p){
-            return p.nombre
-        }
-        else{
-            return ""
-        }
-    }
-    function getNombreLocalidad(id){
-        let l = localidades.filter(lo=>lo.nombre == id)[0]
-        if(l){
-            return l.nombre
-        }
-        else{
-            return ""
-        }
-    }
-    function getLocalidades(idProv){
-        localidad = ""
-        localidadesProv = localidades.filter(lo => lo.idProv == idProv)
-    }
     onMount(async ()=>{
-        
+        let status = await Network.getStatus()
+        await caber.init()
+        await manager.init()
+        conInternet = status.connected
         cab = caber.cab
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.record.id
+        usuarioid = pb_json.model.id
         if(cab.exist){
-           await getCabaña()
-           await getColabs()
-           const recordcolab = await pb.collection('colaboradores').getList(1,1,{
-            filter:`user = '${usuarioid}'`
-           })
-           if(recordcolab.items.length > 0){
-            const recordestxcolab = await pb.collection('estxcolabs').getList(1, 1, {
-                filter: `colab = '${recordcolab.items[0].id}' && cab = '${cab.id}'`,
-            });
-            if(recordestxcolab.items.length > 0){
-                asociado = true
-                idestxcolab = recordestxcolab.items[0].id
-            }
-            else{
-                asociado = false
-            }
-           }
-           else{
-            asociado = false
-           }
+            nombre = manager.cab.nombre
+            direccion = manager.cab.direccion
+            contacto = manager.cab.contacto
+           //await getCabaña()
+           //await getColabs()
            
         }
     })
@@ -262,37 +166,9 @@
 <Navbarr>
     
     {#if cab.exist}
-        <CardBase titulo={`Bienvenido a ${nombre}`} cardsize="max-w-5xl">
+        <CardBase titulo="Bievenido a fertil" cardsize="max-w-5xl">
             <div class="space-y-6">
                 <div>
-                    <label for="RENSPA" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        RENSPA:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="renspa" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {renspa}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="renspa"
-                            bind:value={renspa} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-
                     <label for="nombre" 
                         class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
                     >
@@ -308,87 +184,21 @@
                         <input 
                             type="text" 
                             id="nombre"
+                            disabled={!modoedicion}
                             bind:value={nombre} 
                             required 
                             class={`
                                 w-full px-3 py-2 border rounded-md shadow-sm
                                 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                                 transition duration-150 ease-in-out
-                                border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                ${
+                                modoedicion
+                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                                }
                             `}
                         />
                     {/if}
-                </div>
-                <div>
-                    <label for="Provincia" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Provincia:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Provincia" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {getNombreProvincia(provincia)}
-                        </label>
-                    {:else}
-                        <label class="input-group ">
-                            <select 
-                                class={`
-                                    select select-bordered w-full
-                                    rounded-md
-                                    focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 
-                                    focus:border-green-500
-                                    
-                                    ${estilos.bgdark2}
-                                `}
-                                bind:value={provincia}
-                                onchange={()=>getLocalidades(provincia)}
-                            >
-                                    <option value="" class="rounded"></option>
-                                    {#each provincias as p}
-                                        <option value={p.id} class="rounded">{p.nombre}</option>
-                                    {/each}
-                            </select>
-                        </label>
-                    {/if}
-                </div>
-                <div>
-                    <label for="Localidad" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Localidad:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Provincia" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {getNombreLocalidad(localidad)}
-                        </label>
-                    {:else}
-                        <label class="input-group ">
-                            <select 
-                                class={`
-                                    select select-bordered w-full
-                                    rounded-md
-                                    focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 
-                                    focus:border-green-500
-                                    
-                                    ${estilos.bgdark2}
-                                `}
-                                bind:value={localidad}
-                                
-                            >
-                                    <option value="" class="rounded"></option>
-                                    {#each localidadesProv as l}
-                                        <option value={l.nombre} class="rounded">{l.nombre}</option>
-                                    {/each}
-                            </select>
-                        </label>
-                    {/if}
-
                 </div>
                 <div>
                     <label for="direccion" 
@@ -455,82 +265,6 @@
                     {/if}
                     
                 </div>
-                <div>
-                    <label for="Teléfono" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Teléfono:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Teléfono" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {telefono}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="telefono"
-                            
-                            bind:value={telefono} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="Correo" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Correo:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Correo" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {mail}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="mail"
-                            
-                            bind:value={mail} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="codigo" 
-                        class="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Codigo de transferencia
-                    </label>
-                    <label for="codigo" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {codigo}
-                        </label>
-                </div>
             </div>
             <div class="mt-8 flex justify-end">
                 {#if  !modoedicion}
@@ -566,8 +300,10 @@
                 {/if}
                 
             </div>
-            <Colaboradores {mostrarcolab} {guardarColab} {desasociar} {asociado}/>
-            <ListaColabs {colabs}/>
+            <div class="hidden">
+                <Colaboradores  {mostrarcolab} {guardarColab}/>
+                <ListaColabs {colabs}/>
+            </div>
         </CardBase>
     {:else}
         <CardBase titulo="Registra tu establecimiento">
@@ -620,6 +356,7 @@
                 </div>
 
             </div>
+            {#if conInternet}
             <div class="mt-8 flex justify-end">
                 <button
                     onclick={guardarCabaña}
@@ -634,6 +371,11 @@
                   Guardar establecimiento
                 </button>
             </div>
+            {:else}
+                <div class="mt-8 flex justify-end">
+                    Debes tener internet para guardar la cabaña
+                </div>
+            {/if}
         </CardBase>
     {/if}
 </Navbarr>
