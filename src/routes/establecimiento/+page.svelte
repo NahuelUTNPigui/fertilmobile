@@ -17,7 +17,8 @@
     import estilos from '$lib/stores/estilos';
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
-    let usuarioid = ""
+    const regexRenspa = /^\d{2}\.\d{3}\.\d\.\d{5}\.\d{2}$/;
+    let usuarioid = $state("")
     let cab = $state({
         exist:false,
         nombre:"",
@@ -39,6 +40,7 @@
     let telefono = $state("")
     let mail = $state("")
     let titular = $state("")
+    let renspaValido = $state(true)
     //Desasociar
     let asociado = $state(false)
     let idestxcolab = $state("")
@@ -151,6 +153,7 @@
             console.error(err)
             Swal.fire("Error guardar","No se pudo guardar la cabaña","error")
         }
+        renspaValido = true
         
     }
     async function editarCabaña(){
@@ -175,6 +178,7 @@
             console.error(err)
             Swal.fire("Error modificar","No se pudo modificar la cabaña con éxito","error")
         }
+        renspaValido = true
     }
     async function desasociar() {
         
@@ -228,6 +232,13 @@
         localidad = ""
         localidadesProv = localidades.filter(lo => lo.idProv == idProv)
     }
+
+    function escribirRenspa(){
+        if(!renspaValido){
+            renspaValido = regexRenspa.test(renspa)
+        }
+        
+    }
     onMount(async ()=>{
         
         cab = caber.cab
@@ -277,10 +288,12 @@
                             {renspa}
                         </label>
                     {:else}
+                    <label class="form-control">
                         <input 
                             type="text" 
                             id="renspa"
-                            bind:value={renspa} 
+                            bind:value={renspa}
+                            
                             required 
                             class={`
                                 w-full px-3 py-2 border rounded-md shadow-sm
@@ -289,6 +302,11 @@
                                 border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
                             `}
                         />
+                        <div class="label">
+                            <span class="label-text-alt">Formato: 00.000.0.00000.00</span>
+                            
+                        </div>
+                    </label>
                     {/if}
                 </div>
                 <div>

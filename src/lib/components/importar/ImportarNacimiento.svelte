@@ -1,13 +1,16 @@
 <script>
+    //LAburar nacimientos
     import estilos from "$lib/stores/estilos";
     import * as XLSX from 'xlsx';
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
+    let {animales,animalesusuario} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
+    let usuarioid = $state("")
     let loading = $state(false)
 
     const pb = new PocketBase(ruta);
@@ -15,7 +18,7 @@
     let wkbk = $state(null)
     let lotes = $state([])
     let rodeos = $state([])
-    let animales = $state([])
+    let nacimientos = $state([])
     let padres = $state([])
     let madres = $state([])
 
@@ -70,7 +73,7 @@
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
         
-        let animales = []
+        let nacimientos = []
         let animaleshashmap = {}
         loading = true
         for (const [key, value ] of Object.entries(sheetanimales)) {
@@ -227,6 +230,8 @@
         
     }
     onMount(async ()=>{
+        let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
         rodeos = await pb.collection('rodeos').getFullList({
             filter:`active = true && cab ='${cab.id}'`,
             sort: '-nombre',

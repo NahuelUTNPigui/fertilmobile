@@ -7,7 +7,7 @@
     import { onMount } from 'svelte';
     import sexos from '$lib/stores/sexos';
     import tipostacto from '$lib/stores/tipostacto';
-    import tiposanimal from '$lib/stores/tiposanimal';
+    
     import estilos from '$lib/stores/estilos';
     import estados from "$lib/stores/estados";
     import categorias from '$lib/stores/categorias';
@@ -758,7 +758,7 @@
                     `}
                     bind:value={categoria}
                 >
-                    {#each tiposanimal as t}
+                    {#each categorias.filter(c=>c.sexo == "H") as t}
                         <option value={t.id}>{t.nombre}</option>    
                     {/each}
                   </select>

@@ -1,4 +1,5 @@
 <script>
+    //En proceso
     import estilos from "$lib/stores/estilos";
     let {data,titulo,filtros,confiltros,prepararData} = $props()
     import * as XLSX from "xlsx"

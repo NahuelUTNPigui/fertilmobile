@@ -10,6 +10,7 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {guardarHistorial} from "$lib/historial/lib"
     import PredictSelect from '$lib/components/PredictSelect.svelte';
+    import cuentas from '$lib/stores/cuentas';
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -91,6 +92,22 @@
         nacimientosrow = nacimientos
     }
     async function guardar(){
+        let user = await pb.collection("users").getOne(usuarioid)
+        
+        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
+        
+        
+        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
+        
+        let verificar = true
+        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
+            verificar =  false
+        }
+        
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            return
+        }
         try{
             
             let ms = madres.filter(ma=>ma.id==madre)
@@ -144,7 +161,7 @@
             await pb.collection('animales').update(madre,datamadre)
             }
             
-            Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
+            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
             
             await getNacimientos()
             filterUpdate()
@@ -153,7 +170,7 @@
         }
         catch(err){
             console.error(err)
-            Swal.fire("Error guardar","Hubo un error para guardar la parición","error")
+            Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
         }
     }
     async function editar(){
@@ -184,7 +201,7 @@
         try{
             const recorda = await pb.collection('animales').update(idanimal, datanimal);
             const record = await pb.collection('nacimientos').update(idnacimiento, dataparicion);
-            Swal.fire("Éxito editar","Se pudo editar la paricion con exito","success")
+            Swal.fire("Éxito editar","Se pudo editar el nacimiento con exito","success")
             
             await getNacimientos()
             filterUpdate()
@@ -203,7 +220,7 @@
 
         }catch(err){
             console.error(err)
-            Swal.fire("Error editar","Hubo un error para editar la parición","error")
+            Swal.fire("Error editar","Hubo un error para editar el nacimiento","error")
         }
     }
     function filterUpdate(){
@@ -492,7 +509,7 @@
         </div>
         {#if isOpenFilter}
             <div transition:slide>
-                <div class="grid grid-cols-2 lg:grid-cols-3 mb-2 lg:mb-3 gap-1" >
+                <div class="grid grid-cols-2 lg:grid-cols-2 mb-2 lg:mb-3 gap-1" >
                     <div class="">
                         <label class="block tracking-wide  mb-2" for="grid-first-name">
                           Fecha desde

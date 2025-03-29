@@ -6,16 +6,21 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import { guardarHistorial } from "$lib/historial/lib";
+    import { goto } from "$app/navigation";
+    let {animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
-    let animales = $state([])
     
 
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
+    //Pero si es offline, como hago?
+    function exportarTemplate2(){
+        goto(`${ruta}/Modelo tactos validados.xlsx`)
+    }
     function exportarTemplate(){
         let csvData = [{
             fecha:"MM/DD/AAAA",
@@ -218,15 +223,16 @@
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
-    <button
+    <a
         class={`
-            w-full
+            w-full text-center
             ${estilos.basico} ${estilos.grande} ${estilos.secundario}
         `}
-        onclick={exportarTemplate}
+        href="{`${ruta}/Modelo tactos validados.xlsx`}"
+        
     >
        Descargar Plantilla
-    </button>
+    </a>
     <div class={`
         w-full
         

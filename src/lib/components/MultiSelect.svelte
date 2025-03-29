@@ -2,7 +2,7 @@
     import estilos from '$lib/stores/estilos';
     import {ChevronDown} from 'lucide-svelte'
     import { slide } from 'svelte/transition';
-    let {opciones,etiqueta,valores=$bindable([]),filterUpdate} = $props()
+    let {opciones,etiqueta,valores=$bindable([]),filterUpdate,margintop="mt-2",labelmargin="m-0"} = $props()
     //Logica de las opciones
     let isOpen = $state(false)
 
@@ -22,12 +22,12 @@
     }
 </script>
 <div class="">
-    <label for = "" class="label">
+    <label for = "" class="label my-0 py-0">
         <span class="label-text text-base">{etiqueta} </span>
     </label>
     <button 
         class={`
-            mt-2 h-12 w-full p-2 text-left 
+            ${margintop} h-12 w-full p-2 text-left 
             flex items-center justify-between 
             border
             ${estilos.bgdark2}
@@ -76,9 +76,9 @@
             <ul 
                 class="
                     text-base max-h-40 focus:outline-none sm:text-sm overflow-y-auto 
-                    w-32
-                    sm:w-40
-                    md:w-72
+                    w-80
+                    sm:w-80
+                    md:w-80
                     lg:w-80
                     xl:w-96
                     2xl:w-96

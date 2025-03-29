@@ -68,6 +68,8 @@
         try{
             const data = {
                 active: false,
+                lote:"",
+                rodeo:"",
                 fechafallecimiento: fechafallecimiento +  " 03:00:00",
                 motivobaja:motivo
 
@@ -89,7 +91,9 @@
         try{
             const data = {
                 delete: true,
-                active:false
+                active:false,
+                lote:"",
+                rodeo:""
             };
 
             const record = await pb.collection('animales').update(slug, data);  
@@ -106,12 +110,12 @@
             filter: `active = true && codigo = '${codigo}'`,
             
         });
-        
-
         try{
             
             let data = {
                 cab:resultcab.items[0].id,
+                lote:"",
+                rodeo:""
             }
             
             const record = await pb.collection('animales').update(slug, data);

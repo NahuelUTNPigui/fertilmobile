@@ -21,11 +21,14 @@
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import cuentas from '$lib/stores/cuentas';
     import MultipleToros from '$lib/components/MultipleToros.svelte';
+    import {initTables,getAnimalesDB,setAnimalesDB} from '$lib/stores/sqlite/main'
+    import {createDBAnimal} from '$lib/stores/sqlite/dbanimales.svelte'
     
 
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
+    let animalmanager = createDBAnimal()
     let usuarioid = $state("")
     let cab = $state({
         exist:false,
@@ -301,10 +304,13 @@
         
         let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
         let verificar = true
-        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
+        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
             verificar =  false
         }
-        
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            return {id:-1}
+        }
         let data = {
             caravana,
             active:true,
@@ -335,6 +341,9 @@
             try{
                 
                 let a = await guardarAnimal(true,false)
+                if(a.id == -1){
+                    return
+                }
                 let data = {
                     fecha:fechatacto +" 03:00:00" ,
                     observacion:observaciontacto,
@@ -384,6 +393,19 @@
         
     }
     async function guardarNacimiento(){
+        let user = await pb.collection("users").getOne(usuarioid)
+        
+        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
+        
+        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
+        let verificar = true
+        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
+            verificar =  false
+        }
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            return
+        }
         try{
             let dataparicion = {
                 madre:madrenac,
@@ -425,6 +447,9 @@
             try{
                 
                 let a = await guardarAnimal(false,false)
+                if(a.id == -1){
+                    return
+                }
                 let data = {
                     animal:a.id,
                     categoria:a.categoria,
@@ -469,6 +494,9 @@
                 return
             }
             let a = await guardarAnimal(false,true)
+            if(a.id == -1){
+                    return
+            }
             let data = {
                 cab:cab.id,
                 animal: a.id,
@@ -522,6 +550,9 @@
                 return
             }
             let a = await guardarAnimal(false,true)
+            if(a.id == -1){
+                    return
+            }
             let dataser = {
                 fechadesde : fechadesdeserv + " 03:00:00",
                 fechaparto: fechapartoser + " 03:00:00",
@@ -580,6 +611,9 @@
         if(agregaranimal){
             try{
                 let a = await guardarAnimal(false,false)
+                if(a.id == -1){
+                    return
+                }
                 let data = {
                     animal:a.id,
                     categoria:a.categoria,
@@ -620,23 +654,18 @@
     function validarBotonNacimiento(){
         botonhabilitadonac = true
         if(isEmpty(caravananac)){
-            
             botonhabilitadonac=false
         }
         if(isEmpty(sexonac)){
-            
             botonhabilitadonac = false
         }
         if(isEmpty(fechanac)){
-            
             botonhabilitadonac = false
         }
         if(isEmpty(nombremadrenac)){
-            
             botonhabilitadonac = false
         }
         if(isEmpty(nombrepadrenac)){
-            
             botonhabilitadonac = false
         }
 
@@ -786,6 +815,7 @@
         }
     }
     function oninputNacimiento(inputName){
+        validarBotonNacimiento()
         if(inputName == "CARAVANA"){
             if(caravananac == ""){
                 malcaravananac = true
@@ -838,7 +868,6 @@
                 malpadrenac = false
             }
         }
-        validarBotonNacimiento()
 
     }
     function oninputTrat(campo){
@@ -1009,7 +1038,7 @@
     
     {#if cab.exist}
     
-        <CardBase titulo="Bienvenido a fertil" cardsize="max-w-5xl">
+    <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
                 <StatCard titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
                 <StatCard titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
@@ -1305,7 +1334,7 @@
             </div>
         </CardBase>
     {:else}
-        <CardBase titulo="Inicio">
+    <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="grid grid-cols-1 gap-6">
                 <a class={classbutton}
                     href="/establecimiento"

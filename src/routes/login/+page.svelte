@@ -174,7 +174,7 @@
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                     />
                     <div class="form-control ">
-                        <label class="label cursor-pointer w-1/2">
+                        <label class="label cursor-pointer">
                           <span class="label-text">Mostrar constraseña</span>
                           <input type="checkbox" bind:checked={showpass} class="checkbox" />
                         </label>

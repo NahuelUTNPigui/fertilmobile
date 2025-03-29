@@ -1,0 +1,27 @@
+{
+    "appId": "com.crecientefertil.app",
+    "appName": "Creciente Fertil",
+    "webDir": "dist",
+    "linuxAndroidStudioPath": "/opt/android-studio-2024.2.2/android-studio/bin/studio.sh",
+    "plugins": {
+      "CapacitorSQLite": {
+        "iosDatabaseLocation": "Library/CapacitorDatabase",
+        "iosIsEncryption": true,
+        "iosKeychainPrefix": "fert-app",
+        "iosBiometric": {
+          "biometricAuth": false,
+          "biometricTitle" : "Biometric login for capacitor sqlite"
+        },
+        "androidIsEncryption": true,
+        "androidBiometric": {
+          "biometricAuth" : false,
+          "biometricTitle" : "Biometric login for capacitor sqlite",
+          "biometricSubTitle" : "Log in using your biometric"
+        },
+        "electronIsEncryption": true,
+        "electronWindowsLocation": "C:\\ProgramData\\CapacitorDatabases",
+        "electronMacLocation": "/Volumes/Development_Lacie/Development/Databases",
+        "electronLinuxLocation": "Databases"
+      }
+    }
+  }

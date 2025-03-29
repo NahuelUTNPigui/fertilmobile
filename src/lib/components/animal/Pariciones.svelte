@@ -6,6 +6,7 @@
     import PocketBase from 'pocketbase'
     import Swal from "sweetalert2";
     import PredictSelect from "../PredictSelect.svelte";
+    import cuentas from '$lib/stores/cuentas';
     let {cabid,sexoanimal,prenada=$bindable(0)} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -13,6 +14,7 @@
     const today = new Date();
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    let usuarioid = $state("")
     let buscar = $state("")
     let fechadesde = $state("")
     let fechahasta = $state("")
@@ -35,6 +37,11 @@
     let listapadres = $state([])
     let idanimal = $state("")
     let observacion = $state("")
+    //Validar 
+    let malcaravana = $state(false)
+    let malfecha = $state(false)
+    let malpadre = $state(false)
+    let botonhabilitado = $state(false)
     
     function onelegir(){}
     function onwrite(){}
@@ -57,6 +64,22 @@
         pariciones = recordsn
     }
     async function guardarParicion(){
+        let user = await pb.collection("users").getOne(usuarioid)
+        
+        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
+        
+        
+        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
+        
+        let verificar = true
+        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
+            verificar =  false
+        }
+        
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            return
+        }
         try{
             let dataparicion = {
                 madre,
@@ -88,6 +111,8 @@
         }
     }
     onMount(async ()=>{
+        let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
         id = $page.params.slug
         await getPariciones()
         await getAnimales()

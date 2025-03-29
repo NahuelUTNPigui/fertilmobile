@@ -7,8 +7,9 @@
     import { onMount } from "svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
-    
-    
+    import cuentas from '$lib/stores/cuentas';
+    let {animales,animalesusuario} = $props()
+    let usuarioid = $state("")
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -125,6 +126,19 @@
         for (const [key, value ] of Object.entries(animaleshashmap)) {
             animales.push(value)
         }
+        let user = await pb.collection("users").getOne(usuarioid)
+        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
+        
+        let verificar = true
+        if(nivel.animales != -1 && animals.totalItems + animalesusuario > nivel.animales){
+            verificar =  false
+        }
+        
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            loading = false
+            return
+        }
         for(let i = 0;i<animales.length;i++){
             let an = animales[i]
             let conlote = false
@@ -178,6 +192,8 @@
         
     }
     onMount(async ()=>{
+        let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
         rodeos = await pb.collection('rodeos').getFullList({
             filter:`active = true && cab ='${cab.id}'`,
             sort: '-nombre',
