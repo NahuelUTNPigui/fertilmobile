@@ -1,5 +1,9 @@
 <script>
+    //TENGO QUE MODIFCAR EL OFFLINE CAB
     import {enabled} from '$lib/stores/enabled'
+    import {setUser} from '$lib/stores/capacitor/offlineuser'
+    import {setCab,setDefaultCab} from '$lib/stores/capacitor/offlinecab'
+    import {getCabData} from "$lib/stores/cabsdata"
     import {usuario} from '$lib/stores/usuario'
     import { createCaber } from '$lib/stores/cab.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
@@ -9,23 +13,31 @@
     import PocketBase from 'pocketbase'
     import { fade, fly } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
-    import { createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
-
-
+    import { Network } from '@capacitor/network';
+    import { onMount } from 'svelte';
     let ruta = import.meta.env.VITE_RUTA
     let usuarioname= $state('')
     let contra = $state('')
     let showpass = $state(false)
     let logooscuro = $state(true)
-    
+    let coninternet = false
     function isEmpty(str) {
         return (!str || str.length === 0 );
     }
     function nuevo(){
-        goto("/user/new")
+        if(coninternet){
+            goto("/user/new")
+        }
+        else{
+            Swal.fire("Sin intenet","Para crear un usuario necesitas internet","info")
+        }
+        
     }
     async function ingresar(){
+        if(!coninternet){
+            Swal.fire("Sin intenet","Para ingresar necesitas internet","info")
+            return
+        }
         if(isEmpty(usuarioname)){
             Swal.fire('Error login', 'Nombre usuario vacio', 'error');
             return
@@ -47,15 +59,18 @@
 
             if(pb.authStore.isValid){
                 if(pb.authStore.model.active){
-                    
+                    let pa = JSON.parse(localStorage["pocketbase_auth"])
                     usuario.set(pb.authStore.token)
+                    
                     enabled.set("si")
                     // Cuando te logeas, deberia revisar si tenes una cabaña
-                    
+                    await setUser(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel)
                     try{
                         const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
                         caber.setCab(record.nombre,record.id)
+
                         per.setPer("0,1,2,3,4,5",authData.record.id)
+                        await setCab(record.id,record.nombre,true,"0,1,2,3,4,5") 
                     }
                     catch(err){
                         try{
@@ -64,6 +79,8 @@
                                 expand: 'colab,cab,colab.user',
                             })
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
+                            setCab(recordcab.id,recordcab.nombre,true,recordper.permisos)
+                            let cab = getCabData(pb,recordcab.id)
                             per.setPer(recordper.permisos,authData.record.id)
                             caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
                             
@@ -71,6 +88,7 @@
                         catch(err){
                             caber.setDefault()
                             per.setDefault()
+                            setDefaultCab()
                         }
                         
                     }
@@ -100,7 +118,9 @@
             }
         }
     }
-    
+    onMount(async ()=>{
+        coninternet = await Network.getStatus();
+    })
 </script>
 <svelte:window on:keydown={keyEvent}></svelte:window>
 <div class="min-h-screen bg-gradient-to-br from-green-400 to-green-700  dark:from-gray-900 dark:to-gray-800 p-4">

@@ -22,6 +22,17 @@ export function randomString(len, an) {
     }
     return str;
 }
+export function generarIDAleatorio() {
+    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let resultado = '';
+    
+    for (let i = 0; i < 12; i++) {
+      const indiceAleatorio = Math.floor(Math.random() * caracteres.length);
+      resultado += caracteres.charAt(indiceAleatorio);
+    }
+    
+    return resultado;
+}
 export function getWholeWordButLastLetter(word){
     let newword = word.slice(0,word.length - 2)
     return newword

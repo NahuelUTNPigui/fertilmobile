@@ -7,7 +7,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { createCaber } from "$lib/stores/capacitor/capcab.svelte";
-    import {managerCab} from "$lib/stores/capacitor/offlinecab.svelte";
+    import {managerCab} from "$lib/stores/capacitor/offlinecab";
     import {createPer} from "$lib/stores/permisos.svelte"
     import CardBase from '$lib/components/CardBase.svelte';
     import Colaboradores from '$lib/components/establecimiento/Colaboradores.svelte';

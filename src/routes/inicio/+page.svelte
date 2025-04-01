@@ -21,15 +21,25 @@
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import cuentas from '$lib/stores/cuentas';
     import MultipleToros from '$lib/components/MultipleToros.svelte';
-    import {initTables,getAnimalesDB,setAnimalesDB} from '$lib/stores/sqlite/main'
-    import {createDBAnimal} from '$lib/stores/sqlite/dbanimales.svelte'
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUser,setDefaultUser} from "$lib/stores/capacitor/offlineuser"
+    import {getCab,setDefaultCab} from "$lib/stores/capacitor/offlinecab"
+    import {getInternet, setInternet} from '$lib/stores/sqlite/dbinternet'
+    import {getCabData} from "$lib/stores/cabsdata"
     
-
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
-    let animalmanager = createDBAnimal()
+    //offline
+    let db = null
     let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+
+
+
+    let coninternet = false
     let cab = $state({
         exist:false,
         nombre:"",
@@ -1020,25 +1030,60 @@
         totaleventos.lotes = recordslotes.totalItems
         totaleventos.rodeos = recordsrodeos.totalItems
     }
-    onMount(async ()=>{
-        cab = caber.cab
-        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+    async function reinicarDB() {
+        await resetTables(db)
+        await setDefaultCab()
+        await setDefaultUser()
+
+    }
+    async function getAllData() {
         
-        usuarioid = pb_json.record.id
-        if(cab.exist){
-            await getAnimales()
-            await getTiposTratamientos()
-            await getTotales()
-            cargados = true
+    }
+    onMount(async ()=>{
+        coninternet = await Network.getStatus();
+        useroff = await getUser()
+        caboff = await getCab()
+
+        if(caboff.exist){
+            db = await openDB()
+
+            //Reviso el internet
+            let lastinter = await getInternet(db)
+            //Ahora tengo internet
+            if (coninternet){
+                //Si tengo internet lo primero que hago es guardar los comandos
+                if(lastinter.internet == 0){
+                    //Debo traer los datos de la cabaña
+                    let datacab = await getCabData(pb,caboff.id)
+                }
+                else{
+                    //Logica con internet previo
+                    let ahora = Date.now()
+                    let antes = lastinter.ultimo
+                    const cincoMinEnMs = 300000;
+                
+                    if((ahora - fechaMs) >= cincoMinEnMs){
+                        let datacab = await getCabData(pb,caboff.id)
+                        
+                    }
+                }
+                await setInternet(db,1,Date.now())
+
+                
+            }
+            else{
+                //Es mas faci
+            }
         }
+        
     })
  
 </script>
 <Navbarr>
+    <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
+    {#if caboff.exist}
     
-    {#if cab.exist}
-    
-    <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
+        <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
                 <StatCard titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
                 <StatCard titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>

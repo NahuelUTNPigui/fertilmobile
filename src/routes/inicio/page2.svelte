@@ -7,7 +7,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import {createCaber} from '$lib/stores/capacitor/capcab.svelte' 
-    import {managerCab} from '$lib/stores/capacitor/offlinecab.svelte' 
+    import {managerCab} from '$lib/stores/capacitor/offlinecab' 
     import {managerAnimales} from "$lib/stores/capacitor/offlineanimales.svelte"
     import {managerGrupos} from "$lib/stores/capacitor/offlinegrupos.svelte"
     import {createUser} from '$lib/stores/capacitor/capuser.svelte'
