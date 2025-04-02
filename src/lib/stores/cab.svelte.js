@@ -8,8 +8,10 @@ let defaultcab={
 }
 export function createCaber(){
     let cab = defaultcab
+    //En capacitor esto es true
     if(browser){
         cab = JSON.parse(localStorage.getItem("cab"))||defaultcab
+        
     }
     return{
         get cab() {return cab},

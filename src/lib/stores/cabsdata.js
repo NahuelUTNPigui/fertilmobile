@@ -49,18 +49,23 @@ export async function getCabData(pb,idcab) {
         sort: '-created',
     });
     let nacimientos = await pb.collection("nacimientosall").getFullList({
-        filter:`cab='${cab.id}'`,
+        filter:`cab='${idcab}'`,
         sort:"-fecha",
         expand:"madre,padre"
     })
     let animaleselegir = await pb.collection("Animalestacto").getFullList({
-        filter:`active=true && cab='${cab.id}'`,
+        filter:`active=true && cab='${idcab}'`,
         expand:"rodeo,lote,cab"
     })
     let animales = await pb.collection("animales").getFullList({
         filter:`active=true && delete=false && cab='${idcab}'`,
-        expand:"rodeo,lote"
+        expand:"rodeo,lote,nacimiento"
     })
+    let pesajes = await pb.collection('pesaje').getFullList({
+        expand:"animal",
+        filter:`animal.cab='${idcab}'`
+    })
+    cab.pesajes = pesajes//12
     cab.tactos = tactos//11
     cab.servicios = servicios//10
     cab.inseminaciones = inseminaciones//9

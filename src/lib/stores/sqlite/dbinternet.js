@@ -1,5 +1,6 @@
 export async function getInternet(db) {
     let rowsinternet = await db.query("select id,internet,ultimo from Internet where id = 1")
+    
     let internet = rowsinternet.values[0]
     return internet
 }

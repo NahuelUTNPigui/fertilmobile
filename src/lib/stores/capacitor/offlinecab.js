@@ -12,7 +12,7 @@ export async function setDefaultCab() {
     })
 }
 export async function setCab(id,nombre,exist,permisos) {
-    let c ={id,nombre,apellido,exist}
+    let c = {id,nombre,exist,permisos}
     await Preferences.set({key:"cab",value:JSON.stringify(c)})
 }
 export async function getCab() {

@@ -58,17 +58,18 @@ export async function resetTables(db) {
     `);
     //Consultar si existe algun valor para esas tablas
     //tabla collecciones
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (1,'Animales','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (2,'animaleselegir','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (3,'nacimientos','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (4,'trats','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (5,'tipostrat','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (6,'rodeos','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (7,'lotes','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (8,'observaciones','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (9,'inseminaciones','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','',0)")
-    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (1,'Animales','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (2,'animaleselegir','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (3,'nacimientos','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (4,'trats','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (5,'tipostrat','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (6,'rodeos','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (7,'lotes','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (8,'observaciones','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (9,'inseminaciones','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (12,'pesajes','[]',0)")
     
     //tabla numeroanimales
     await db.run("INSERT INTO Animalesuser (id,numero,ultimo) VALUES (1,0,0)")
@@ -76,7 +77,7 @@ export async function resetTables(db) {
     //tabla internet
     await db.run("INSERT INTO Internet (id,internet,ultimo) VALUES (1,0,0)")
     //tabla comandos
-    await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'')")
+    await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'[]')")
 
     return db;
 }
@@ -135,17 +136,18 @@ export async function initTables(){
     //tabla collecciones
     let colls = await db.query("select * from Colecciones")
     if(!colls.values || colls.values.length == 0){
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (1,'Animales','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (2,'animaleselegir','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (3,'nacimientos','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (4,'trats','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (5,'tipostrat','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (6,'rodeos','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (7,'lotes','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (8,'observaciones','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (9,'inseminaciones','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','',0)")
-        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (1,'Animales','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (2,'animaleselegir','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (3,'nacimientos','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (4,'trats','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (5,'tipostrat','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (6,'rodeos','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (7,'lotes','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (8,'observaciones','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (9,'inseminaciones','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (12,'pesajes','[]',0)")
     }
     //tabla numeroanimales
     let ans = await db.query("select * from Animalesuser")
@@ -161,13 +163,12 @@ export async function initTables(){
     let comander = await db.query("select * from Comandos")
     if(!comander.values || comander.values.length == 0){
         //tabla comandos
-        await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'')")
+        await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'[]')")
     }
 
     // Save store only for web platform
     if (platform === "web") {
         await sqlite.saveToStore(DBNAME);
-        alert("Store saved successfully");
     }
 
     return db;

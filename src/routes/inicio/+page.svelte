@@ -27,19 +27,22 @@
     import {getCab,setDefaultCab} from "$lib/stores/capacitor/offlinecab"
     import {getInternet, setInternet} from '$lib/stores/sqlite/dbinternet'
     import {getCabData} from "$lib/stores/cabsdata"
-    
+    //import {addNewTacto,getEventos, setEventos, setUltimoEventos } from '$lib/stores/sqlite/dbeventos';
+    //import { setAnimales,getAnimales, setUltimoAnimales } from '$lib/stores/sqlite/dbanimales';
+    //import {generarIDAleatorio} from "$lib/stringutil/lib"
+    //import {getTotalAnimales} from "$lib/stores/totaldata"
+    //import {getTotal,setTotal,setUltimoTotal} from "$lib/stores/sqlite/dbtotal"
+    //import { getComandos, setComandos } from '$lib/stores/sqlite/dbcomandos';
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     //offline
-    let db = null
+    let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-
-
-
-    let coninternet = false
+    let coninternet = $state(false)
+    let comandos = $state([])
     let cab = $state({
         exist:false,
         nombre:"",
@@ -69,6 +72,7 @@
     let cargadoanimales = $state(false)
     //Datos cabaña
     let classbutton = "w-full flex items-center justify-center space-x-4 bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 dark:bg-green-700 dark:hover:bg-green-600"
+
     //Tacto
     let fechatacto = $state("")
     let observaciontacto = $state("")
@@ -164,7 +168,7 @@
     let sexo = $state("")
     let fechanacimiento = $state("")
     let categoria = $state("")
-
+    
     async function getAnimales(){
         //Estaria joya que el animal venga con todos los chiches
         const recordsa = await pb.collection("animales").getFullList({
@@ -188,6 +192,26 @@
         listaanimales = animales.map(item=>{
             return {id:item.id,nombre:item.caravana}
         })
+    }
+    
+    
+    async function loadAnimales() {
+        cargadoanimales = false
+        let dataanimales = await getAnimales(db)
+        animales = dataanimales.lista
+        totaleventos.animales = animales.length
+        madres = animales.filter(a=>a.sexo=="H"||a.sexo=="F")
+        listamadres = madres.map(item=>{
+            return {id:item.id,nombre:item.caravana}
+        })
+        padres = animales.filter(a=>a.sexo=="M")
+        listapadres = padres.map(item=>{
+            return {id:item.id,nombre:item.caravana}
+        })
+        listaanimales = animales.map(item=>{
+            return {id:item.id,nombre:item.caravana}
+        })
+        cargadoanimales = true
     }
     async function getTiposTratamientos(){
         const records = await pb.collection('tipotratamientos').getFullList({
@@ -307,7 +331,67 @@
         malfechaobs = false
         nuevoModalObservacion.showModal()
     }
+    async function guardarAnimal2(esTacto,esInseminacion) {
+        //Los nombres de la funciones horribles
+        let totalanimals = await getTotal(db)
+        let verificar = true
+        
+        if(nivel.animales != -1 && totalanimals >= nivel.animales){
+            verificar =  false
+        }
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            return {id:-1}
+        }
+
+        let data = {
+            caravana,
+            active:true,
+            categoria,
+            delete:false,
+            sexo,
+            peso,
+            cab:caboff.id
+        }
+        if(fechanacimiento){
+            data.fechanacimiento=fechanacimiento +" 03:00:00"
+        }
+        if(esTacto){
+            data.prenada = prenadatacto
+        }
+        if(esInseminacion){
+            data.prenada = 3
+        }
+        let idprov = "nuevo_animal_"+generarIDAleatorio() 
+        let isOnline = await Network.getStatus();
+        if(isOnline){
+            
+            let recorda = await pb.collection('animales').create(data); 
+            
+            return recorda
+        }
+        else{
+            data.id = idprov
+            let comando = {
+                tipo:"add",
+                coleccion:"animales",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:3,
+                idprov,
+                //No tiene poque no lotes y rodeos
+                camposprov:""
+            }
+            comandos.push(comando)
+            setComandos(db,comandos)
+            
+            return data
+        }
+        
+
+    }
     async function guardarAnimal(esTacto,esInseminacion) {
+        
         let user = await pb.collection("users").getOne(usuarioid)
         
         let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
@@ -326,10 +410,12 @@
             active:true,
             categoria,
             delete:false,
-            fechanacimiento:fechanacimiento +" 03:00:00",
             sexo,
             peso,
             cab:cab.id
+        }
+        if(fechanacimiento){
+            data.fechanacimiento=fechanacimiento +" 03:00:00"   
         }
         if(esTacto){
             data.prenada = prenadatacto
@@ -341,6 +427,108 @@
         return recorda
         
         
+    }
+    async function guardarTacto2(){
+        let idprov = "nuevo_tacto_"+generarIDAleatorio() 
+        let isOnline = await Network.getStatus();
+        if(agregaranimal){
+            if(caravana == ""){
+                Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
+                return
+            }
+            let a = await guardarAnimal2(true,false)
+            if(a.id == -1){
+                return
+            }
+            let data = {
+                fecha:fechatacto +" 03:00:00" ,
+                observacion:observaciontacto,
+                animal:a.id,
+                categoria:categoriatacto,
+                prenada:prenadatacto,
+                tipo:tipotacto,
+                nombreveterinario:"",
+                cab:caboff.id,
+                active:true
+            }
+            if(isOnline){
+                try{
+                    //que pasa si el animal no existe
+                    const record = await pb.collection('tactos').create(data);
+
+                    await loadAnimales()
+                    await addNewTacto(db,record)
+                    Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+                }
+                catch(err){
+                    console.error(err)
+                    Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+                }
+            }
+            else{
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"tactos",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,    
+                    camposprov:"animal"
+                }
+                comandos.push(comando)
+                setComandos(db,comandos)
+                await addNewTacto(db,data)
+            }
+        }
+        else{
+            let data = {
+                fecha:fechatacto +" 03:00:00" ,
+                observacion:observaciontacto,
+                animal:animaltacto,
+                categoria:categoriatacto,
+                prenada:prenadatacto,
+                tipo:tipotacto,
+                nombreveterinario:"",
+                cab:cab.id,
+                active:true
+            }
+            if(coninternet){
+                const record = await pb.collection('tactos').create(data);
+                await pb.collection('animales').update(animaltacto,{
+                    prenada:prenadatacto
+                })
+                await guardarHistorial(pb,animaltacto)
+                Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+            }
+            else{
+                let nuevoanimal = animaltacto.id.split("_")[0]=="nuevo"
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"tactos",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:nuevoanimal?"animal":""
+                }
+                if(!nuevoanimal){
+                    let comandohisto = {
+                        tipo:"historial",
+                        data:{id:animaltacto},
+                        hora:Date.now(),
+                        prioridad:5,
+                    }
+                    comandos.push(comando)
+                }
+                
+                comandos.push(comando)
+                setComandos(db,comandos)
+                await addNewTacto(db,data)
+                
+            }
+        }
     }
     async function guardarTacto(){
         if(agregaranimal){
@@ -378,15 +566,15 @@
             try{
             
                 let data = {
-                fecha:fechatacto +" 03:00:00" ,
-                observacion:observaciontacto,
-                animal:animaltacto,
-                categoria:categoriatacto,
-                prenada:prenadatacto,
-                tipo:tipotacto,
-                nombreveterinario:"",
-                cab:cab.id,
-                active:true
+                    fecha:fechatacto +" 03:00:00" ,
+                    observacion:observaciontacto,
+                    animal:animaltacto,
+                    categoria:categoriatacto,
+                    prenada:prenadatacto,
+                    tipo:tipotacto,
+                    nombreveterinario:"",
+                    cab:cab.id,
+                    active:true
                 }
                 const record = await pb.collection('tactos').create(data);
                 await pb.collection('animales').update(animaltacto,{
@@ -439,7 +627,9 @@
             }
             
             let recorda = await pb.collection('animales').create(data); 
+            
             Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
+
             nuevoModalNacimiento.close()
         }
         catch(err){
@@ -469,7 +659,7 @@
                     cab:cab.id
                 }
                 const  record = await pb.collection("tratamientos").create(data)
-                await getAnimales()
+                await loadAnimales()
                 Swal.fire("Éxito guardar","Se pudo guardar el tratamiento con exito","success")
             }
             catch(err){
@@ -519,7 +709,7 @@
             }
             try{
                 const record = await pb.collection('inseminacion').create(data);
-                await getAnimales()
+                await loadAnimales()
                 Swal.fire("Éxito guardar","Se pudo guardar la inseminación con exito","success")
             }
             catch(err){
@@ -578,7 +768,7 @@
             try{
                 await pb.collection("servicios").create(dataser)
                 
-                await getAnimales()
+                await loadAnimales()
                 Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
             }
             catch(err){
@@ -633,7 +823,7 @@
                     active:true
                 }
                 const record = await pb.collection('observaciones').create(data);
-                await getAnimales()
+                await loadAnimales()
                 Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
             }
             catch(err){
@@ -1036,44 +1226,16 @@
         await setDefaultUser()
 
     }
-    async function getAllData() {
-        
-    }
     onMount(async ()=>{
-        coninternet = await Network.getStatus();
-        useroff = await getUser()
-        caboff = await getCab()
-
-        if(caboff.exist){
-            db = await openDB()
-
-            //Reviso el internet
-            let lastinter = await getInternet(db)
-            //Ahora tengo internet
-            if (coninternet){
-                //Si tengo internet lo primero que hago es guardar los comandos
-                if(lastinter.internet == 0){
-                    //Debo traer los datos de la cabaña
-                    let datacab = await getCabData(pb,caboff.id)
-                }
-                else{
-                    //Logica con internet previo
-                    let ahora = Date.now()
-                    let antes = lastinter.ultimo
-                    const cincoMinEnMs = 300000;
-                
-                    if((ahora - fechaMs) >= cincoMinEnMs){
-                        let datacab = await getCabData(pb,caboff.id)
-                        
-                    }
-                }
-                await setInternet(db,1,Date.now())
-
-                
-            }
-            else{
-                //Es mas faci
-            }
+        cab = caber.cab
+        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        
+        usuarioid = pb_json.record.id
+        if(cab.exist){
+            await getAnimales()
+            await getTiposTratamientos()
+            await getTotales()
+            cargados = true
         }
         
     })
@@ -1081,7 +1243,7 @@
 </script>
 <Navbarr>
     <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
-    {#if caboff.exist}
+    {#if cab.exist}
     
         <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">

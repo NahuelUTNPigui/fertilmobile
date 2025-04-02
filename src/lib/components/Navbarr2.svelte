@@ -6,6 +6,7 @@
     import { page } from '$app/stores';  
     import {createCaber} from '$lib/stores/capacitor/capcab.svelte' 
     import {createUser} from '$lib/stores/capacitor/capuser.svelte'
+    import {enabled} from '$lib/stores/enabled'
     let { children} = $props();
     let userer = createUser()
     let pageurl = $page.url.pathname  
@@ -26,26 +27,25 @@
     let nombreestablecimiento = $state("")
     onMount(async ()=>{
       let caber = createCaber()
-      nombreestablecimiento = caber.cab.nombre
+      useroff = await getUser()
+      caboff = await getCab()
+      
+      nombreestablecimiento = caboff.nombre
       if (window.innerWidth <= 600) { // Pantallas pequeñas
         nombreestablecimiento= nombreestablecimiento.slice(0,15)
       }
-
-      let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-      usuarioid = pb_json.model.id
-      nombreusuario = pb_json.model.username
-
-      let hab = userer.user.id==""?"no":"si"
-      cab = caber.cab      
       
-      ////let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-      //let user = userer.user
-      //usuarioid = user.id
-      //nombreusuario = user.username
+      //let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+      usuarioid = useroff.id
+      nombreusuario = useroff.username
       
+      let hab = $enabled
       if(hab==="no"){
         goto("/")
       }
+      
+      cab = caber.cab
+      //SI no tengo internet debo revisar      
       await getNotis()
     })
     

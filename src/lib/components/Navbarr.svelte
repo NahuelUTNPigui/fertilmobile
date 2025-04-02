@@ -9,13 +9,18 @@
   import { createDarker } from "$lib/stores/dark.svelte";
   import { page } from '$app/stores';  
   import { createCaber } from "$lib/stores/cab.svelte";
-  let { children} = $props();
+  import {getUser,setDefaultUser} from "$lib/stores/capacitor/offlineuser"
+  import {getCab,setDefaultCab} from "$lib/stores/capacitor/offlinecab"
+  import {openDB} from '$lib/stores/sqlite/main'
+  let {children} = $props();
   let pageurl = $page.url.pathname  
   let ruta = import.meta.env.VITE_RUTA
   const pb = new PocketBase(ruta);
   let darker = createDarker()
   let leido = $state(true)
   let notificaciones = $state([])
+  let useroff = $state({})
+  let caboff = $state({})
   let cab = $state({
       exist:false,
       nombre:"",
@@ -32,14 +37,17 @@
   //let rol = "cab"
   onMount(async ()=>{
     let caber = createCaber()
-    nombreestablecimiento = caber.cab.nombre
+    useroff = await getUser()
+    caboff = await getCab()
+    
+    nombreestablecimiento = caboff.nombre
     if (window.innerWidth <= 600) { // Pantallas pequeñas
       nombreestablecimiento= nombreestablecimiento.slice(0,15)
     }
     
-    let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-    usuarioid = pb_json.record.id
-    nombreusuario = pb_json.record.username
+    //let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+    usuarioid = useroff.id
+    nombreusuario = useroff.username
     
     let hab = $enabled
     if(hab==="no"){

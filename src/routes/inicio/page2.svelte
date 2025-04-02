@@ -588,20 +588,142 @@
         }
     }
     onMount(async ()=>{
-        
-        await caber.init()
-        await userer.init()
-        cab = caber.cab
-        usuarioid = userer.user.id
-        if(cab.exist){
-            //await getAnimales()
-            //await getTiposTratamientos()
-            let manager = managerCab()
-            await manager.initOnline()
-            await animaler.initOnline()
-            await gruper.initOnline()
+        coninternet = await Network.getStatus();
+        useroff = await getUser()
+        caboff = await getCab()
+        usuarioid = useroff.id
+        if(caboff.exist){
+            db = await openDB()
+
+            //Reviso el internet
+            let lastinter = await getInternet(db)
+            let res = await getComandos(db)
+            comandos = res.lista
+
+            //Ahora tengo internet
+            if (coninternet){
+                //Si tengo internet lo primero que hago es guardar los comandos
+                if(lastinter.internet == 0){
+                    //Debo traer los datos de la cabaña
+                    let datacab = await getCabData(pb,caboff.id)
+                    let datatotal = await getTotalAnimales(pb)
+                    setEventos(
+                        db,
+                        datacab.tactos,
+                        datacab.servicios,
+                        datacab.inseminaciones,
+                        datacab.observaciones,
+                        datacab.lotes,
+                        datacab.rodeos,
+                        datacab.tipostrat,
+                        datacab.trats,
+                        datacab.nacimientos,
+                        datacab.animaleselegir,
+                        datacab.pesajes
+                    );
+                    setAnimales(db,datacab.animales)
+                    setUltimoAnimales(db)
+                    setUltimoEventos(db)
+                    setTotal(db,datatotal)
+                    setUltimoTotal(db)
+                    animales = datacab.animales
+                    totaleventos.tactos = datacab.tactos.length
+                    totaleventos.inseminaciones = datacab.inseminaciones.length
+                    totaleventos.nacimientos = datacab.nacimientos.length
+                    totaleventos.tratamientos = datacab.trats.length
+                    totaleventos.observaciones = datacab.observaciones.length
+                    totaleventos.pesajes = datacab.pesajes.length
+                    totaleventos.servicios = datacab.servicios.length
+                    totaleventos.lotes = datacab.lotes.length
+                    totaleventos.rodeos = datacab.rodeos.length
+                    totaleventos.animales = animales.length
+                }
+                else{
+                    //Logica con internet previo
+                    let ahora = Date.now()
+                    let antes = lastinter.ultimo
+                    const cincoMinEnMs = 300000;
+                
+                    if((ahora - antes) >= cincoMinEnMs){
+                        let datacab = await getCabData(pb,caboff.id)
+                        let datatotal = await getTotalAnimales(pb)
+                        setEventos(
+                            db,
+                            datacab.tactos,
+                            datacab.servicios,
+                            datacab.inseminaciones,
+                            datacab.observaciones,
+                            datacab.lotes,
+                            datacab.rodeos,
+                            datacab.tipostrat,
+                            datacab.trats,
+                            datacab.nacimientos,
+                            datacab.animaleselegir
+                        );
+                        setAnimales(datacab.animales)
+                        setAnimales(db,datacab.animales)
+                        setUltimoAnimales(db)
+                        setUltimoEventos(db)
+                        setTotal(db,datatotal)
+                        setUltimoTotal(db)
+                        animales = datacab.animales
+                        totaleventos.tactos = datacab.tactos.length
+                        totaleventos.inseminaciones = datacab.inseminaciones.length
+                        totaleventos.nacimientos = datacab.nacimientos.length
+                        totaleventos.tratamientos = datacab.trats.length
+                        totaleventos.observaciones = datacab.observaciones.length
+                        totaleventos.pesajes = datacab.pesajes.length
+                        totaleventos.servicios = datacab.servicios.length
+                        totaleventos.lotes = datacab.lotes.length
+                        totaleventos.rodeos = datacab.rodeos.length
+                        totaleventos.animales = animales.length
+                    }
+                    else{
+                        let data = await getEventos(db)
+                        let dataanimales = await getAnimales(db)
+                        animales = dataanimales.lista
+                        totaleventos.tactos = data.tactos.length
+                        totaleventos.inseminaciones = data.inseminaciones.length
+                        totaleventos.nacimientos = data.nacimientos.length
+                        totaleventos.tratamientos = data.trats.length
+                        totaleventos.observaciones = data.observaciones.length
+                        totaleventos.pesajes = data.pesajes.length
+                        totaleventos.servicios = data.servicios.length
+                        totaleventos.lotes = data.lotes.length
+                        totaleventos.rodeos = data.rodeos.length
+                        totaleventos.animales = animales.length
+                    }
+                }
+                await setInternet(db,1,Date.now())
+            }
+            else{
+                let data = await getEventos(db)
+                let dataanimales = await getAnimales(db)
+                animales = dataanimales.lista
+                totaleventos.tactos = data.tactos.length
+                totaleventos.inseminaciones = data.inseminaciones.length
+                totaleventos.nacimientos = data.nacimientos.length
+                totaleventos.tratamientos = data.trats.length
+                totaleventos.observaciones = data.observaciones.length
+                totaleventos.pesajes = data.pesajes.length
+                totaleventos.servicios = data.servicios.length
+                totaleventos.lotes = data.lotes.length
+                totaleventos.rodeos = data.rodeos.length
+                totaleventos.animales = animales.length
+            }
+            madres = animales.filter(a=>a.sexo=="H"||a.sexo=="F")
+            listamadres = madres.map(item=>{
+                return {id:item.id,nombre:item.caravana}
+            })
+            padres = animales.filter(a=>a.sexo=="M")
+            listapadres = padres.map(item=>{
+                return {id:item.id,nombre:item.caravana}
+            })
+            listaanimales = animales.map(item=>{
+                return {id:item.id,nombre:item.caravana}
+            })
+            cargadoanimales = true
         }
-        
         
     })
  
