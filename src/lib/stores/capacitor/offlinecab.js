@@ -5,17 +5,17 @@ let defaultcab = {
     id:"",
     permisos:""
 }
-export async function setDefaultCab() {
+export async function setDefaultCabOffline() {
     await Preferences.set({
         key:"cab",
         value:JSON.stringify(defaultcab)
     })
 }
-export async function setCab(id,nombre,exist,permisos) {
+export async function setCabOffline(id,nombre,exist,permisos) {
     let c = {id,nombre,exist,permisos}
     await Preferences.set({key:"cab",value:JSON.stringify(c)})
 }
-export async function getCab() {
+export async function getCabOffline() {
     const c = await Preferences.get({ key: 'cab' });
     if(c.value){
         return JSON.parse(c.value)

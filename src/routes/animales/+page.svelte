@@ -431,7 +431,7 @@
         <div class="flex col-span-2 gap-1 justify-end">
             <div>
                 <button class={` btn btn-primary rounded-lg ${estilos.btntext} px-2 mx-1`} data-theme="forest" onclick={()=>openNewModal()}>
-                    <span  class="text-lg m-1">Nuevo</span>
+                    <span  class="text-lg m-1 text-white">Nuevo</span>
                 </button>
             </div>
             <div>

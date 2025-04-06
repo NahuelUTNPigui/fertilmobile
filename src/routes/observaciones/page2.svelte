@@ -14,29 +14,7 @@
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import cuentas from '$lib/stores/cuentas';
     //offline
-    import {openDB,resetTables} from '$lib/stores/sqlite/main'
-    import { Network } from '@capacitor/network';
-    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
-    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
-    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline,getUS} from "$lib/stores/capacitor/offlinecab"
-    import {
-        updateLocalObservaciones,
-        setObservacionesSQL,
-        addNewObservacionSQL,
-        getObservacionesSQL
-    } from '$lib/stores/sqlite/dbeventos';
-    //offline
-    let db = $state(null)
-    let usuarioid = $state("")
-    let useroff = $state({})
-    let caboff = $state({})
-    let coninternet = $state(false)
-    let comandos = $state([])
-    //online
-
+    
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -54,7 +32,7 @@
     let malcaravana = $state(false)
     let sexo = $state("")
     let peso = $state(0)
-    
+    let usuarioid = $state("")
     //Datos observaciones
     let idobservacion = $state("")
     let animal = $state("")
@@ -209,121 +187,13 @@
             totalObservacionesEncontradas = observacionesrow.length
         }
     }
-
-    async function originalMount() {
+    onMount(async ()=>{
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         await getObservaciones()
         filterUpdate()
         await getAnimales()
-    }
-    onMount(async ()=>{
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        if (coninternet.connected){
-            if(lastinter.internet == 0){
-                observaciones = await updateLocalObservaciones(db,pb,caboff.id)
-                filterUpdate()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    observaciones = await updateLocalObservaciones(db,pb,caboff.id)
-                    filterUpdate()
-                }
-                else{
-                    let resobservaciones = await getObservacionesSQL(db)
-                    observaciones = resobservaciones.lista
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            let resobservaciones = await getObservacionesSQL(db)
-            observaciones = resobservaciones.lista
-            await setInternetSQL(db,0,Date.now())
-
-        }
     })
-    async function guardarAnimal2() {
-        //Los nombres de la funciones horribles
-        let totalanimals = await getTotalSQL(db)
-        let verificar = true
-        //No funciona correctamente porque prueva el usuario cuando deberia probar el usuario
-        //Dueño de la cabaña
-        if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
-            verificar =  false
-        }
-        if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
-            return {id:-1}
-        }
-        let data = {
-            caravana:caravananuevo,
-            active:true,
-            categoria:categorianuevo,
-            delete:false,
-            fechanacimiento:fechanacimientonuevo +" 03:00:00",
-            sexo:sexonuevo,
-            peso:pesonuevo,
-            cab:caboff.id
-        }
-        let idprov = "nuevo_animal_"+generarIDAleatorio() 
-        if(coninternet.connected){
-            let recorda = await pb.collection('animales').create(data); 
-            return recorda   
-        }
-        else{
-            data.id = idprov
-            let comando = {
-                tipo:"add",
-                coleccion:"animales",
-                data:{...data},
-                hora:Date.now(),
-                prioridad:3,
-                idprov,
-                //No tiene poque no lotes y rodeos
-                camposprov:""
-            }
-            comandos.push(comando)
-            await setComandosSQL(db,comandos)
-            return data
-        }
-    }
-    async function guardar2() {
-        let idprov = "nuevo_obs_"+generarIDAleatorio()
-        if(agregaranimal){
-            let a = await guardarAnimal2()
-            if(a.id == -1){
-                return 
-            }
-            animales.push(a)
-            await setAnimalesSQL(db,animales)
-            if(coninternet.connected){
-
-            }
-            else{
-
-            }
-        }
-        else{
-            if(coninternet.connected){
-
-            }
-            else{
-                
-            }
-        }
-    }
     async function guardar(){
         if (agregaranimal){
             try{

@@ -1,36 +1,21 @@
 <script>
+    import { goto } from "$app/navigation";
     import Navbarr from "$lib/components/Navbarr.svelte";
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
     import estilos from '$lib/stores/estilos';
+    import estados from "$lib/stores/estados";
     import { createCaber } from '$lib/stores/cab.svelte';
     import categorias from "$lib/stores/categorias";
     import sexos from "$lib/stores/sexos";
     import {capitalize} from "$lib/stringutil/lib"
     import {guardarHistorial} from "$lib/historial/lib"
     import MultiSelect from "$lib/components/MultiSelect.svelte";
-    import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
-    //OFFLINE
-    import {openDB} from '$lib/stores/sqlite/main'
-    import { Network } from '@capacitor/network';
-    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimales} from "$lib/stores/sqlite/dbanimales"
-    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import {getRodeosSQL,getEventosSQL, getLotesSQL} from "$lib/stores/sqlite/dbeventos"
     
-    //offline
-    let db = $state(null)
-    let usuarioid = $state("")
-    let useroff = $state({})
-    let caboff = $state({})
-    let coninternet = $state(false)
-    let comandos = $state([])
-    //online
     let ruta = import.meta.env.VITE_RUTA
-
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -38,9 +23,8 @@
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     let caber = createCaber()
     let cab = caber.cab
-
     //boton
-    let textoboton = $state("Mover")
+    let textoboton = $state("Tratamientos")
     //Datos animales
     let animales = $state([])
     let animalesrows = $state([])
@@ -52,12 +36,13 @@
     let rodeoseleccion = $state([])
     let categoriaseleccion = $state([])
     let categoria = $state("")
-    let sexo = $state("")
+    let sexo = $state("H")
 
     let lotes = $state([])
     let rodeos = $state([])
-    let tipos = $state([])
     let isOpenFilter = $state(false)
+    let tipotratamientos = $state([])
+
     //Seleccionados
     let selectanimales = $state([])
     let selecthashmap = $state({})
@@ -67,13 +52,13 @@
 
     //movimiento
     let fecha = $state("")
-    let nuevospesos = $state({})
+    let tipotratamientoselect = $state("")
+    let observaciongeneral = $state("")
 
-    //Seleecionar
-    let selectcategoria = $state(true)
-    let selectlote = $state(false)
-    let selectrodeo = $state(false)
-    let selecttratamiento = $state(false)
+    //validacion
+    let malfecha = $state(false)
+    let maltipo = $state(false)
+    let botonhabilitado = $state(false)
 
     function clickFilter(){
         isOpenFilter = !isOpenFilter
@@ -103,33 +88,38 @@
         if(rodeoseleccion.length != 0){
             if(rodeoseleccion.length == 1 && rodeoseleccion[0] == "-1"){
                 animalesrows = animalesrows.filter(a=>!a.rodeo)
+                totalAnimalesEncontrados = animalesrows.length
             }
             else{
                 animalesrows = animalesrows.filter(a=>rodeoseleccion.includes(a.rodeo))
-                
+                totalAnimalesEncontrados = animalesrows.length
             }
+            
         }
         if(loteseleccion.length != 0){
             if(loteseleccion.length == 1 && loteseleccion[0] == "-1"){
                 animalesrows = animalesrows.filter(a=>!a.lote)
+                totalAnimalesEncontrados = animalesrows.length
             }
             else{
                 animalesrows = animalesrows.filter(a=>loteseleccion.includes(a.lote))
+                totalAnimalesEncontrados = animalesrows.length
             }
             
         }
         if(categoriaseleccion.length != 0){
             if(categoriaseleccion.length == 1 && categoriaseleccion[0] == "-1"){
                 animalesrows = animalesrows.filter(a=>!a.categoria)
+                totalAnimalesEncontrados = animalesrows.length
             }
             else{
                 animalesrows = animalesrows.filter(a=>categoriaseleccion.includes(a.categoria))
+                totalAnimalesEncontrados = animalesrows.length
             }
             
         }
 
     }
-
     function ordenarNombre(lista){
         lista.sort((r1,r2)=>r1.nombre.toLocaleLowerCase()>r2.nombre.toLocaleLowerCase()?1:-1)
     }
@@ -153,7 +143,6 @@
             }
         }
     }
-
     function clickTodos(){
         if(todos){
             todos = false
@@ -179,7 +168,13 @@
         }
         
     }
-
+    function inputObsGeneral(){
+        
+        for(let i = 0 ;i < selectanimales.length;i++){
+            selectanimales[i].observacionnuevo = observaciongeneral
+            
+        }
+    }
     async function getLotes(){
         const records = await pb.collection('lotes').getFullList({
             filter:`active = true && cab ~ '${cab.id}'`,
@@ -196,15 +191,14 @@
         rodeos = records
         //ordenarNombre(rodeos)
     }
-    async function getTipos(){
+    async function getTiposTratamientos(){
         const records = await pb.collection('tipotratamientos').getFullList({
             filter : `(cab='${cab.id}' || generico = true) && active = true`,
             sort: '-created',
         });
-        tipos = records
-        tipos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
+        tipotratamientos = records
+        tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
-    //No haria falta
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`active=true && delete=false && cab='${cab.id}'`,
@@ -216,185 +210,111 @@
         animalesrows = animales
     }
     function openNewModal(){
-        
         if(ninguno){
-            Swal.fire("Error pesaje","No hay animales seleccionados","error")
+            Swal.fire("Error tratamiento","No hay animales seleccionados","error")
             return
         }
         selectanimales = []
         for (const [key, value ] of Object.entries(selecthashmap)) {
             if(value != null){
-                selectanimales.push({...value,pesonuevo:value.peso})
+                selectanimales.push({
+                    ...value,
+                    tipotratamiento:"",
+                    observacionnuevo:""})
             }
         }
-        if(selectanimales.length==0){
-            Swal.fire("Error pesaje","No hay animales seleccionados","error")
-            return
-        }
-        nuevoModal.showModal()   
-        
-
+        tratamientoMasivo.showModal()
     }
-    async function crearPesajeOnline() {
+    async function guardarTratamiento(){
+        if(fecha == "" || tipotratamientoselect == ""){
+            Swal.fire("Error tratamientos","Debe seleccionar una fecha","error")
+            return 
+        }
         let errores = false
+        let bulkdata = []
+        for(let i = 0;i<selectanimales.length;i++){
+            let tratamientoanimal = selectanimales[i]
+            let datatratamiento = {
+                    fecha : fecha+ " 03:00:00",
+                    observacion:tratamientoanimal.observacionnuevo,
+                    categoria:tratamientoanimal.categoria,
+                    animal:tratamientoanimal.id,
+                    tipo:tipotratamientoselect,
+                    active : true,
+                    cab:cab.id
+            }
+            bulkdata.push(datatratamiento)
+            
+        }
+        try{
+            const batch = pb.createBatch();
+            for(let i = 0;i<bulkdata.length;i++){
+                let t = bulkdata[i]
+                batch.collection('tratamientos').create(t);
+            }
+            
+
+            const result = await batch.send();
+
+            Swal.fire("Éxito tratamientos","Se lograron registrar todos los tratamientos","success")
+        }
+        catch(err){
+            Swal.fire("Error tratamientos","Hubo algun error en algun tratamiento","error")
+        }
         
-        for(let i = 0;i<selectanimales.length ;i++){
-            
-            let ps = selectanimales[i]
-            
-            try{
-                let dataupdate = {
-                    peso:ps.pesonuevo
-                }
-                let data ={
-                    pesonuevo:ps.pesonuevo,
-                    pesoanterior:ps.peso,
-                    fecha:fecha+" 03:00:00",
-                    animal:ps.id
-                }
-                await guardarHistorial(pb,selectanimales[i].id)
-                let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                await pb.collection("pesaje").create(data)
-            }
-            catch(err){
-                console.error(err)
-                errores = true
-            }
-        }
-        if(errores){
-            Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
-        }
-        else{
-            Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
-        }
-        //await getAnimales()
-        filterUpdate()
+        fecha = ""
+        malfecha = false
+        maltipo = false
+        tipotratamientoselect = ""
+        botonhabilitado = false
         selecthashmap = {}
         selectanimales = []
-    }
-    async function crearPesajeOffline() {
-        let errores = false
-        
-        for(let i = 0;i<selectanimales.length ;i++){
-            
-            let ps = selectanimales[i]
-            
-            try{
-                let dataupdate = {
-                    peso:ps.pesonuevo
-                }
-                let data ={
-                    pesonuevo:ps.pesonuevo,
-                    pesoanterior:ps.peso,
-                    fecha:fecha+" 03:00:00",
-                    animal:ps.id
-                }
-                let comandopesaje = {}
-                let comandocambio = {}
-                let comandohistorial = {}
-                comandos.push(comandopesaje)
-                comandos.push(comandocambio)
-                comandos.push(comandohistorial)
-                //await guardarHistorial(pb,selectanimales[i].id)
-                //let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                //await pb.collection("pesaje").create(data)
-                await setComandosSQL(db,comandos)
-            }
-            catch(err){
-                console.error(err)
-                errores = true
-            }
-        }
-        if(errores){
-            Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
-        }
-        else{
-            Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
-        }
-        //await getAnimales()
-        filterUpdate()
-        selecthashmap = {}
-        selectanimales = []
-    }
-    async function crearPesaje(){
-        if(coninternet.connected){
-            await crearPesajeOnline()
-        }
-        else{
-            await crearPesajeOffline()
-        }
-    }
-    async function originalMount(){
-        await getAnimales()
-        await getRodeos()
-        await getLotes()
-        await getTipos()
-    }
-
-    //Esto se repite en todas las paginas abstraer
-    async function initData() {
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-        db = await openDB()
-
-        let reslotes = await getLotesSQL(db)
-        lotes = reslote.lista
-        let resrodeos = await getRodeosSQL(db)
-        rodeos = resrodeos.lista
     }
     onMount(async ()=>{
-        await initData()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        //Hago un reinicio de los comandos
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-    
-        //await flushComandosSQL(db)
-        if(coninternet.connected){
-            if(lastinter.internet == 0){
-                animales = await updateLocalAnimales(db,pb)
-                animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-                animalesrows = animales
-            }
-            else{
-                //Logica con internet previo
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalAnimales(db)
-                    animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-                    animalesrows = animales
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            let resanimales = await getAnimalesSQL(db)
-            animales = resanimales.lista
-            animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-            animalesrows = animales
-            await setInternetSQL(db,0,Date.now())
-        }
+        await getAnimales()
+        await getLotes()
+        await getRodeos()
+        await getTiposTratamientos()
         
-
     })
+
 </script>
 <Navbarr>
-    <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
+    <div class="grid grid-cols-2 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
-            <h1 class="text-2xl">Pesajes </h1>
+            <button
+                    class="bg-transparent border-none flex"
+                    aria-label="volver"
+                    onclick={()=>goto("/tratamientos")}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mt-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    <h1 class="text-2xl">
+                        Tratamientos
+                    </h1>
+                </button>
+            
         </div>
-        <div class="flex col-span-2 gap-1 justify-end">
+        <div class="flex gap-1 justify-end">
             <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={()=>openNewModal()}>
                 <span  class="text-xl">{capitalize("nuevo")}</span>
             </button>
-            <a class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" href="/pesajes/lista">
-                <span  class="text-xl">Historia</span>
-            </a>
+            <button
+
+                onclick={()=>goto("/tratamientos")}
+                class={`
+                    hidden
+                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
+                    ${estilos.btnsecondary}
+                    rounded-full
+                    px-4 pt-2 pb-3
+                `} 
+                aria-label="Exportar"
+            >
+                <span  class="text-xl font-semibold ">Volver</span>
+                
+            </button>
         </div>
         
     </div>
@@ -412,83 +332,82 @@
             onclick={clickFilter}
         >
             <div class="flex justify-between items-center px-1">
-                <h1 class="font-semibold text-lg py-2">Filtros</h1>
+                <h2 class="font-semibold text-xl py-2">Filtros</h2>
                 <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     class={`h-5 w-5 transition-all duration-300 ${isOpenFilter? 'transform rotate-180':''}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-            </div> 
-        </button>
-        {#if isOpenFilter}
-            <div transition:slide class="grid grid-cols-2 lg:grid-cols-4  m-1 gap-2 w-11/12" >
-                <div>
-                    <label for = "sexo" class="label">
-                        <span class="label-text text-base">Sexo</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 
-                                focus:border-green-500
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={sexo}
-                            onchange={filterUpdate}
-                        >
-                                <option value="">Todos</option>
-                                {#each sexos as s}
-                                    <option value={s.id}>{s.nombre}</option>
-                                {/each}
-                        </select>
-                    </label>
-                </div>
-                <div class="mt-0">
-                    <MultiSelect
-                        opciones={[{id:"-1",nombre:"Sin rodeo"}].concat(rodeos)}
-                        bind:valores={rodeoseleccion}
-                        etiqueta="Rodeos"
-                        filterUpdate = {filterUpdate}
-                    />
-                </div>
-                
-                <div class="mt-0">
-                    <MultiSelect
-                        opciones={[{id:"-1",nombre:"Sin lote"}].concat(lotes)}
-                        bind:valores={loteseleccion}
-                        etiqueta="Lotes"
-                        filterUpdate = {filterUpdate}
-                    />
-                </div>
-                <div class="">
-                    <MultiSelect
-                        opciones={[{id:"-1",nombre:"Sin categoria"}].concat(categorias)}
-                        bind:valores={categoriaseleccion}
-                        etiqueta="Categorias"
-                        
-                        filterUpdate = {filterUpdate}
-                    />
-                </div>
-                <button
-                        class="btn btn-neutral"
-                        onclick={limpiar}
-                >
-                    Limpiar
-                </button>
-            
             </div>
+        </button>
+        <div class="flex justify-between items-center px-1">
+            <h3 class=" text-md py-2">Animales seleccionados: {Object.keys(selecthashmap).length}</h3>
+        </div>
+        {#if isOpenFilter}
+        <div transition:slide class="grid grid-cols-1 lg:grid-cols-4  m-1 gap-2 w-11/12" >
+            <div>
+                <label for = "sexo" class="label">
+                    <span class="label-text text-base">Sexo</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 
+                            focus:border-green-500
+                            ${estilos.bgdark2}
+                        `}
+                        bind:value={sexo}
+                        onchange={filterUpdate}
+                    >
+                            <option value="">Todos</option>
+                            {#each sexos as s}
+                                <option value={s.id}>{s.nombre}</option>
+                            {/each}
+                    </select>
+                </label>
+            </div>
+            <div class="mt-0">
+                <MultiSelect
+                    opciones={[{id:"-1",nombre:"Sin rodeo"}].concat(rodeos)}
+                    bind:valores={rodeoseleccion}
+                    etiqueta="Rodeos"
+                    filterUpdate = {filterUpdate}
+                />
+            </div>
+            <div class="mt-0">
+                <MultiSelect
+                    opciones={[{id:"-1",nombre:"Sin lote"}].concat(lotes)}
+                    bind:valores={loteseleccion}
+                    etiqueta="Lotes"
+                    filterUpdate = {filterUpdate}
+                />
+            </div>
+            <div class="">
+                <MultiSelect
+                    opciones={[{id:"-1",nombre:"Sin categoria"}].concat(categorias)}
+                    bind:valores={categoriaseleccion}
+                    etiqueta="Categorias"
+                    
+                    filterUpdate = {filterUpdate}
+                />
+            </div>
+            <button class="btn btn-neutral" onclick={limpiar}>
+                Limpiar
+            </button>
+            
+        
+        </div>
         {/if}
     </div>
-
     <div class="hidden w-full md:grid grid-cols-1 justify-items-center mx-1 lg:mx-10 lg:w-11/12 overflow-x-auto" >
         <table class="table table-lg w-full " >
             <thead>
                 <tr>
-                    <th class="px-1 p-0 m-0">
+                    <th class="px-1 py-0 m-0">
                         <button    
                             aria-label="Todos"
                             onclick={clickTodos}
@@ -527,7 +446,7 @@
             <tbody>
                 {#each animalesrows as a}
                     <tr>
-                        <td class="px-1 p-0 m-0">
+                        <td class="px-1 py-0 m-0">
                             <button
                                 aria-label="fila"
                                 onclick={()=>clickAnimal(a.id)}
@@ -609,20 +528,17 @@
                             `}
                         >
                             {#if selecthashmap[a.id]}
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="red" class="size-6">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                 </svg>                                  
                             {:else}             
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                 </svg>
                             {/if}
                         </button>
                         {a.caravana}
                     </h3>
-                    {#if a.sexo == "H" && a.prenada != 1}
-                        <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
-                    {/if}
                 </div>
                 <div class="grid grid-cols-2 gap-y-2">
                     <div class="flex items-start">
@@ -635,13 +551,6 @@
                       </span>
                       
                     </div>
-                    <div class="flex items-start">
-                        <span >Peso:</span> 
-                        <span class="font-semibold">
-                          {a.peso}
-                        </span>
-                        
-                      </div>
                     <div class="flex items-start">
                       <span >Lote:</span>
                       <span class="font-semibold">
@@ -676,10 +585,10 @@
         {/each}
     </div>
 </Navbarr>
-<dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+<dialog id="tratamientoMasivo" class="modal modal-middle rounded-xl">
     <div 
         class="
-            modal-box w-11/12 max-w-xl
+            modal-box w-11/12 max-w-6xl
             bg-gradient-to-br from-white to-gray-100 
             dark:from-gray-900 dark:to-gray-800
             "
@@ -687,64 +596,143 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        
-        <h3 class="text-lg font-bold">Movimiento</h3>
-        <label for = "fechapesaje" class="label">
-            <span class="label-text text-base">Fecha </span>
-        </label>
-        <label class="input-group ">
-            <input id ="fechapesaje" type="date" max={HOY}  
-                class={`
-                    input input-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 
-                    focus:border-green-500
-                    ${estilos.bgdark2} 
-                `}
-                bind:value={fecha}
-            />
-            
-        </label>
-        <div class="hidden w-full grid grid-cols-1 justify-items-center overflow-x-auto" >
-            <table class="table table-lg w-full " >
-                <thead>
-                    <tr>
-                        <th class="text-base p-0">Caravana</th>
-                        <th class="text-base p-0">Peso anterior</th>
-                        <th class="text-base ">Peso nuevo</th>
-                    </tr>
-                    
-                </thead>
-                <tbody>
-                    {#each selectanimales as a,i}
+        <h3 class="text-lg font-bold">Tratamientos</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
+            <div>
+                <label for = "fechatrata" class="label">
+                    <span class="label-text text-base">Fecha </span>
+                </label>
+                <label class="input-group ">
+                    <input id ="fechtrata" type="date" max={HOY}  
+                        class={`
+                            input input-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 
+                            focus:border-green-500
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={fecha}
+                        onchange={
+                            ()=>{
+                                if(fecha == ""){
+                                    malfecha = true
+                                    botonhabilitado = false
+                                }
+                                else{
+                                    malfecha = false
+                                    if(!maltipo && tipotratamientoselect !=""){
+                                        botonhabilitado = true
+                                    }
+                                    
+                                }
+                            }
+                        }
+                    />
+                    {#if malfecha}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500">Debe seleccionar la fecha del tratamiento</span>                    
+                        </div>
+                    {/if}
+                </label>
+            </div>
+            <div>
+                <label for = "tipo" class="label">
+                    <span class="label-text text-base">Tipo tratamiento</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 
+                            focus:border-green-500
+                            ${estilos.bgdark2} 
+                        `}
+                        bind:value={tipotratamientoselect}
+                        onchange={
+                            ()=>{
+                                if(tipotratamientoselect == ""){
+                                    maltipo = true
+                                    
+                                    botonhabilitado = false
+                                }
+                                else{
+                                    maltipo = false
+                                    if(!malfecha && fecha != ""){
+                                        botonhabilitado = true
+                                    }
+                                    
+                                }
+                            }
+                        }
+                    >
+                        {#each tipotratamientos as t}
+                            <option value={t.id}>{t.nombre}</option>    
+                        {/each}
+                    </select>
+                    <div class={`label ${maltipo?"":"hidden"}`}>
+                        <span class="label-text-alt text-red-400">Debe seleccionar un tipo</span>
+                    </div>
+                </label>
+            </div>
+            <div>
+                <label for = "obs" class="label">
+                    <span class="label-text text-base">Observación </span>
+                </label>
+                <input 
+                    id ="obs" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={observaciongeneral}
+                    oninput={inputObsGeneral}
+                />
+            </div>
+        </div>
+        <div class="hidden w-full grid grid-cols-1 justify-items-start " >
+            <div class="flex overflow-x-auto">
+                <table class="table table-lg w-full" >
+                    <thead>
                         <tr>
-                            <td class="text-base p-0">{a.caravana}</td>
-                            <td class="text-base p-0">{a.peso}</td>
-                            <td class="">
-                                <label class="input-group">
-
-                                
+                            
+                            <th class="text-base ">Caravana</th>
+                            <th class="text-base ">Categoria</th>
+                            <th class="text-base ">Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each selectanimales as a,i}
+                            <tr>
+                                <td class="text-base">{a.caravana}</td>
+                                <td class="text-base">{a.categoria}</td>
+                                <td class="">
                                     <input
-                                    
-                                    bind:value={selectanimales[i].pesonuevo}
-                                    
+                                    bind:value={selectanimales[i].observacionnuevo}
                                     class={`
-                                        input input-bordered w-full
-                                        border border-gray-300 rounded-md
+                                        px-1
+                                        h-12 border border-gray-300 
+                                        w-full
+                                        rounded-md
                                         focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 focus:border-green-500
+                                        focus:ring-green-500 
+                                        focus:border-green-500
                                         ${estilos.bgdark2}
                                     `}
-                                    
                                     />
-                                </label>
-                              </td>
-                            
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                                </td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table> 
+            </div>
         </div>
         <div class="block  justify-items-center mx-1">
             {#each selectanimales as a,i}
@@ -758,31 +746,23 @@
                             </span>
                         </div>
                         <div class="flex items-start col-span-2">
-                            <span >Peso:</span> 
-                            <span class="font-semibold">
-                              {a.peso}
-                            </span>
-                        </div>
-                        <div class="flex items-start col-span-2">
-                            <label class="input-group">
-
-                                
-                                <input
-                                
-                                bind:value={selectanimales[i].pesonuevo}
-                                
+                            
+                            
+                            <input
+                                bind:value={selectanimales[i].observacion}
+                                placeholder="Observación"
                                 class={`
-                                    input input-bordered w-full
-                                    border border-gray-300 rounded-md
+                                    h-12 border border-gray-300
+                                    px-2 
+                                    w-full
+                                    rounded-md
                                     focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 focus:border-green-500
+                                    focus:ring-green-500 
+                                    focus:border-green-500
                                     ${estilos.bgdark2}
                                 `}
-                                
-                                />
-                            </label>
+                            />
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -790,7 +770,7 @@
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >
-                <button class="btn btn-success text-white" onclick={crearPesaje} >Crear pesaje</button>
+                <button class="btn btn-success text-white" disabled={!botonhabilitado} onclick={guardarTratamiento} >Crear tratamientos</button>
                 <button class="btn btn-error text-white" >Cancelar</button>
             </form>
         </div>

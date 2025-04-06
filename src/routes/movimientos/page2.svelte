@@ -16,22 +16,6 @@
     import tiponoti from "$lib/stores/tiponoti";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
-    //OFfline
-    import {openDB,resetTables} from '$lib/stores/sqlite/main'
-    import { Network } from '@capacitor/network';
-    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
-    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-
-    //offline
-    let db = $state(null)
-    let usuarioid = $state("")
-    let useroff = $state({})
-    let caboff = $state({})
-    let coninternet = $state(false)
-    let comandos = $state([])
-
-
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -237,7 +221,7 @@
         }
         
     }
-    async function moverInternet() {
+    async function mover(){
         if(ninguno){
             Swal.fire("Error movimiento","No hay animales seleccionados","error")
             nuevorodeo = ""
@@ -393,148 +377,6 @@
         
         await getAnimales()
         filterUpdate()
-    }
-    async function moverOffline() {
-        if(ninguno){
-            Swal.fire("Error movimiento","No hay animales seleccionados","error")
-            nuevorodeo = ""
-            nuevolote = ""
-            nuevacategoria = ""
-            return
-        }
-        let lista = []
-        for (const [key, value ] of Object.entries(selecthashmap)) {
-            if(value != null){
-                lista.push(value)
-            }
-        }
-        if(lista.length==0){
-            Swal.fire("Error movimiento","No hay animales seleccionados","error")
-            nuevorodeo = ""
-            nuevolote = ""
-            nuevacategoria = ""
-            return
-        }
-        let data = {}
-        let nombrelote = ""
-        let nombrerodeo = ""
-        if(selectcategoria){
-            data.categoria = nuevacategoria
-            
-        }
-        if(selectlote){
-            data.lote = nuevolote
-            nombrelote = lotes.filter(l =>l.id==nuevolote)[0]
-        }
-        if(selectrodeo){
-            data.rodeo = nuevorodeo
-            nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0]
-        }
-        if(selecttratamiento){
-            data.fecha = fecha + " 03:00:00"
-            data.tipo = tipotratamiento
-            data.active = true
-            data.cab = cab.id
-        }
-        if(selectbaja){
-            data.active = false
-            data.motivobaja = motivo
-            data.fechafallecimiento = fechabaja + " 03:00:00" 
-        }
-        //Sin internet no se puede trasladar, por que? Porque no tengo el codigo
-        //Podria ser un posible 
-        let bulkcambios = []
-        let bulkhistoriales = []
-        let bulktratamientos = []
-        for(let i = 0;i<lista.length;i++){
-            let a = lista[i]
-            if(!selecttratamiento){
-                let datacambio={
-                    ...data
-                }
-                bulkcambios.push(datacambio)
-                let datahistorial = {
-                    animal:a.id,
-                    caravana:a.caravana,
-                    user:a.expand.cab.user,
-                    active:true,
-                    delete:false,
-                    fechanacimiento:a.fechanacimiento,
-                    sexo:a.sexo,
-                    peso:a.peso,
-                    lote:a.lote,
-                    rodeo:a.rodeo,
-                    categoria:a.categoria,
-                    prenada:a.prenada
-                }
-                bulkhistoriales.push(datahistorial)
-            }
-            else{
-                let a = lista[i]
-                let datatratamiento = {
-                    ...data,
-                    animal:a.id,
-                    categoria:a.categoria
-                }
-                bulktratamientos.push(datatratamiento)
-            }
-        }
-
-        //Aca agrego los comandos
-        for(let i = 0;i<lista.length;i++){
-            if(!selecttratamiento){
-                //Que pasa si tiene un id nuevo
-                let comandocambio = {
-
-                }
-                //Si tienen id nuevo entonces no habra historial
-                let comandohistorial = {}
-                //batch.collection('animales').update(lista[i].id,bulkcambios[i]);
-                //batch.collection('historialanimales').create(bulkhistoriales[i]);
-                comandos.push(comandohistorial)
-                comandos.push(comandocambio)
-            }
-            else{
-                let comandotrata={
-
-                }
-                comandos.push(comandotrata)
-                //batch.collection('tratamientos').create(bulktratamientos[i]);
-            }
-        }
-        await setComandosSQL(db,comandos)
-        for(let i = 0;i<lista.length;i++){
-            delete selecthashmap[lista[i].id] 
-        }
-        algunos = false
-        todos = false
-        ninguno = true
-        selectcategoria = true
-        selectlote = false
-        selectrodeo = false
-        selecttratamiento = false
-        selectbaja = false
-        selecttransfer
-        nuevacategoria = ""
-        nuevolote = ""
-        nuevorodeo = ""
-        fecha = ""
-        tipotratamiento = ""
-        fechabaja = ""
-        motivo = ""
-        codigo = ""
-        habilitarboton = false
-        await setAnimalesSQL(db,animales)
-        await updateLocalAnimales()
-        filterUpdate()
-    }
-    async function mover(){
-        if(coninternet.connected){
-            await moverInternet()
-        }
-        else{
-            await moverOffline()
-        }
 
     }
     function onChangeCollapse(seccion){
@@ -708,55 +550,12 @@
             }
         }
     }
-    async function originalMount() {
+    
+    onMount(async ()=>{
         await getAnimales()
         await getRodeos()
         await getLotes()
         await getTipos()
-    }
-    async function updateLocalAnimales(db) {
-        await getAnimales()
-        await setAnimalesSQL(db,animales)
-        await setUltimoAnimalesSQL(db)
-
-    }
-
-    //Falta traer los lostes
-    onMount(async ()=>{
-        //Esto se repite en todas las paginas deberia abstraerlo
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        //Hago un reinicio de los comandos
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        //await flushComandosSQL(db)
-        if(coninternet.connected){
-            if(lastinter.internet == 0){
-                await updateLocalAnimales(db)
-            }
-            else{
-                //Logica con internet previo
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalAnimales(db)
-                }
-                
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            let resanimales = await getAnimalesSQL(db)
-            animales = resanimales.lista
-            await setInternetSQL(db,0,Date.now())
-        }
-        
     })
 
 </script>

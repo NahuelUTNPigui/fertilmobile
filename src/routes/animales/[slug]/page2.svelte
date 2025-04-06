@@ -13,34 +13,42 @@
     import Pariciones from "$lib/components/animal/Pariciones.svelte";
     import Tactos from "$lib/components/animal/Tactos.svelte";
     import Historial from "$lib/components/animal/Historial.svelte";
+    import {guardarHistorial} from "$lib/historial/lib"
     import Acciones from "$lib/components/animal/Acciones.svelte";
     import { createCaber } from "$lib/stores/cab.svelte";
     import Inseminaciones from "$lib/components/animal/Inseminaciones.svelte";
     import Tratamientos from "$lib/components/animal/Tratamientos.svelte";
     import Observaciones from "$lib/components/animal/Observaciones.svelte";
     import Pesajes from "$lib/components/animal/Pesajes.svelte";
-    
+    import HistoriaClinica from "$lib/components/animal/HistoriaClinica.svelte";
+    import tiponoti from "$lib/stores/tiponoti";
+    import Servicios from "$lib/components/animal/Servicios.svelte";    
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let caber = createCaber()
     let cab = caber.cab
+    let cargado = $state(false)
     // Datos
-    let slug = ""
-    let caravana = ""
-    let usuarioid =""
-    let active = true
-    let fechanacimiento = ""
-    let sexo = ""
-    let nacimiento = ""
-    let rodeo = ""
-    let lote = ""
-    let peso = 0
-    let categoria = ""
-    let pariciones = []
-    let fechafall = ""
-    let nacimientoobj = {}
-    let tactos = []
-    let prenada = 0
+    let slug = $state("")
+    let caravana = $state("")
+    let usuarioid =$state("")
+    let active = $state(true)
+    let fechanacimiento = $state("")
+    let sexo = $state("")
+    let nacimiento = $state("")
+    let rodeo = $state("")
+    let lote = $state("")
+    let peso = $state(0)
+    let categoria = $state("")
+    let pariciones = $state([])
+    let fechafall = $state("")
+    let motivobaja = $state("")
+    let nacimientoobj = $state({})
+    let tactos = $state([])
+    let prenada = $state(0)
+    
+    let modohistoria = $state(false)
+    
     async function  getPariciones(id){
         const recordpariciones =  await pb.collection('nacimientos').getFullList({
             filter:`madre='${id}' || padre='${id}'`,
@@ -56,13 +64,17 @@
 
         tactos = recordtactos
     }
-    async function darBaja(fechafallecimiento){
+    async function darBaja(fechafallecimiento,motivo){
         try{
             const data = {
                 active: false,
-                fechafallecimiento: fechafallecimiento +  " 03:00:00"
-            };
+                lote:"",
+                rodeo:"",
+                fechafallecimiento: fechafallecimiento +  " 03:00:00",
+                motivobaja:motivo
 
+            };
+            await guardarHistorial(pb,slug)
             const record = await pb.collection('animales').update(slug, data);  
             Swal.fire("Éxito dar de baja","Se pudo dar de baja al animal","success")
             goto("/animales")  
@@ -79,6 +91,9 @@
         try{
             const data = {
                 delete: true,
+                active:false,
+                lote:"",
+                rodeo:""
             };
 
             const record = await pb.collection('animales').update(slug, data);  
@@ -90,21 +105,38 @@
             
         }
     }
-    async function transferir(newcab){
-        
+    async function transferir(codigo){
+        const resultcab = await pb.collection('cabs').getList(1, 1, {
+            filter: `active = true && codigo = '${codigo}'`,
+            
+        });
         try{
-            const data = {
-                
-                cab: newcab,
-                rodeo: "",
-            };
-
+            
+            let data = {
+                cab:resultcab.items[0].id,
+                lote:"",
+                rodeo:""
+            }
+            
             const record = await pb.collection('animales').update(slug, data);
 
+            let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        
+            let origenusuarioid =  pb_json.record.id
+            let datatrans = {
+                texto:"Se transfirió a "+caravana,
+                titulo:"Transferencia de 1 animal",
+                tipo:tiponoti[1].id,
+                origen:origenusuarioid,
+                destino:resultcab.items[0].user,
+                leido:false
+            }
+            await pb.collection('notificaciones').create(datatrans);
+            
             goto("/animales")
             Swal.fire("Éxito transferencia","Se pudo transferir al animal","success")
         }catch(err){
-            
+            console.error(err)
             Swal.fire("Error transferencia","No se pudo transferir al animal","error")
         }
         
@@ -131,14 +163,12 @@
                 rodeo = recorda.rodeo
                 lote = recorda.lote
                 categoria = recorda.categoria
-                prenada = recorda.prenada
+                prenada = recorda.prenada==1?0:recorda.prenada
                 if(recorda.fechafallecimiento != ""){
                     fechafall = recorda.fechafallecimiento.split(" ")[0]
-                    
+                    motivobaja = recorda.motivobaja
                 }
-                
-                //await getPariciones(slug)
-                //await getTactos(slug)
+                cargado = true
                 
             }
             catch(err){
@@ -152,38 +182,58 @@
 </script>
 <Navbarr>
     <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
-        <DatosBasicos peso={peso} {prenada} {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} connacimiento={nacimiento != ""} nacimiento={nacimientoobj} fechanacimiento = {fechanacimiento}/>
+        <DatosBasicos {peso} {prenada} {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} connacimiento={nacimiento != ""} nacimiento={nacimientoobj} fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}/>
     </CardAnimal>
-    <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
-        <Pesajes pesoanterior={peso} {caravana}></Pesajes>
-    </CardAnimal>
-    <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
-        <Pariciones cabid={cab.id} sexoanimal = {sexo}/>
-    </CardAnimal>
-    <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-        <Tratamientos cabid={cab.id}></Tratamientos>
-    </CardAnimal>
-    <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-        <Observaciones cabid={cab.id} />
-    </CardAnimal>
-    {#if sexo=="H"}
-        <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
-            <Tactos cabid={cab.id}  />
+    {#if !modohistoria}
+        <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
+            <Pesajes pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
         </CardAnimal>
-        <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
-            <Inseminaciones cabid={cab.id} />
+        {#if cargado}
+        <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
+            <Tratamientos cabid={cab.id} {categoria} ></Tratamientos>
+        </CardAnimal>
+        <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
+            <Observaciones cabid={cab.id} {categoria}/>
+        </CardAnimal>
+        {/if}
+        
+        {#if sexo=="H"}
+            {#if cargado}
+            <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
+                <Pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
+            </CardAnimal>
+            
+            <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
+                
+                <Tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
+                
+            </CardAnimal>
+            <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
+                <Inseminaciones cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
+            </CardAnimal>
+
+            <!--<CardAnimal cardsize="max-w-7xl" titulo="Servicios">
+                <Servicios cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
+            </CardAnimal>
+            -->
+            {/if}
+        {/if}
+        <CardAnimal cardsize="max-w-7xl" titulo="Historial">
+            <Historial  />
+        </CardAnimal>
+    {:else}
+        <CardAnimal cardsize="max-w-7xl" titulo="Historia clínica">
+            <HistoriaClinica  />
         </CardAnimal>
     {/if}
-    <CardAnimal cardsize="max-w-7xl" titulo="Historial">
-        <Historial  />
-    </CardAnimal>
     <CardAnimal cardsize="max-w-7xl" titulo="Acciones">
         <Acciones 
             caravana = {caravana}
             fechafallecimiento  = {fechafall}
-            bajar={async (fechafallecimiento)=>await darBaja(fechafallecimiento)}
+            motivo = {motivobaja}
+            bajar={async (fechafallecimiento,motivo)=>await darBaja(fechafallecimiento,motivo)}
             eliminar={eliminar}
-            transferir={(newcab)=>transferir(newcab)}
+            transferir={(codigo)=>transferir(codigo)}
         />
     </CardAnimal>
 </Navbarr>

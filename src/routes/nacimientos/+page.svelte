@@ -11,6 +11,24 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import PredictSelect from '$lib/components/PredictSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline,getUS} from "$lib/stores/capacitor/offlinecab"
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+    //online
+
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -19,7 +37,7 @@
     const today = new Date();
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    let usuarioid = $state("")
+    
     //Datos filtrar
     let nacimientos = $state([])
     let nacimientosrow = $state([])
@@ -91,6 +109,57 @@
         nacimientos = recordsn
         nacimientosrow = nacimientos
     }
+    async function guardar2() {
+        let idprov = "nuevo_nac_"+generarIDAleatorio() 
+        let idani = "nuevo_animal_"+generarIDAleatorio() 
+        let totalanimals = await getTotalSQL(db)
+        let verificar = true
+        //No funciona correctamente porque prueva el usuario cuando deberia probar el usuario
+        //Dueño de la cabaña
+        if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
+            verificar =  false
+        }
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
+            return {id:-1}
+        }
+        let ms = madres.filter(ma=>ma.id==madre)
+        let m = {
+            id:"",
+            nombremadre:"",
+            rodeo:"",
+            lote:""
+        }
+        if(ms.length > 0){
+            m.id = ms[0].id
+            m.nombremadre = ms[0].caravana
+            m.lote = ms[0].lote
+            m.rodeo = ms[0].rodeo
+        }
+        let tipomadre = m.categoria
+        let dataparicion = {
+            madre:m.id,
+            padre,
+            fecha:fecha + " 03:00:00",
+            nombremadre:m.nombremadre,
+            nombrepadre,
+            observacion,
+            cab:caboff.id
+        }
+
+        let data = {
+            caravana,
+            active:true,
+            delete:false,
+            fechanacimiento:fecha +" 03:00:00",
+            sexo,
+            cab:cab.id,
+            peso,
+            lote:m.lote,
+            rodeo:m.rodeo,
+            nacimiento:recordparicion.id
+        }
+    }
     async function guardar(){
         let user = await pb.collection("users").getOne(usuarioid)
         
@@ -149,16 +218,16 @@
             let recorda = await pb.collection('animales').create(data); 
             if(m.id != ""){
                 let datamadre = {
-                prenada:0
-            }
-            if(m.categoria == "vaquillona"){
-                datamadre.categoria = "vaca"
-                let datamadre = {
-                    categoria:"vaca"
+                    prenada:0
                 }
-            }
-            await guardarHistorial(pb,madre)
-            await pb.collection('animales').update(madre,datamadre)
+                if(m.categoria == "vaquillona"){
+                    datamadre.categoria = "vaca"
+                    let datamadre = {
+                        categoria:"vaca"
+                    }
+                }
+                await guardarHistorial(pb,madre)
+                await pb.collection('animales').update(madre,datamadre)
             }
             
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
@@ -333,12 +402,35 @@
             }
         })
     }
-    onMount(async ()=>{
+    async function onmountoriginal(params) {
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         await getNacimientos()
         filterUpdate()
         await getAnimales()
+    }
+    //Falta desarrollo
+    onMount(async ()=>{
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+            }
+            else{
+
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await setInternetSQL(db,0,Date.now())
+        }
     })
     function onwriteMadre(){
         

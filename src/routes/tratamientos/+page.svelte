@@ -12,7 +12,7 @@
     import categorias from '$lib/stores/categorias';
     import estilos from '$lib/stores/estilos';
     import { goto } from "$app/navigation";
-    
+    //Offline
     
     let caber = createCaber()
     let cab = caber.cab

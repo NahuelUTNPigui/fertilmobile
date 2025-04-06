@@ -9,8 +9,8 @@
   import { createDarker } from "$lib/stores/dark.svelte";
   import { page } from '$app/stores';  
   import { createCaber } from "$lib/stores/cab.svelte";
-  import {getUser,setDefaultUser} from "$lib/stores/capacitor/offlineuser"
-  import {getCab,setDefaultCab} from "$lib/stores/capacitor/offlinecab"
+  import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+  import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
   import {openDB} from '$lib/stores/sqlite/main'
   let {children} = $props();
   let pageurl = $page.url.pathname  
@@ -33,12 +33,10 @@
   
   let rol = roler.rol==""?"":roler.rol=="vet"?"Veterinario":"Establecimiento"
   let nombreestablecimiento = $state("")
-  
-  //let rol = "cab"
-  onMount(async ()=>{
+  async function cabuserSQL() {
     let caber = createCaber()
-    useroff = await getUser()
-    caboff = await getCab()
+    useroff = await getUserOffline()
+    caboff = await getCabOffline()
     
     nombreestablecimiento = caboff.nombre
     if (window.innerWidth <= 600) { // Pantallas pequeñas
@@ -48,6 +46,18 @@
     //let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
     usuarioid = useroff.id
     nombreusuario = useroff.username
+    
+  }
+  //let rol = "cab"
+  onMount(async ()=>{
+    let caber = createCaber()
+    nombreestablecimiento = caber.cab.nombre
+    if (window.innerWidth <= 600) { // Pantallas pequeñas
+      nombreestablecimiento= nombreestablecimiento.slice(0,15)
+    }
+    let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+    usuarioid = pb_json.record.id
+    nombreusuario = pb_json.record.username
     
     let hab = $enabled
     if(hab==="no"){

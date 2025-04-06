@@ -1,8 +1,8 @@
 <script>
     //TENGO QUE MODIFCAR EL OFFLINE CAB
     import {enabled} from '$lib/stores/enabled'
-    import {setUser} from '$lib/stores/capacitor/offlineuser'
-    import {setCab,setDefaultCab} from '$lib/stores/capacitor/offlinecab'
+    import {setUserOffline} from '$lib/stores/capacitor/offlineuser'
+    import {setCabOffline,setDefaultCabOffline} from '$lib/stores/capacitor/offlinecab'
     import {getCabData} from "$lib/stores/cabsdata"
     import {usuario} from '$lib/stores/usuario'
     import { createCaber } from '$lib/stores/cab.svelte';
@@ -65,13 +65,13 @@
                     enabled.set("si")
                     //Cuando me logeo si o si debo poner si soy de iotra cabaña
                     // Cuando te logeas, deberia revisar si tenes una cabaña
-                    await setUser(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel)
+                    await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel)
                     try{
                         const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
                         caber.setCab(record.nombre,record.id)
 
                         per.setPer("0,1,2,3,4,5",authData.record.id)
-                        await setCab(record.id,record.nombre,true,"0,1,2,3,4,5")
+                        await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5")
                     }
                     catch(err){
                         try{
@@ -80,8 +80,8 @@
                                 expand: 'colab,cab,colab.user',
                             })
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
-                            await setCab(recordcab.id,recordcab.nombre,true,recordper.permisos)
-                            let cab = getCabData(pb,recordcab.id)
+                            await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos)
+                            //let cab = getCabData(pb,recordcab.id)
                             per.setPer(recordper.permisos,authData.record.id)
                             caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
                             
@@ -89,7 +89,7 @@
                         catch(err){
                             caber.setDefault()
                             per.setDefault()
-                            await setDefaultCab()
+                            await setDefaultCabOffline()
                         }
                         
                     }

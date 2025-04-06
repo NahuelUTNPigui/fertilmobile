@@ -1,45 +1,45 @@
-export async function getEventos(db) {
-    let tactos = await getTactos(db)
-    let servicios = await getServicios(db)
-    let inseminaciones = await getInseminaciones(db)
-    let observaciones = await getObservaciones(db)
-    let lotes = await getLotes(db)
-    let rodeos = await getRodeos(db)
-    let tipostrat = await getTiposTrat(db)
-    let trats = await getTrats(db)
-    let nacimientos = await getNacimientos(db)
-    let animaleselegir = await getAnimalesElegir(db)
-    let pesajes = await getPesajes(db)
+export async function getEventosSQL(db) {
+    let tactos = await getTactosSQL(db)
+    let servicios = await getServiciosSQL(db)
+    let inseminaciones = await getInseminacionesSQL(db)
+    let observaciones = await getObservacionesSQL(db)
+    let lotes = await getLotesSQL(db)
+    let rodeos = await getRodeosSQL(db)
+    let tipostrat = await getTiposTratSQL(db)
+    let trats = await getTratsSQL(db)
+    let nacimientos = await getNacimientosSQL(db)
+    let animaleselegir = await getAnimalesElegirSQL(db)
+    let pesajes = await getPesajesSQL(db)
     return {tactos,servicios,inseminaciones,observaciones,lotes,rodeos,tipostrat,trats,nacimientos,animaleselegir,pesajes};
 }
-export async function setEventos(db,tactos,servicios,inseminaciones,observaciones,lotes,rodeos,tipostrat,trats,nacimientos,animaleselegir,pesajes) {
-    await setTactos(db,tactos)
-    await setServicios(db,servicios)
-    await setInseminaciones(db,inseminaciones)
-    await setObservaciones(db,observaciones)
-    await setLotes(db,lotes)
-    await setRodeos(db,rodeos)
-    await setTiposTrat(db,tipostrat)
-    await setTrats(db,trats)
-    await setNacimientos(db,nacimientos)
-    await setAnimalesElegir(db,animaleselegir)
-    await setPesajes(db,pesajes)
+export async function setEventosSQL(db,tactos,servicios,inseminaciones,observaciones,lotes,rodeos,tipostrat,trats,nacimientos,animaleselegir,pesajes) {
+    await setTactosSQL(db,tactos)
+    await setServiciosSQL(db,servicios)
+    await setInseminacionesSQL(db,inseminaciones)
+    await setObservacionesSQL(db,observaciones)
+    await setLotesSQL(db,lotes)
+    await setRodeosSQL(db,rodeos)
+    await setTiposTratSQL(db,tipostrat)
+    await setTratsSQL(db,trats)
+    await setNacimientosSQL(db,nacimientos)
+    await setAnimalesElegirSQL(db,animaleselegir)
+    await setPesajesSQL(db,pesajes)
 }
-export async function setUltimoEventos(db){
-    await setUltimoTactos(db)
-    await setUltimoServicios(db)
-    await setUltimoInseminaciones(db)
-    await setUltimoObservaciones(db)
-    await setUltimoLotes(db)
-    await setUltimoRodeos(db)
-    await setUltimoTiposTrat(db)
-    await setUltimoTrats(db)
-    await setUltimoNacimientos(db)
-    await setUltimoAnimalesElegir(db)
-    await setUltimoPesajes(db)
+export async function setUltimoEventosSQL(db){
+    await setUltimoTactosSQL(db)
+    await setUltimoServiciosSQL(db)
+    await setUltimoInseminacionesSQL(db)
+    await setUltimoObservacionesSQL(db)
+    await setUltimoLotesSQL(db)
+    await setUltimoRodeosSQL(db)
+    await setUltimoTiposTratSQL(db)
+    await setUltimoTratsSQL(db)
+    await setUltimoNacimientosSQL(db)
+    await setUltimoAnimalesElegirSQL(db)
+    await setUltimoPesajesSQL(db)
 }
 //GET
-export async function getPesajes(db) {
+export async function getPesajesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 12")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -47,10 +47,7 @@ export async function getPesajes(db) {
     coleccion.lista = lista
     return coleccion
 }
-
-
-
-export async function getTactos(db) {
+export async function getTactosSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 11")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -58,7 +55,7 @@ export async function getTactos(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getServicios(db) {
+export async function getServiciosSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 10")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -66,7 +63,7 @@ export async function getServicios(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getInseminaciones(db) {
+export async function getInseminacionesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 9")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -74,7 +71,7 @@ export async function getInseminaciones(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getObservaciones(db) {
+export async function getObservacionesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 8")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -82,7 +79,7 @@ export async function getObservaciones(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getLotes(db) {
+export async function getLotesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 7")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -90,7 +87,7 @@ export async function getLotes(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getRodeos(db) {
+export async function getRodeosSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 6")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -98,7 +95,7 @@ export async function getRodeos(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getTiposTrat(db) {
+export async function getTiposTratSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 5")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -106,7 +103,7 @@ export async function getTiposTrat(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getTrats(db) {
+export async function getTratsSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 4")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -114,7 +111,7 @@ export async function getTrats(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function getNacimientos(db) {
+export async function getNacimientosSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 3")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -123,7 +120,7 @@ export async function getNacimientos(db) {
     return coleccion
 }
 //Este es mas dificil
-export async function getAnimalesElegir(db) {
+export async function getAnimalesElegirSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 2")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
@@ -132,83 +129,148 @@ export async function getAnimalesElegir(db) {
     return coleccion
 }
 //SET
-export async function setPesajes(db,pesajes) {
+export async function addNewPesajeSQL(db,pesaje) {
+    let pesajes = await getTactosSQL(db)
+    let lista = pesajes.lista
+    lista.push(pesaje)
+    await setPesajesSQL(db,lista)
+}
+export async function setPesajesSQL(db,pesajes) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(pesajes)}' WHERE id = 12`)
 }
-export async function setUltimoPesajes(db) {
+export async function setUltimoPesajesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 12`)
 }
-export async function addNewTacto(db,tacto) {
-    let lista = await getTactos(db)
+export async function addNewTactoSQL(db,tacto) {
+    let tactos = await getTactosSQL(db)
+    let lista = tactos.lista
     lista.push(tacto)
-    setTactos(db,lista)
+    await setTactosSQL(db,lista)
 }
-export async function setTactos(db,tactos) {
+
+export async function setTactosSQL(db,tactos) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(tactos)}' WHERE id = 11`)
 }
-export async function setUltimoTactos(db) {
+export async function setUltimoTactosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 11`)
 }
 
-export async function setServicios(db,servicios) {
+export async function addNewServicioSQL(db,ser) {
+    let servicios = await getTactosSQL(db)
+    let lista = servicios.lista
+    lista.push(ser)
+    await setServiciosSQL(db,lista)
+}
+export async function setServiciosSQL(db,servicios) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(servicios)}' WHERE id = 10`)
 }
-export async function setUltimoServicios(db) {
+export async function setUltimoServiciosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 10`)
 }
 
-export async function setInseminaciones(db,inseminaciones) {
+export async function addnewInseminacionSQL(db,ins) {
+    let inseminaciones = await getTactosSQL(db)
+    let lista = inseminaciones.lista
+    lista.push(ins)
+    await setInseminacionesSQL(db,lista)
+}
+export async function setInseminacionesSQL(db,inseminaciones) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(inseminaciones)}' WHERE id = 9`)
 }
-export async function setUltimoInseminaciones(db) {
+export async function setUltimoInseminacionesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 9`)
 }
 
-export async function setObservaciones(db,observaciones) {
+export async function updateLocalObservaciones(db,pb,cabid) {
+    const records = await pb.collection('observaciones').getFullList({
+        filter:`active=true && cab='${cabid}'`,
+        expand:"animal",
+        sort: '-fecha',
+    });
+    let observaciones = records
+    await setObservacionesSQL(db,observaciones)
+    await setUltimoObservacionesSQL(db)
+    return observaciones
+}
+export async function addNewObservacionSQL(db,obs) {
+    let observaciones = await getObservacionesSQL(db)
+    let lista = observaciones.lista
+    lista.push(obs)
+    await setObservacionesSQL(db,lista)
+}
+export async function setObservacionesSQL(db,observaciones) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(observaciones)}' WHERE id = 8`)
 }
-export async function setUltimoObservaciones(db) {
+export async function setUltimoObservacionesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 8`)
 }
 
-export async function setLotes(db,lotes) {
+export async function addnewLoteSQL(db,lote) {
+    let lotes = await getLotesSQL(db)
+    let lista = observaciones.lista
+    lista.push(lote)
+    await setLotesSQL(db,lotes)
+}
+export async function setLotesSQL(db,lotes) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(lotes)}' WHERE id = 7`)
 }
-export async function setUltimoLotes(db) {
+export async function setUltimoLotesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 7`)
 }
 
-export async function setRodeos(db,rodeos) {
+export async function addNewRodeoSQL(db,rodeo) {
+    let rodeos = await getRodeosSQL(db)
+    let lista = rodeos.lista
+    lista.push(rodeo)
+    await setRodeosSQL(db,rodeos)
+}
+export async function setRodeosSQL(db,rodeos) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(rodeos)}' WHERE id = 6`)
 }
-export async function setUltimoRodeos(db) {
+export async function setUltimoRodeosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 6`)
 }
 
-export async function setTiposTrat(db,tipos) {
+export async function addNewTipoTratSQL(db,tipo) {
+    let tipos = await getTiposTratSQL(db)
+    let lista = tipos.lista
+    lista.push(tipo)
+    await setTiposTratSQL(db,rodeos)
+}
+export async function setTiposTratSQL(db,tipos) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(tipos)}' WHERE id = 5`)
 }
-export async function setUltimoTiposTrat(db) {
+export async function setUltimoTiposTratSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 5`)
 }
-
-export async function setTrats(db,trats) {
+export async function addNewTrataSQL(trat) {
+    let trats = await getTratsSQL(db)
+    let lista = trats.lista
+    lista.push(trat)
+    await setTratsSQL(db,lista)
+}
+export async function setTratsSQL(db,trats) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(trats)}' WHERE id = 4`)
 }
-export async function setUltimoTrats(db) {
+export async function setUltimoTratsSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 4`)
 }
-
-export async function setNacimientos(db,nacs) {
+export async function addNewNacimientoSQL(db,nac) {
+    let nacs = await getNacimientosSQL(db)
+    let lista = nacs.lista
+    lista.push(nac)
+    await setNacimientosSQL(db,lista)
+}
+export async function setNacimientosSQL(db,nacs) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(nacs)}' WHERE id = 3`)
 }
-export async function setUltimoNacimientos(db) {
+export async function setUltimoNacimientosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 3`)
 }
 
-export async function setAnimalesElegir(db,animales) {
+export async function setAnimalesElegirSQL(db,animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 2`)
 }
-export async function setUltimoAnimalesElegir(db) {
+export async function setUltimoAnimalesElegirSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 2`)
 }
