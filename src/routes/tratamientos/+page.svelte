@@ -13,7 +13,38 @@
     import estilos from '$lib/stores/estilos';
     import { goto } from "$app/navigation";
     //Offline
-    
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {getCabData} from "$lib/stores/cabsdata"
+    import {
+        getTratsSQL,
+        setTratsSQL,
+        setUltimoTratsSQL,
+        addNewTrataSQL,
+        updateLocalTratsSQL,
+
+        getTiposTratSQL,
+        setTiposTratSQL,
+        addNewTipoTratSQL,
+        setUltimoTiposTratSQL,
+        updateLocalTipoTratsSQL
+
+    } from '$lib/stores/sqlite/dbeventos';
+    import {addNewAnimal, getAnimalesSQL,updateLocalAnimalesSQL } from '$lib/stores/sqlite/dbanimales';
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+
+    //Offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -291,18 +322,20 @@
         nombretipotratamiento = ""
         addtipo = true
     }
-    async function guardarTipo(){
+    async function guardarTipoOnline() {
         if(idtipotratamiento == ""){
             try{
                 let data = {
                     nombre:nombretipotratamiento,
                     active : true,
-                    cab:cab.id
+                    cab:caboff.id
 
                 }
                 const  record = await pb.collection("tipotratamientos").create(data)
+                
                 tipotratamientos.push(record)
                 tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
+                await setTiposTratSQL(db,tipotratamientos)
                 
                 cerrarTipoModal()
             }
@@ -314,7 +347,64 @@
         else{
             await editarTipo()
         }
-        
+    }
+    async function guardarTipoOffline() {
+        let idprov = "nuevo_tipo_"+generarIDAleatorio()
+        if(idtipotratamiento == ""){
+            let data = {
+                nombre:nombretipotratamiento,
+                active : true,
+                cab:caboff.id
+            }
+            data.id = idprov
+            tipotratamientos.push(data)
+            
+            let comando = {
+                tipo:"add",
+                coleccion:"tipotrats",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:1,
+                idprov,
+                camposprov:""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            await setTiposTratSQL(db,tipotratamientos)
+        }
+        else{
+            let data = {
+                nombre:nombretipotratamiento,
+                active : true,
+                cab:caboff.id,
+                id:idtipotratamiento
+            }
+            let comando = {
+                tipo:"update",
+                coleccion:"tipotrats",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:1,
+                idtipotratamiento,
+                camposprov:""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            
+            let item = {...data}
+            tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
+            tipotratamientos.push(item)
+            tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
+            await setTiposTratSQL(db,tipotratamientos)
+        }
+    }
+    async function guardarTipo(){
+        if(coninternet.connected){
+            await guardarTipoOnline()
+        }
+        else{
+            await guardarTipoOffline()
+        }
     }
     async function editarTipo(){
         try{
@@ -326,6 +416,7 @@
             tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
             tipotratamientos.push(item)
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+            await setTiposTratSQL(db,tipotratamientos)
             
             
             cerrarTipoModal()
@@ -335,7 +426,8 @@
             
         }
     }
-    async function eliminarTipo(id){
+
+    async function eliminarTipoOnline(id) {
         idtipotratamiento = id
         try{
             let data = {
@@ -344,9 +436,36 @@
             const  record = await pb.collection("tipotratamientos").update(idtipotratamiento,data)
             tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+            await setTiposTratSQL(db,tipotratamientos)
         }
         catch(err){
             console.error(err)
+        }
+    }
+    async function eliminarTipoOffline(id) {
+        idtipotratamiento = id
+        
+        tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
+        tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+        let comando = {
+            tipo:"delete",
+            coleccion:"tipotrats",
+            data:{},
+            hora:Date.now(),
+            prioridad:1,
+            idtipotratamiento,
+            camposprov:""
+        }
+        comandos.push(comando)
+        await setComandosSQL(db,comandos)
+        await setTiposTratSQL(db,tipotratamientos)
+    }
+    async function eliminarTipo(id){
+        if(coninternet.connected){
+            await eliminarTipoOnline(id)
+        }
+        else{
+            await eliminarTipoOffline(id)
         }
         
     }
@@ -420,12 +539,71 @@
             totalTratamientosEncontrados = tratamientosrow.length
         }
     }
-    onMount(async()=>{
+    async function onmountoriginal(params) {
         await getTratamientos()
         await getTiposTratamientos()
         await getAnimales()
         filterUpdate()
+    }
+    async function initPage() {
+        //coninternet = {connected:false} // await Network.getStatus();
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    //Este metodo deberia tomar los datos de la nube y pisar lo que tengo sqlite
+    // Se supone que los comandos ya fueron flush
+    async function updateLocalSQL() {
+        tratamientos = await updateLocalTratsSQL(db,pb,caboff.id)
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        tipotratamientos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let restratamientos = await getTratsSQL(db)
+        tratamientos = restratamientos.lista
+        let resanimales = await getAnimalesSQL(db)
+        animales = resanimales.lista
+        let restipos = await getTiposTratSQL(db)
+        tipotratamientos = restipos.lista
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                    let antes = lastinter.ultimo
+                    const cincoMinEnMs = 300000;
+                    if((ahora - antes) >= cincoMinEnMs){
+                        await updateLocalSQL()
+                    }
+                    else{
+                        await getLocalSQL()            
+                    }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async()=>{
+        await initPage()
+        await getDataSQL()   
     })
+    //Tengo que buscar otra manera todavia no funciona
     function prepararData(item){
         return {
             CARAVANA:item.expand.animal.caravana,
@@ -435,8 +613,13 @@
             
         }
     }
+    function setArbitrarioInternet(conectado){
+        coninternet.connected  = conectado
+    }
 </script>
 <Navbarr>
+    <button onclick={updateLocalSQL} class="btn">Forzar update</button>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
     <div class="grid grid-cols-3 lg:grid-cols-4 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Tratamientos</h1>
@@ -452,7 +635,7 @@
                     <span  class="text-xl">Tipos</span>
                 </button>
             </div>
-            <div>
+            <div class="hidden">
                 <Exportar
                     titulo ={"Tratamientos"}
                     filtros = {[]}

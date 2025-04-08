@@ -525,7 +525,7 @@
         codigo = ""
         habilitarboton = false
         await setAnimalesSQL(db,animales)
-        await updateLocalAnimales()
+        await updateLocalAnimalesSQL()
         filterUpdate()
     }
     async function mover(){

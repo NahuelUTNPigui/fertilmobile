@@ -17,7 +17,7 @@
     import {openDB} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimales} from "$lib/stores/sqlite/dbanimales"
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getRodeosSQL,getEventosSQL, getLotesSQL} from "$lib/stores/sqlite/dbeventos"
     
@@ -355,7 +355,7 @@
         //await flushComandosSQL(db)
         if(coninternet.connected){
             if(lastinter.internet == 0){
-                animales = await updateLocalAnimales(db,pb)
+                animales = await updateLocalAnimalesSQL(db,pb)
                 animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
                 animalesrows = animales
             }
@@ -365,7 +365,7 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalAnimales(db)
+                    await updateLocalAnimalesSQL(db,pb)
                     animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
                     animalesrows = animales
                 }

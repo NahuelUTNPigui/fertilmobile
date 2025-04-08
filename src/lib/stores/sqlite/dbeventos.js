@@ -204,7 +204,16 @@ export async function setObservacionesSQL(db,observaciones) {
 export async function setUltimoObservacionesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 8`)
 }
-
+export async function updateLocalLotesSQL(db,pb,cabid) {
+    const records = await pb.collection('lotes').getFullList({
+        filter:`active = true && cab ~ '${cabid}'`,
+        sort: 'nombre',
+    });
+    let lotes = records
+    await setLotesSQL(db,lotes)
+    await setUltimoLotesSQL(db)
+    return lotes
+}
 export async function addnewLoteSQL(db,lote) {
     let lotes = await getLotesSQL(db)
     let lista = observaciones.lista
@@ -218,6 +227,16 @@ export async function setUltimoLotesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 7`)
 }
 
+export async function updateLocalRodeosSQL(db,pb,cabid) {
+    const records = await pb.collection('rodeos').getFullList({
+        filter:`active = true && cab ~ '${cabid}'`,
+        sort: 'nombre',
+    });
+    let rodeos = records
+    await setRodeosSQL(db,rodeos)
+    await setUltimoRodeosSQL(db)
+    return rodeos
+}
 export async function addNewRodeoSQL(db,rodeo) {
     let rodeos = await getRodeosSQL(db)
     let lista = rodeos.lista
@@ -231,17 +250,46 @@ export async function setUltimoRodeosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 6`)
 }
 
+export async function updateLocalTipoTratsSQL(db,pb,cabid) {
+    const records = await pb.collection('tipotratamientos').getFullList({
+        filter : `(cab='${cabid}' || generico = true) && active = true`,
+        sort: '-created',
+    });
+    let tipotratamientos = records
+    await setTiposTratSQL(db,tipotratamientos)
+    await setUltimoTiposTratSQL(db)
+    return tipotratamientos
+}
 export async function addNewTipoTratSQL(db,tipo) {
     let tipos = await getTiposTratSQL(db)
     let lista = tipos.lista
     lista.push(tipo)
     await setTiposTratSQL(db,rodeos)
 }
+
 export async function setTiposTratSQL(db,tipos) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(tipos)}' WHERE id = 5`)
 }
 export async function setUltimoTiposTratSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 5`)
+}
+export async function updateLocalTratsSQL(db,pb,cabid) {
+    //Lo que me hace ruido es cuando tenga miles de tratamientos, se va a poner lenta
+    const records = await pb.collection('tratamientos').getFullList({
+        filter : `cab='${cabid}' && active = true`,
+        expand:"animal,tipo",
+        sort: '-created',
+    });
+    let tratamientos = records
+    await setTratsSQL(db,tratamientos)
+    await setUltimoTratsSQL(db)
+    return tratamientos
+}
+export async function addSomeNewTrataSQL(db,nuevostrats) {
+    let trats = await getTratsSQL(db)
+    let lista = trats.lista
+    lista = lista.concat(nuevostrats)
+    await setTratsSQL(db,lista)
 }
 export async function addNewTrataSQL(trat) {
     let trats = await getTratsSQL(db)
@@ -268,6 +316,10 @@ export async function setUltimoNacimientosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 3`)
 }
 
+
+export async function updateLocalAnimalesElegirSQL(db,pb,cabid) {
+    
+}
 export async function setAnimalesElegirSQL(db,animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 2`)
 }

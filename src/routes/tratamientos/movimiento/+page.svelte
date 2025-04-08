@@ -14,6 +14,33 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //OFfline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {
+        getLotesSQL,
+        getRodeosSQL,
+        updateLocalLotesSQL,
+        updateLocalRodeosSQL,
+        getTiposTratSQL,
+        updateLocalTratsSQL,
+        getTratsSQL,
+        addSomeNewTrataSQL
+
+    } from '$lib/stores/sqlite/dbeventos';
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -214,6 +241,7 @@
             Swal.fire("Error tratamiento","No hay animales seleccionados","error")
             return
         }
+        
         selectanimales = []
         for (const [key, value ] of Object.entries(selecthashmap)) {
             if(value != null){
@@ -225,7 +253,7 @@
         }
         tratamientoMasivo.showModal()
     }
-    async function guardarTratamiento(){
+    async function guardarTratamientoOnline() {
         if(fecha == "" || tipotratamientoselect == ""){
             Swal.fire("Error tratamientos","Debe seleccionar una fecha","error")
             return 
@@ -241,7 +269,7 @@
                     animal:tratamientoanimal.id,
                     tipo:tipotratamientoselect,
                     active : true,
-                    cab:cab.id
+                    cab:caboff.id
             }
             bulkdata.push(datatratamiento)
             
@@ -255,6 +283,9 @@
             
 
             const result = await batch.send();
+
+            //Como es por batch nunca voy a tener el id
+            await updateLocalTratsSQL(db,pb,caboff.id)
 
             Swal.fire("Éxito tratamientos","Se lograron registrar todos los tratamientos","success")
         }
@@ -270,16 +301,176 @@
         selecthashmap = {}
         selectanimales = []
     }
-    onMount(async ()=>{
+    function getDatoAnimal(idanimal){
+        let a = animales.filter(an=>an.id==idanimal)[0]
+        return {
+            caravana:a.caravana,
+            categoria:a.categoria
+        }
+    }
+    function getTipoNombre(idtipo){
+        let t = tipotratamientos.filter(ti=>ti.id==idtipo)[0]
+        return t.nombre
+    }
+    async function guardarTratamientoOffline() {
+        if(fecha == "" || tipotratamientoselect == ""){
+            Swal.fire("Error tratamientos","Debe seleccionar una fecha","error")
+            return 
+        }
+        try {
+            let errores = false
+            let trats = []
+            for(let i = 0;i<selectanimales.length;i++){
+                let tratamientoanimal = selectanimales[i]
+                let idprov = "nuevo_trat_"+generarIDAleatorio()
+                let nuevoanimal = tratamientoanimal.id.split("_")[0]=="nuevo"
+                let nuevotipo = tipotratamientoselect.split("_")[0]=="nuevo"
+                let dataanimal = getDatoAnimal(tratamientoanimal.id)
+                let nombretipo = getTipoNombre(tipotratamientoselect)
+                //El expand falta
+                let datatratamiento = {
+                    fecha : fecha+ " 03:00:00",
+                    observacion:tratamientoanimal.observacionnuevo,
+                    categoria:tratamientoanimal.categoria,
+                    animal:tratamientoanimal.id,
+                    tipo:tipotratamientoselect,
+                    active : true,
+                    cab:caboff.id,
+                    id:idprov,
+                    expand:{
+                        animal:{
+                            categoria:dataanimal.categoria,
+                            caravana:dataanimal.caravana
+                        },
+                        tipo:{
+                            nombre:nombretipo
+                        }
+                    }
+                    
+                }
+                let camposprov = ""
+                if(nuevoanimal){
+                    camposprov = "animal"
+                    if(nuevotipo){
+                        camposprov+=",tipo"
+                    }
+                }
+                if(nuevotipo){
+                    camposprov ="tipo"
+                }
+                let comando = {
+                    tipo:"add",
+                    coleccion:"tratamiento",
+                    data:{...datatratamiento},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,    
+                    camposprov
+                }
+                trats.push(datatratamiento)
+                comandos.push(comando)
+            }
+        
+            await addSomeNewTrataSQL(db,trats)
+            await setComandosSQL(db,comandos)
+            Swal.fire("Éxito tratamientos","Se lograron registrar todos los tratamientos","success")
+        }
+        catch(err){
+            Swal.fire("Error tratamientos","Hubo algun error en algun tratamiento","error")
+        }
+        
+
+        fecha = ""
+        malfecha = false
+        maltipo = false
+        tipotratamientoselect = ""
+        botonhabilitado = false
+        selecthashmap = {}
+        selectanimales = []
+    }
+    async function guardarTratamiento(){
+        if(coninternet.connected){
+            await guardarTratamientoOnline()
+        }
+        else{
+            await guardarTratamientoOffline()
+        }
+    }
+    async function onmountoriginal(){
         await getAnimales()
         await getLotes()
         await getRodeos()
         await getTiposTratamientos()
+    }
+    async function initPage() {
+        //coninternet = {connected:false} // await Network.getStatus();
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function updateLocalSQL() {
         
+        animales = await updateLocalAnimalesSQL(db,pb)
+        lotes = await updateLocalLotesSQL(db,pb)
+        rodeos = await updateLocalRodeosSQL(db,pb)
+        let restipos = await getTiposTratSQL(db)
+        tipotratamientos = restipos.lista
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let reslotes = await getLotesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        let restipos = await getTiposTratSQL(db)
+        tipotratamientos = restipos.lista
+        animales = resanimales.lista
+        lotes = reslotes.lista
+        rodeos = resrodeos.lista
+        
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                    let antes = lastinter.ultimo
+                    const cincoMinEnMs = 300000;
+                    if((ahora - antes) >= cincoMinEnMs){
+                        await updateLocalSQL()
+                    }
+                    else{
+                        await getLocalSQL()            
+                    }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()    
+        await getDataSQL()
     })
+    function setArbitrarioInternet(conectado){
+        coninternet.connected  = conectado
+    }
 
 </script>
 <Navbarr>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
     <div class="grid grid-cols-2 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <button

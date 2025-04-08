@@ -21,6 +21,7 @@
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import cuentas from '$lib/stores/cuentas';
     import MultipleToros from '$lib/components/MultipleToros.svelte';
+    //Offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -422,7 +423,7 @@
             delete:false,
             sexo,
             peso,
-            cab:cab.id
+            cab:caboff.id
         }
         if(fechanacimiento){
             data.fechanacimiento=fechanacimiento +" 03:00:00"   
@@ -739,7 +740,7 @@
                 nombremadre:nombremadrenac,
                 nombrepadre:nombrepadrenac,
                 observacion:observacionnac,
-                cab:cab.id
+                cab:caboff.id
             }
             const recordparicion = await pb.collection('nacimientos').create(dataparicion);
             let data = {
@@ -748,7 +749,7 @@
                 delete:false,
                 fechanacimiento:fechanac +" 03:00:00",
                 sexo:sexonac,
-                cab:cab.id,
+                cab:caboff.id,
                 peso:pesonac,
                 nacimiento:recordparicion.id
             }
@@ -881,7 +882,7 @@
                     tipo:tipotrat,
                     fecha:fechatrat +" 03:00:00",
                     active : true,
-                    cab:cab.id
+                    cab:caboff.id,
                 }
                 const  record = await pb.collection("tratamientos").create(data)
                 await loadAnimales()
@@ -900,7 +901,7 @@
                     tipo:tipotrat,
                     fecha:fechatrat +" 03:00:00",
                     active : true,
-                    cab:cab.id
+                    cab:caboff.id,
                 }
                 const  record = await pb.collection("tratamientos").create(data)
                 Swal.fire("Éxito guardar","Se pudo guardar el tratamiento con exito","success")
@@ -1041,7 +1042,7 @@
                     return
             }
             let data = {
-                cab:cab.id,
+                cab:caboff.id,
                 animal: a.id,
                 fechaparto: fechapartoins +' 03:00:00',
                 fechainseminacion: fechainseminacion + ' 03:00:00',
@@ -1062,7 +1063,7 @@
         }
         else{
             let data = {
-                cab:cab.id,
+                cab:caboff.id,
                 animal: idanimalins,
                 fechaparto: fechapartoins +' 03:00:00',
                 fechainseminacion: fechainseminacion + ' 03:00:00',
@@ -1132,7 +1133,7 @@
                 madre:a.id,
                 padres:padreserlista.join(),
                 active:true,
-                cab:cab.id
+                cab:caboff.id,
             }
             if(fechahastaserv != ""){
                 dataser.fechahasta = fechahastaserv + " 03:00:00"
@@ -1157,7 +1158,7 @@
                 madre:idanimalser,
                 padres:padreserlista.join(),
                 active:true,
-                cab:cab.id
+                cab:caboff.id,
             }
             if(fechahastaserv != ""){
                 dataser.fechahasta = fechahastaserv + " 03:00:00"
@@ -1219,7 +1220,7 @@
                     animal:a.id,
                     categoria:a.categoria,
                     fecha:fechaobs +" 03:00:00",
-                    cab:cab.id,
+                    cab:caboff.id,
                     observacion:observacionobs,
                     active:true
                 }
@@ -1238,7 +1239,7 @@
                     animal:animalobs,
                     fecha:fechaobs +" 03:00:00",
                     categoria:categoriaobs,
-                    cab:cab.id,
+                    cab:caboff.id,
                     observacion:observacionobs,
                     active:true
                 }
@@ -1693,12 +1694,15 @@
         totaleventos.rodeos = data.rodeos.lista.length
         totaleventos.animales = animales.length
     }
-    onMount(async ()=>{
+    async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
         coninternet = await Network.getStatus();
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
+    }
+    onMount(async ()=>{
+        await initPage()
         if(caboff.exist){
             db = await openDB()
             //Reviso el internet

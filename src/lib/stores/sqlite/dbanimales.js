@@ -21,9 +21,9 @@ export async function addNewAnimal(db,animal) {
     await setUltimoAnimalesSQL(db,lista)
     
 }
-export async function updateLocalAnimales(db,pb) {
+export async function updateLocalAnimalesSQL(db,pb,cabid) {
     const recordsa = await pb.collection("animales").getFullList({
-        filter:`active=true && delete=false && cab='${cab.id}'`,
+        filter:`active=true && delete=false && cab='${cabid}'`,
         expand:"rodeo,lote,cab"
     })
     let animales = recordsa
