@@ -190,7 +190,6 @@
                 <tr>
                     <th class="text-base ml-3 pl-3 mr-1 pr-1 ">Fecha</th>
                     <th class="text-base mx-1 px-1">Caravana</th>
-                    <th class="text-base mx-1 px-1">Madre</th>
                     <th class="text-base mx-1 px-1">Padre</th>
                     <th class="text-base mx-1 px-1">Observacion</th>
                     
@@ -203,9 +202,6 @@
                         <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(n.fecha).toLocaleDateString()}</td>
                         <td class="text-base mx-1 px-1">
                             {`${n.caravana}`}
-                        </td>
-                        <td class="text-base mx-1 px-1">
-                            {`${n.nombremadre}`}
                         </td>
                         <td class="text-base mx-1 px-1">
                             {`${n.nombrepadre}`}

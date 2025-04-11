@@ -13,24 +13,8 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
-    //OFFLINE
-    import {openDB} from '$lib/stores/sqlite/main'
-    import { Network } from '@capacitor/network';
-    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
-    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import {getRodeosSQL,getEventosSQL, getLotesSQL} from "$lib/stores/sqlite/dbeventos"
-    
-    //offline
-    let db = $state(null)
-    let usuarioid = $state("")
-    let useroff = $state({})
-    let caboff = $state({})
-    let coninternet = $state(false)
-    let comandos = $state([])
-    //online
     let ruta = import.meta.env.VITE_RUTA
-
+    //let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -127,6 +111,9 @@
             }
             
         }
+        if(categoria != ""){
+            animalesrows = animalesrows.filter(a=>a.categoria == categoria)
+        }
 
     }
 
@@ -204,7 +191,6 @@
         tipos = records
         tipos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
-    //No haria falta
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`active=true && delete=false && cab='${cab.id}'`,
@@ -235,7 +221,7 @@
         
 
     }
-    async function crearPesajeOnline() {
+    async function crearPesaje(){
         let errores = false
         
         for(let i = 0;i<selectanimales.length ;i++){
@@ -267,120 +253,16 @@
         else{
             Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
         }
-        //await getAnimales()
+        await getAnimales()
         filterUpdate()
         selecthashmap = {}
         selectanimales = []
     }
-    async function crearPesajeOffline() {
-        let errores = false
-        
-        for(let i = 0;i<selectanimales.length ;i++){
-            
-            let ps = selectanimales[i]
-            
-            try{
-                let dataupdate = {
-                    peso:ps.pesonuevo
-                }
-                let data ={
-                    pesonuevo:ps.pesonuevo,
-                    pesoanterior:ps.peso,
-                    fecha:fecha+" 03:00:00",
-                    animal:ps.id
-                }
-                let comandopesaje = {}
-                let comandocambio = {}
-                let comandohistorial = {}
-                comandos.push(comandopesaje)
-                comandos.push(comandocambio)
-                comandos.push(comandohistorial)
-                //await guardarHistorial(pb,selectanimales[i].id)
-                //let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                //await pb.collection("pesaje").create(data)
-                await setComandosSQL(db,comandos)
-            }
-            catch(err){
-                console.error(err)
-                errores = true
-            }
-        }
-        if(errores){
-            Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
-        }
-        else{
-            Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
-        }
-        //await getAnimales()
-        filterUpdate()
-        selecthashmap = {}
-        selectanimales = []
-    }
-    async function crearPesaje(){
-        if(coninternet.connected){
-            await crearPesajeOnline()
-        }
-        else{
-            await crearPesajeOffline()
-        }
-    }
-    async function originalMount(){
+    onMount(async ()=>{
         await getAnimales()
         await getRodeos()
         await getLotes()
         await getTipos()
-    }
-
-    //Esto se repite en todas las paginas abstraer
-    async function initData() {
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-        db = await openDB()
-
-        let reslotes = await getLotesSQL(db)
-        lotes = reslote.lista
-        let resrodeos = await getRodeosSQL(db)
-        rodeos = resrodeos.lista
-    }
-    onMount(async ()=>{
-        await initData()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        //Hago un reinicio de los comandos
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-    
-        //await flushComandosSQL(db)
-        if(coninternet.connected){
-            if(lastinter.internet == 0){
-                animales = await updateLocalAnimalesSQL(db,pb)
-                animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-                animalesrows = animales
-            }
-            else{
-                //Logica con internet previo
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalAnimalesSQL(db,pb)
-                    animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-                    animalesrows = animales
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            let resanimales = await getAnimalesSQL(db)
-            animales = resanimales.lista
-            animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-            animalesrows = animales
-            await setInternetSQL(db,0,Date.now())
-        }
-        
-
     })
 </script>
 <Navbarr>
@@ -392,7 +274,7 @@
             <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={()=>openNewModal()}>
                 <span  class="text-xl">{capitalize("nuevo")}</span>
             </button>
-            <a class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" href="/pesajes/lista">
+            <a class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" href={"/pesajes/lista"}>
                 <span  class="text-xl">Historia</span>
             </a>
         </div>
@@ -422,7 +304,7 @@
             </div> 
         </button>
         {#if isOpenFilter}
-            <div transition:slide class="grid grid-cols-2 lg:grid-cols-4  m-1 gap-2 w-11/12" >
+            <div transition:slide class="grid grid-cols-1 lg:grid-cols-4  m-1 gap-2 w-11/12" >
                 <div>
                     <label for = "sexo" class="label">
                         <span class="label-text text-base">Sexo</span>
@@ -455,7 +337,6 @@
                         filterUpdate = {filterUpdate}
                     />
                 </div>
-                
                 <div class="mt-0">
                     <MultiSelect
                         opciones={[{id:"-1",nombre:"Sin lote"}].concat(lotes)}
@@ -473,10 +354,31 @@
                         filterUpdate = {filterUpdate}
                     />
                 </div>
-                <button
-                        class="btn btn-neutral"
-                        onclick={limpiar}
-                >
+                <div class="hidden">
+                    <label for = "categorias" class="label">
+                        <span class="label-text text-base">Categorias</span>
+                    </label>
+                    <label class="input-group ">
+                        <select 
+                            class={`
+                                select select-bordered w-full
+                                rounded-md
+                                focus:outline-none 
+                                focus:ring-2 
+                                focus:ring-green-500 focus:border-green-500
+                                ${estilos.bgdark2}
+                            `} 
+                            bind:value={categoria}
+                            onchange={filterUpdate}
+                        >
+                                <option value="">Todos</option>
+                                {#each categorias as r}
+                                    <option value={r.id}>{r.nombre}</option>    
+                                {/each}
+                        </select>
+                    </label>
+                </div>
+                <button class="btn btn-neutral" onclick={limpiar}>
                     Limpiar
                 </button>
             
@@ -499,7 +401,7 @@
                             `}
                         >
                             {#if todos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
                             {/if}
@@ -509,7 +411,7 @@
                             </svg>
                             {/if}
                             {#if algunos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="red" class="size-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>      
                             {/if}                        
@@ -538,11 +440,11 @@
                                 `}
                             >
                                 {#if selecthashmap[a.id]}
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="red" class="size-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>                                  
                                 {:else}             
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                 {/if}
@@ -571,7 +473,7 @@
                 `}
             >
                 {#if todos}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                 {/if}
@@ -581,7 +483,7 @@
                     </svg>
                 {/if}
                 {#if algunos}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="red" class="size-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>      
                 {/if}

@@ -1,7 +1,8 @@
 <script>
     import Navbarr from '$lib/components/Navbarr.svelte';
-    
     import CardImportar from '$lib/components/importar/CardImportar.svelte';
+
+    import ImportarServicios from '$lib/components/importar/ImportarServicios.svelte';   
     import ImportarAnimal from '$lib/components/importar/ImportarAnimal.svelte';
     import ImportarLotes from '$lib/components/importar/ImportarLotes.svelte';
     import ImportarNacimiento from '$lib/components/importar/ImportarNacimiento.svelte';
@@ -35,14 +36,15 @@
 
 </script>
 <Navbarr>
+    {#if cargado}
     <CardImportar cardsize="max-w-2xl" titulo="Importar animales">
-        <ImportarAnimal/>
+        <ImportarAnimal {animales} {animalesusuario}/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar tactos">
-        <ImportarTactos/>
+        <ImportarTactos {animales}/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar nacimientos">
-        <ImportarNacimiento/>
+        <ImportarNacimiento {animales} {animalesusuario}/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar rodeos">
         <ImportarRodeos/>
@@ -51,12 +53,21 @@
         <ImportarLotes/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar observaciones">
-        <ImportarObservaciones/>
+        <ImportarObservaciones {animales}/>
+    </CardImportar>
+    <CardImportar cardsize="max-w-2xl" titulo="Importar servicios">
+        <ImportarServicios {animales}/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar inseminaciones">
-        <ImportarInseminaciones/>
+        <ImportarInseminaciones {animales}/>
     </CardImportar>
     <CardImportar cardsize="max-w-2xl" titulo="Importar pesajes">
-        <ImportarPesajes/>
+        <ImportarPesajes {animales}/>
     </CardImportar>
+    {:else}
+    <CardImportar cardsize="max-w-2xl" titulo="Cargando">
+        <span class="loading loading-spinner loading-xl"></span>
+    </CardImportar>
+    {/if}
+    
 </Navbarr>

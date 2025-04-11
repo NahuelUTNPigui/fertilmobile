@@ -26,9 +26,11 @@
         fechanacimiento,
         categoria,
         prenada,
+        rp,
         modohistoria=$bindable()
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
+    //pre
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let caber = createCaber()
@@ -50,7 +52,8 @@
     let loteviejo = $state("")
     let categoriavieja = $state("")
     let prenadaviejo = $state(false)
-
+    let rpviejo = $state("")
+    
     //Nacimiento
     let fechaviejo = $state("")
     let nombremadreviejo = $state("")
@@ -111,6 +114,7 @@
         }
     }
     //Animales
+    //Si quiero tener animales fallecidos
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`active=true && cab='${cab.id}' `,
@@ -157,6 +161,7 @@
             caravanavieja = caravana
             categoriavieja = categoria
             prenadaviejo  = prenada
+            rpviejo = rp
         }
         else{
             Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
@@ -172,6 +177,7 @@
         lote = loteviejo
         categoria = categoriavieja
         prenada = prenadaviejo
+        rp = rpviejo
         if(rodeo != ""){
             nombrerodeo = rodeos.filter(t=>t.id==rodeo)[0].nombre
         }
@@ -315,24 +321,24 @@
             prenada,
             categoria
         }
-        let datahistorial = {
-            prenada:prenadaviejo,
-            sexo:sexoviejo,
-            peso:pesoviejo,
-            caravana:caravanavieja,
-            active:true,
-            delete: false,
-            fechanacimiento:fecha+ " 03:00:00",
-            lote:loteviejo,
-            rodeo:rodeovieja,
-            user:userid,
-            categoria:categoriavieja,
-            animal:id
-        }
+        //let datahistorial = {
+        //    prenada:prenadaviejo,
+        //    sexo:sexoviejo,
+        //    peso:pesoviejo,
+        //    caravana:caravanavieja,
+        //    active:true,
+        //    delete: false,
+        //    fechanacimiento:fecha+ " 03:00:00",
+        //    lote:loteviejo,
+        //    rodeo:rodeovieja,
+        //    user:userid,
+        //    categoria:categoriavieja,
+        //    animal:id
+        //}
         try{
             const record = await pb.collection('animales').update(id, data);
             
-            await pb.collection("historialanimales").create(datahistorial)
+            await guardarHistorial(pb,id)
             sexo = data.sexo
             peso = data.peso
             caravana = data.caravana
@@ -431,6 +437,25 @@
 </div>
 
 <div class="grid grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2">
+    <div class="mb-1 lg:mb-0 col-span-2 lg:col-span-1" >
+        <label for = "peso" class="label">
+            <span class="label-text text-base">RP</span>
+        </label>
+        {#if modoedicion}
+            <label class="input-group">
+                <input id ="rp" type="text"  
+                    class={`input input-bordered w-full ${estilos.bgdark2}`}
+                    bind:value={rp}
+                />
+            </label>
+        {:else}
+            <label for="rp" 
+                class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
+            >
+                {rp}
+            </label>
+        {/if}
+    </div>
     <div class="mb-1 lg:mb-0">
         <label for = "peso" class="label">
             <span class="label-text text-base">Peso(KG)</span>

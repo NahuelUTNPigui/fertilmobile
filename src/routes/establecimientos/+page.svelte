@@ -9,14 +9,16 @@
     
     import {createPer} from "$lib/stores/permisos.svelte"
     import { usuario } from "$lib/stores/usuario";
+    import { getUserOffline } from "$lib/stores/capacitor/offlineuser";
     let ruta = import.meta.env.VITE_RUTA
-
+    //pre
     const pb = new PocketBase(ruta);
     let establecimientos = $state([])
     let establecimientoscolab = $state([])
     let totales = $state([])
     let totalescolab = $state([])
     let usuarioid = $state("")
+    let useroff = getUserOffline()
     let caber = createCaber()
     let cab = $state({})
     //Guardar establecimiento 
@@ -93,7 +95,7 @@
     }
     onMount(async ()=>{
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.model.id
+        usuarioid = pb_json.record.id
         cab = caber.cab
         const records = await pb.collection("cabs").getFullList({
             filter: `active = True && user = '${usuarioid}'` 

@@ -130,6 +130,36 @@
         }
         
     }
+    async function eliminarCuenta() {
+        let html= `
+            Estas apunto de eliminar la cuenta y sus datos,
+            <br>
+            Solo se mantendra los datos de animales transferidos a otro establecimiento.
+            <br>
+            Ante la duda comunicarse con aplicacionfertil@gmail.com
+        `;
+        Swal.fire({
+            title: "¿Seguro que deseas eliminar la cuenta?",
+            html,
+            showDenyButton: true,
+            showCancelButton: false,
+            confirmButtonText: "Confirmación",
+            denyButtonText: `Cancelar`
+            }).then(async (result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+                Swal.fire("Eliminada!", "", "success");
+                let data = {active:false}
+                const record = await pb.collection('users').update(usuarioid, data);
+                pb.authStore.clear();
+                goto(pre+"/")
+            } else if (result.isDenied) {
+                
+            }
+        });
+        
+        
+    }
     onMount(async ()=>{
         let caber = createCaber()
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
@@ -348,6 +378,18 @@
             </button> 
             
         </div>
+        <h2 class="text-xl font-semibold">Eliminar cuenta</h2>
+        <button 
+            onclick={eliminarCuenta}
+            class="
+                btn btn-error 
+                text-white 
+                font-bold font-lg
+            "
+        >
+
+            Eliminar
+        </button>
 
     </CardBase>
     

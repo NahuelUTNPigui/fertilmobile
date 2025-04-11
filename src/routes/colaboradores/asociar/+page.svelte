@@ -31,7 +31,7 @@
 
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         
-        let origenusuarioid =  pb_json.model.id
+        let origenusuarioid =  pb_json.record.id
         let userid = resultList.items[0].id
         let nombre = resultList.items[0].nombre
         let apellido = resultList.items[0].apellido

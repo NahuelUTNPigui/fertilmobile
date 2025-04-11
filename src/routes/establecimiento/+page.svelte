@@ -16,6 +16,7 @@
     import localidades from '$lib/stores/geo/localidades';
     import estilos from '$lib/stores/estilos';
     let ruta = import.meta.env.VITE_RUTA
+    //rp
     const pb = new PocketBase(ruta);
     const regexRenspa = /^\d{2}\.\d{3}\.\d\.\d{5}\.\d{2}$/;
     let usuarioid = $state("")

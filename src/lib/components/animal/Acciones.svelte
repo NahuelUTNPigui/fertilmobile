@@ -9,7 +9,6 @@
     import { onMount } from "svelte";
     import tiponoti from '$lib/stores/tiponoti';
     
-
     let {caravana,bajar,eliminar,transferir,fechafallecimiento=$bindable(""),motivo = $bindable("fallecimiento")} = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);

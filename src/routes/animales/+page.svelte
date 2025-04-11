@@ -21,8 +21,9 @@
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
     import { getSexoNombre,capitalize } from '$lib/stringutil/lib';
-    let ruta = import.meta.env.VITE_RUTA
 
+    let ruta = import.meta.env.VITE_RUTA
+    //pre
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let caber = createCaber()
@@ -59,6 +60,7 @@
     let animal = $state(null)
     let idanimal = $state("")
     let caravana = $state("")
+    let rp = $state("")
     let prenada = $state(0)
     let fechanacimiento = $state("")
     let nacimiento = $state("")
@@ -155,6 +157,7 @@
             madre = ""
             animal = null
             observacion = ""
+            rp = ""
             nuevoModal.showModal()
         }
         else{
@@ -179,6 +182,7 @@
         nacimiento = animal.nacimiento
         lote = animal.lote
         rodeo = animal.rodeo
+        rp = animal.rp
         nuevoModal.showModal()
     }
     //Se puede guardar un animal con su nacimiento
@@ -226,7 +230,8 @@
                 lote,
                 rodeo,
                 categoria,
-                cab:cab.id
+                cab:cab.id,
+                rp
             }
             if(conparicion){
                 data.nacimiento = recordparicion.id
@@ -376,7 +381,7 @@
         padre = ""
         madre = ""
         animal = null
-
+        rp = ""
         observacion = ""
         lote = ""
         rodeo = ""
@@ -386,6 +391,7 @@
     function prepararData(item){
         return {
             CARAVANA:item.caravana,
+            RP:item.pr,RP:item.pr,
             NACIMIENTO:item.fechanacimiento?new Date(item.fechanacimiento).toLocaleDateString():"",
             PADRE:item.expand?
                 item.expand.nacimiento?
@@ -420,6 +426,94 @@
     let isOpenFilter = $state(false)
     function clickFilter(){
         isOpenFilter = !isOpenFilter
+    }
+    //Para el collapse de los ordenar
+    let isOpenOrdenar = $state(false)
+    function clickOrdenar(){
+        isOpenOrdenar = !isOpenOrdenar
+    }
+    //Para los ordenar
+    let ascendente = $state(true)
+    let forma = $state("caravana")
+    let selectforma = $state("caravana")
+    //Ordenar animales
+    function ordenarAnimalesDescendente(p_forma){
+        console.log(ascendente)
+        let escalar = 1
+        if(!ascendente){
+            escalar = -1
+        }
+        forma = p_forma
+        if(forma=="caravana"){
+            
+            animalesrows.sort((a1,a2)=>escalar * a1.caravana.localeCompare(a2.caravana))
+        }
+        else if(forma=="sexo"){
+            
+            animalesrows.sort((a1,a2)=>escalar * a1.sexo.localeCompare(a2.sexo))
+        }
+        else if(forma=="categoria"){
+            animalesrows.sort((a1,a2)=>escalar * a1.categoria.localeCompare(a2.categoria))
+        }
+        else if(forma=="estado"){
+            animalesrows.sort((a1,a2)=> a1.prenada > a2.prenada?escalar:-1*escalar)
+        }
+        else if(forma=="lote"){
+            animalesrows.sort((a1,a2)=>{
+                let l1 = a1.expand?a1.expand.lote?a1.expand.lote.nombre:"":""
+                let l2 = a2.expand?a2.expand.lote?a2.expand.lote.nombre:"":""
+                return escalar * l1.localeCompare(l2)
+            })
+        }
+        else if(forma=="rodeo"){
+            animalesrows.sort((a1,a2)=>{
+                let r1 = a1.expand?a1.expand.rodeo?a1.expand.rodeo.nombre:"":""
+                let r2 = a2.expand?a2.expand.rodeo?a2.expand.rodeo.nombre:"":""
+                return escalar * r1.localeCompare(r2)
+            })
+        }
+    }
+    function ordenarAnimales(p_forma){
+        
+        if(p_forma == forma){
+            ascendente = !ascendente
+        }
+        else{
+            ascendente = false
+        }
+        let escalar = 1
+        if(!ascendente){
+            escalar = -1
+        }
+        forma = p_forma
+        if(forma=="caravana"){
+            
+            animalesrows.sort((a1,a2)=>escalar * a1.caravana.localeCompare(a2.caravana))
+        }
+        else if(forma=="sexo"){
+            
+            animalesrows.sort((a1,a2)=>escalar * a1.sexo.localeCompare(a2.sexo))
+        }
+        else if(forma=="categoria"){
+            animalesrows.sort((a1,a2)=>escalar * a1.categoria.localeCompare(a2.categoria))
+        }
+        else if(forma=="estado"){
+            animalesrows.sort((a1,a2)=> a1.prenada > a2.prenada?escalar:-1*escalar)
+        }
+        else if(forma=="lote"){
+            animalesrows.sort((a1,a2)=>{
+                let l1 = a1.expand?a1.expand.lote?a1.expand.lote.nombre:"":""
+                let l2 = a2.expand?a2.expand.lote?a2.expand.lote.nombre:"":""
+                return escalar * l1.localeCompare(l2)
+            })
+        }
+        else if(forma=="rodeo"){
+            animalesrows.sort((a1,a2)=>{
+                let r1 = a1.expand?a1.expand.rodeo?a1.expand.rodeo.nombre:"":""
+                let r2 = a2.expand?a2.expand.rodeo?a2.expand.rodeo.nombre:"":""
+                return escalar * r1.localeCompare(r2)
+            })
+        }
     }
 </script>
 <Navbarr>
@@ -471,7 +565,7 @@
             </label>
         </div>
     </div>
-    
+    <!--Filtros-->
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
         <button 
             aria-label="Filtrar" 
@@ -596,16 +690,100 @@
                 </div>
             {/if}
     </div>
+    <!--Ordenar-->
+    <div class="block  md:hidden w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
+        <button 
+            aria-label="Ordenar" 
+            class="w-full"
+            onclick={clickOrdenar}
+        >
+            <div class="flex justify-between items-center px-1">
+                <h1 class="font-semibold text-lg py-2">Ordenar</h1>
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    class={`size-6 transition-all duration-300 ${isOpenOrdenar? 'transform rotate-180':''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+            
+        </button>
+        {#if isOpenOrdenar}
+            <div transition:slide>
+                <div class="my-0 py-0">
+                    <label class="input-group ">
+                        <select 
+                            class={`
+                                select select-bordered w-full
+                                rounded-md
+                                focus:outline-none focus:ring-2 
+                                focus:ring-green-500 
+                                focus:border-green-500
+                                
+                                ${estilos.bgdark2}
+                            `}
+                            bind:value={selectforma}
+                            onchange={()=>ordenarAnimales(selectforma)}
+                            
+                        >
+                            <option value="caravana" class="rounded">Caravana</option>
+                            <option value="sexo" class="rounded">Sexo</option>
+                            <option value="categoria" class="rounded">Categoria</option>
+                            <option value="lote" class="rounded">Lote</option>
+                            <option value="rodeo" class="rounded">Rodeo</option>
+                            <option value="estado" class="rounded">Estado</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="my-1">
+                    <div class="form-control">
+                        <label class="label cursor-pointer">
+                            <span class="label-text">Ascendente</span>
+                            <input type="checkbox" class="toggle" bind:checked={ascendente} onclick={()=>ordenarAnimales(selectforma)}/>
+                        </label>
+                      </div>
+                </div>
+            </div>
+        {/if}
+    </div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
                 <tr >
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Animal</th>
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Sexo</th>
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Categoria</th>
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Estado</th>
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Lote</th>
-                    <th class="text-base p-3 border-b dark:border-gray-600"  >Rodeo</th>
+                    <th 
+                        onclick={()=>ordenarAnimales("caravana")}
+                        class={`
+                            text-base p-3 border-b dark:border-gray-600 
+                            hover:cursor-pointer hover:bg-gray-200 
+                            dark:hover:bg-gray-800
+                        `}  >
+                        Animal
+                    </th>
+                    <th 
+                        onclick={()=>ordenarAnimales("sexo")}
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        Sexo
+                    </th>
+                    <th 
+                        onclick={()=>ordenarAnimales("categoria")}
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        Categoria
+                    </th>
+                    <th 
+                        onclick={()=>ordenarAnimales("estado")}
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        Estado
+                    </th>
+                    <th 
+                        onclick={()=>ordenarAnimales("lote")}
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        Lote
+                    </th>
+                    <th 
+                        onclick={()=>ordenarAnimales("rodeo")}
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        Rodeo
+                    </th>
                     <!--<th class="text-base"  >Acciones</th>-->
                     
                 </tr>
@@ -766,6 +944,26 @@
                     <div class={`label ${malcaravana?"":"hidden"}`}>
                         <span class="label-text-alt text-red-400">Error debe escribir la caravana del animal</span>
                     </div>
+                </label>
+                <label for = "rp" class="label">
+                    <span class="label-text text-base">RP:</span>
+                </label>
+                <label class="input-group">
+                    <input 
+                        id ="rp" 
+                        type="text"  
+                        class={`
+                            input 
+                            input-bordered 
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                            w-full
+                            ${estilos.bgdark2} 
+                            
+                        `}
+                        bind:value={rp}
+                        
+                    />
                 </label>
                 <label for = "sexo" class="label">
                     <span class="label-text text-base">Sexo</span>
@@ -1051,4 +1249,4 @@
                 </form>
             </div>
         </div>
-    </dialog>
+</dialog>

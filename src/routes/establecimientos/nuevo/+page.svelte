@@ -16,6 +16,7 @@
     import Swal from 'sweetalert2';
     let pageurl = $page.url.pathname  
     let ruta = import.meta.env.VITE_RUTA
+    //pre
     const pb = new PocketBase(ruta);
     let darker = createDarker()
     
@@ -43,8 +44,8 @@
       let caber = createCaber()
       nombreestablecimiento = caber.cab.nombre
       let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-      usuarioid = pb_json.model.id
-      nombreusuario = pb_json.model.username
+      usuarioid = pb_json.record.id
+      nombreusuario = pb_json.record.username
       let hab = $enabled
       if(hab==="no"){
         goto("/")
@@ -212,4 +213,4 @@
             </div>
         </CardBase>
     </div>
-  </div>
+</div>

@@ -15,6 +15,7 @@
   let {children} = $props();
   let pageurl = $page.url.pathname  
   let ruta = import.meta.env.VITE_RUTA
+  //pre
   const pb = new PocketBase(ruta);
   let darker = createDarker()
   let leido = $state(true)
@@ -134,7 +135,7 @@
               </button>
             </div>
             <div class="flex-1">
-              <a href="/inicio" 
+              <a href={"/establecimientos"} 
                 class={`ps-0 btn btn-ghost text-xl ${classtextnavbar}`}
               >
                 {nombreestablecimiento}

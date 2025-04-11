@@ -3,6 +3,7 @@
     import {isEmpty} from "$lib/stringutil/lib"
     import { goto } from "$app/navigation";
     let {colabs = $bindable()} = $props()
+    //pre
     function getColab(id){
         goto("/colaboradores/"+id)
     }

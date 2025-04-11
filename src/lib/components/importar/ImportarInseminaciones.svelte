@@ -128,8 +128,8 @@
                     }
                     
                     const record = await pb.collection("inseminacion").create(datains)
-                    await guardarHistorial(pb,recordmadre.id)
-                    await pb.collection("animales").update(recordmadre.id,{prenada:3})
+                    //await guardarHistorial(pb,recordmadre.id)
+                    //await pb.collection("animales").update(recordmadre.id,{prenada:3})
 
                 }
                 catch(err){

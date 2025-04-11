@@ -6,6 +6,8 @@
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
+    import cuentas from '$lib/stores/cuentas';
+    import categorias from "$lib/stores/categorias";
     let {animales,animalesusuario} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -32,7 +34,8 @@
             fechanacimiento:"MM/DD/AAAA",
             nombremadre:"",
             nombrepadre:"",
-            observaciones:""
+            observaciones:"",
+            categoria:""
         }].map(item=>({
             CARAVANA: item.caravana,
             PESO: item.peso,
@@ -42,7 +45,8 @@
             FECHANACIMIENTO: item.fechanacimiento,
             CARAVANA_MADRE: item.nombremadre,
             CARAVANA_PADRE: item.nombrepadre,
-            OBSERVACIONES:item.observaciones
+            OBSERVACIONES:item.observaciones,
+            CATEGORIA:item.categoria
         }))
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(csvData);
@@ -110,10 +114,13 @@
                 if(firstLetter=="I"){
                     animaleshashmap[tail].observaciones = value.v
                 }
+                if(firstLetter=="J"){
+                    animaleshashmap[tail].categoria = value.v
+                }
             }
             else{
                 animaleshashmap[tail]={
-                    caravana:'',peso:'',sexo:'',rodeo:'',lote:"",fechanacimiento:"",nombremadre:"",nombrepadre:"",observaciones:""
+                    caravana:'',peso:'',sexo:'',rodeo:'',lote:"",fechanacimiento:"",nombremadre:"",nombrepadre:"",observaciones:"",categoria:""
                 }
                 if(firstLetter=="A"){
                     animaleshashmap[tail].caravana = value.v
@@ -141,7 +148,10 @@
                 }
                 if(firstLetter=="I"){
                     animaleshashmap[tail].observaciones = value.v
-                }          
+                }    
+                if(firstLetter=="J"){
+                    animaleshashmap[tail].categoria = value.v
+                }      
             }
         }
         for (const [key, value ] of Object.entries(animaleshashmap)) {
@@ -154,7 +164,8 @@
             let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
             let padre = animales.filter(p=>p.caravana==an.nombrepadre)[0]
             let madre = animales.filter(m=>m.caravana==an.nombremadre)[0]
-            
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+            //Falta comprobar el nivel de las cuentas
             // Agregar animal si no existe y nacimiento
             let dataadd = {
                 caravana:an.caravana,
@@ -182,7 +193,9 @@
             if(rodeo){
                 dataadd.rodeo = rodeo.id
             }
-
+            if(categoria){
+                dataadd.categoria = categoria.id
+            }
             if(padre){
                 datanacimiento.padre=padre.id
             }

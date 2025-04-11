@@ -1,5 +1,5 @@
 {
-    "appId": "com.crecientefertil.app",
+    "appId": "com.fertmob.app",
     "appName": "Creciente Fertil",
     "webDir": "dist",
     "linuxAndroidStudioPath": "/opt/android-studio-2024.2.2/android-studio/bin/studio.sh",

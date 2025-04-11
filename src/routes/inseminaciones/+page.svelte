@@ -407,21 +407,6 @@
                     {prepararData}
                 />
             </div>
-            <div class="hidden">
-                <button
-                    onclick={()=>goto("/inseminaciones/movimiento")}
-                    class={`
-                        bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                        ${estilos.btnsecondary}
-                        rounded-full
-                        px-4 pt-2 pb-3
-                    `} 
-                    aria-label="Exportar"
-                >
-                    <span  class="text-xl font-semibold ">Múltiples</span>
-                    
-                </button>
-            </div>
             
         </div>
     </div>
@@ -461,7 +446,7 @@
         </div>
         {#if isOpenFilter}
             <div transition:slide>
-                <div class="grid grid-cols-2 lg:grid-cols-4" >
+                <div class="grid grid-cols-1 lg:grid-cols-2 lg:grid-cols-4" >
                     <div class="">
                         <label class="block tracking-wide text-base font-medium mb-2" for="grid-first-name">
                           Inseminacion desde

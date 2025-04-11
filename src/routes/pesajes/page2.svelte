@@ -13,6 +13,22 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //OFFLINE
+    import {openDB} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getRodeosSQL,getEventosSQL, getLotesSQL} from "$lib/stores/sqlite/dbeventos"
+    
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+    //online
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -188,6 +204,7 @@
         tipos = records
         tipos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
+    //No haria falta
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`active=true && delete=false && cab='${cab.id}'`,
@@ -218,7 +235,7 @@
         
 
     }
-    async function crearPesaje(){
+    async function crearPesajeOnline() {
         let errores = false
         
         for(let i = 0;i<selectanimales.length ;i++){
@@ -250,16 +267,120 @@
         else{
             Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
         }
-        await getAnimales()
+        //await getAnimales()
         filterUpdate()
         selecthashmap = {}
         selectanimales = []
     }
-    onMount(async ()=>{
+    async function crearPesajeOffline() {
+        let errores = false
+        
+        for(let i = 0;i<selectanimales.length ;i++){
+            
+            let ps = selectanimales[i]
+            
+            try{
+                let dataupdate = {
+                    peso:ps.pesonuevo
+                }
+                let data ={
+                    pesonuevo:ps.pesonuevo,
+                    pesoanterior:ps.peso,
+                    fecha:fecha+" 03:00:00",
+                    animal:ps.id
+                }
+                let comandopesaje = {}
+                let comandocambio = {}
+                let comandohistorial = {}
+                comandos.push(comandopesaje)
+                comandos.push(comandocambio)
+                comandos.push(comandohistorial)
+                //await guardarHistorial(pb,selectanimales[i].id)
+                //let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
+                //await pb.collection("pesaje").create(data)
+                await setComandosSQL(db,comandos)
+            }
+            catch(err){
+                console.error(err)
+                errores = true
+            }
+        }
+        if(errores){
+            Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
+        }
+        else{
+            Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
+        }
+        //await getAnimales()
+        filterUpdate()
+        selecthashmap = {}
+        selectanimales = []
+    }
+    async function crearPesaje(){
+        if(coninternet.connected){
+            await crearPesajeOnline()
+        }
+        else{
+            await crearPesajeOffline()
+        }
+    }
+    async function originalMount(){
         await getAnimales()
         await getRodeos()
         await getLotes()
         await getTipos()
+    }
+
+    //Esto se repite en todas las paginas abstraer
+    async function initData() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+        db = await openDB()
+
+        let reslotes = await getLotesSQL(db)
+        lotes = reslote.lista
+        let resrodeos = await getRodeosSQL(db)
+        rodeos = resrodeos.lista
+    }
+    onMount(async ()=>{
+        await initData()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        //Hago un reinicio de los comandos
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+    
+        //await flushComandosSQL(db)
+        if(coninternet.connected){
+            if(lastinter.internet == 0){
+                animales = await updateLocalAnimalesSQL(db,pb)
+                animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+                animalesrows = animales
+            }
+            else{
+                //Logica con internet previo
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalAnimalesSQL(db,pb)
+                    animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+                    animalesrows = animales
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            let resanimales = await getAnimalesSQL(db)
+            animales = resanimales.lista
+            animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+            animalesrows = animales
+            await setInternetSQL(db,0,Date.now())
+        }
+        
+
     })
 </script>
 <Navbarr>
@@ -301,7 +422,7 @@
             </div> 
         </button>
         {#if isOpenFilter}
-            <div transition:slide class="grid grid-cols-2 lg:grid-cols-4  m-1 gap-2 w-11/12" >
+            <div transition:slide class="grid grid-cols-1 lg:grid-cols-4  m-1 gap-2 w-11/12" >
                 <div>
                     <label for = "sexo" class="label">
                         <span class="label-text text-base">Sexo</span>

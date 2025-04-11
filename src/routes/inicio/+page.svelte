@@ -1756,22 +1756,22 @@
  
 </script>
 <Navbarr>
-    <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    <button onclick={reinicarDB} class="hidden btn">Reiniciar bd</button>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="hidden btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
     {#if caboff.exist}
     
         <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
-                <StatCard titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
-                <StatCard titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
-                <StatCard titsize={"text-md"} titulo="Rodeos" valor={totaleventos.rodeos}/>
-                <StatCard titsize={"text-md"} titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
-                <StatCard titsize={"text-md"} titulo="Servicios" valor={totaleventos.servicios}/>
-                <StatCard titsize={"text-md"} titulo="Nacimientos" valor={totaleventos.nacimientos}/>
-                <StatCard titsize={"text-md"} titulo="Tratamientos" valor={totaleventos.tratamientos}/>
-                <StatCard titsize={"text-md"} titulo="Observaciones" valor={totaleventos.observaciones}/>
-                <StatCard titsize={"text-md"} titulo="Pesajes" valor={totaleventos.pesajes}/>
-                <StatCard titsize={"text-md"} titulo="Tactos" valor={totaleventos.tactos}/>
+                <StatCard urlto={"/animales"}  titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
+                <StatCard urlto={"/lotes"}  titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
+                <StatCard urlto={"/rodeos"}  titsize={"text-md"} titulo="Rodeos" valor={totaleventos.rodeos}/>
+                <StatCard urlto={"/servicios"}  titsize={"text-md"} titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
+                <StatCard urlto={"/servicios"}  titsize={"text-md"} titulo="Servicios" valor={totaleventos.servicios}/>
+                <StatCard urlto={"/nacimientos"}  titsize={"text-md"} titulo="Nacimientos" valor={totaleventos.nacimientos}/>
+                <StatCard urlto={"/tratamientos"}  titsize={"text-md"} titulo="Tratamientos" valor={totaleventos.tratamientos}/>
+                <StatCard urlto={"/observaciones"}  titsize={"text-md"} titulo="Observaciones" valor={totaleventos.observaciones}/>
+                <StatCard urlto={"/pesajes"}  titsize={"text-md"} titulo="Pesajes" valor={totaleventos.pesajes}/>
+                <StatCard urlto={"/tactos/cab"} titsize={"text-md"} titulo="Tactos" valor={totaleventos.tactos}/>
             </div>
             <h2 class="text-xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">Opciones</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

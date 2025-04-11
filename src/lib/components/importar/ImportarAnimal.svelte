@@ -8,6 +8,7 @@
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
     import cuentas from '$lib/stores/cuentas';
+    import categorias from "$lib/stores/categorias";
     let {animales,animalesusuario} = $props()
     let usuarioid = $state("")
     let ruta = import.meta.env.VITE_RUTA
@@ -29,13 +30,15 @@
             peso:"0",
             sexo:"H/M",
             rodeo:"",
-            lote:""
+            lote:"",
+            categoria:""
         }].map(item=>({
             CARAVANA:item.caravana,
             PESO:item.peso,
             SEXO:item.sexo,
             RODEO:item.rodeo,
-            LOTE:item.lote
+            LOTE:item.lote,
+            CATEGORIA:item.categoria
         }))
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(csvData);
@@ -98,11 +101,15 @@
                 if(firstLetter=="E"){
                     animaleshashmap[tail].lote = value.v
                 }
+                if(firstLetter=="F"){
+                    animaleshashmap[tail].categoria = value.v
+                }
+                
                 
             }
             else{
                 animaleshashmap[tail]={
-                    caravana:'',peso:'',sexo:'',rodeo:'',lote:""
+                    caravana:'',peso:'',sexo:'',rodeo:'',lote:"",categoria:""
                 }
                 if(firstLetter=="A"){
                     animaleshashmap[tail].caravana = value.v
@@ -119,6 +126,9 @@
                 }
                 if(firstLetter=="E"){
                     animaleshashmap[tail].lote = value.v
+                }
+                if(firstLetter=="F"){
+                    animaleshashmap[tail].categoria = value.v
                 }
                 
             }
@@ -145,7 +155,7 @@
             let contropa = false
             let lote = lotes.filter(l=>l.nombre==an.lote)[0]
             let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
-            
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
 
             let dataadd = {
                 caravana:an.caravana,
@@ -169,6 +179,10 @@
             if(rodeo){
                 dataadd.rodeo = rodeo.id
                 datamod.rodeo = rodeo.id
+            }
+            if(categoria){
+                dataadd.categoria = categoria.id
+                datamod.categoria = categoria.id
             }
             try{
                 const record = await pb.collection('animales').getFirstListItem(`

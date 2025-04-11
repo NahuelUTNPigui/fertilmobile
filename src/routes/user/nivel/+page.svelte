@@ -52,7 +52,7 @@
     let nivel = $state(0)
     onMount(()=>{
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-        nivel = pb_json.model.nivel
+        nivel = pb_json.record.nivel
         
     })
     async function cambiarPlan(p_nivel){
@@ -67,8 +67,8 @@
             if(result.value){
                 nivel = p_nivel
                 let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-                pb_json.model.nivel = p_nivel
-                let usuarioid = pb_json.model.id
+                pb_json.record.nivel = p_nivel
+                let usuarioid = pb_json.record.id
                 localStorage.setItem('pocketbase_auth',JSON.stringify(pb_json))
                 try{
                     let data = {

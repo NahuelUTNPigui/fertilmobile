@@ -1,5 +1,5 @@
 <script>
-    //En proceso
+    //En proceso es que necesito un write file diferente para celular
     import estilos from "$lib/stores/estilos";
     let {data,titulo,filtros,confiltros,prepararData} = $props()
     import * as XLSX from "xlsx"

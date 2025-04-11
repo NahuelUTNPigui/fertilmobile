@@ -12,7 +12,8 @@ export async function guardarHistorial(pb,idanimal){
         lote:record.lote,
         rodeo:record.rodeo,
         categoria:record.categoria,
-        prenada:record.prenada
+        prenada:record.prenada,
+        rp:record.rp
 
     }
     await pb.collection("historialanimales").create(histo)
