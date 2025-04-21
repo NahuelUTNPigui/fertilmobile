@@ -344,6 +344,7 @@
         nuevoModalObservacion.showModal()
     }
     //Debo agregar la verificacion de cantidad de animales de cabaña
+    //Debo crearle el pesaje cuando le guardo el animl
     async function guardarAnimal2(esTacto,esInseminacion) {
         //Los nombres de la funciones horribles
         let totalanimals = await getTotalSQL(db)
@@ -369,6 +370,7 @@
         if(fechanacimiento){
             data.fechanacimiento=fechanacimiento +" 03:00:00"
         }
+        //Verificar si las fechas coinciden
         if(esTacto){
             data.prenada = prenadatacto
         }
@@ -643,6 +645,7 @@
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
             return {id:-1}
         }
+        //que pasa si la madre y el padre son nuevos
         let dataparicion = {
             madre:madrenac,
             padre:padrenac,
@@ -707,12 +710,12 @@
             comandos.push(comandonac)
             let comandoani = {
                 tipo:"add",
-                coleccion:"animal",
+                coleccion:"animales",
                 data:{...dataanimal},
                 hora:Date.now(),
                 prioridad:3,
                 idprov,    
-                camposprov:""
+                camposprov:"nacimiento"
             }
             comandos.push(comandoani)
             await setComandosSQL(db,comandos)
@@ -813,6 +816,7 @@
             }
             
         }
+        //Animal existente
         else{
             let data = {
                 animal:animaltrat,
@@ -1087,7 +1091,7 @@
         }
         
     }
-    //Falta completar
+    
     async function guardarServicio2(){
         let idprov = "nuevo_serv_"+generarIDAleatorio() 
         if(agregaranimal){
@@ -1095,24 +1099,82 @@
                 Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
                 return
             }
-            let a = await guardarAnimal(false,true)
+            let a = await guardarAnimal2(false,true)
             if(a.id == -1){
                     return
             }
             await updateAnimales(db,a)
+            let dataser = {
+                fechadesde : fechadesdeserv + " 03:00:00",
+                fechaparto: fechapartoser + " 03:00:00",
+                observacion: observacionser,
+                madre:a.id,
+                padres:padreserlista.join(),
+                active:true,
+                cab:caboff.id,
+            }
+            if(fechahastaserv != ""){
+                dataser.fechahasta = fechahastaserv + " 03:00:00"
+            }
             if(coninternet.connected){
-
+                await pb.collection("servicios").create(dataser)
+                totaleventos.servicios += 1
+                Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
             }
             else{
-
+                dataser.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"servicios",
+                    data:{...dataser},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:"animal"
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                await addNewServicioSQL(db,data)
+                Swal.fire("Éxito guardar","Se pudo guardar el servicio con exito","success")
+                totaleventos.servicios += 1
             }
         }
+        //Animal seleccionado
         else{
+            let dataser = {
+                fechadesde : fechadesdeserv + " 03:00:00",
+                fechaparto: fechapartoser + " 03:00:00",
+                observacion: observacionser,
+                madre:idanimalser,
+                padres:padreserlista.join(),
+                active:true,
+                cab:caboff.id,
+            }
+            if(fechahastaserv != ""){
+                dataser.fechahasta = fechahastaserv + " 03:00:00"
+            }
             if(coninternet.connected){
-
+                await pb.collection("servicios").create(dataser)
+                Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
+                totaleventos.servicios += 1
             }
             else{
-                
+                let nuevoanimal = idanimalser.split("_")[0]=="nuevo"
+                dataser.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"servicios",
+                    data:{...dataser},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:nuevoanimal?"animal":""
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                await addNewServicioSQL(db,data)
+                Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
+                totaleventos.servicios += 1
             }
         }
     }
@@ -1165,7 +1227,7 @@
             }
             try{
                 await pb.collection("servicios").create(dataser)
-                
+                //NO es tan directo, provar si las fechas dan
                 await pb.collection('animales').update(idanimalser,{
                     prenada:3
                 })
@@ -1180,7 +1242,6 @@
             
         }
     }
-    //Falta completar
     async function guardarObs2() {
         let idprov = "nuevo_obs_"+generarIDAleatorio() 
         if(agregaranimal){
@@ -1193,19 +1254,69 @@
                     return
             }
             await updateAnimales(db,a)
+            let data = {
+                animal:a.id,
+                categoria:a.categoria,
+                fecha:fechaobs +" 03:00:00",
+                cab:caboff.id,
+                observacion:observacionobs,
+                active:true
+            }
             if(coninternet.connected){
-
+                const record = await pb.collection('observaciones').create(data);
+                Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
+                totaleventos.observaciones += 1
             }
             else{
-
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"observaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:"animal"
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                await addNewObservacionSQL(db,data)
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con exito","success")
+                totaleventos.observaciones += 1
             }
         }
+        //Animal seleccionado
         else{
+            let data = {
+                animal:animalobs,
+                fecha:fechaobs +" 03:00:00",
+                categoria:categoriaobs,
+                cab:caboff.id,
+                observacion:observacionobs,
+                active:true
+            }
             if(coninternet.connected){
-
+                const record = await pb.collection('observaciones').create(data);
+                Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
+                totaleventos.observaciones += 1
             }
             else{
-                
+                let nuevoanimal = animalobs.split("_")[0]=="nuevo"
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"observaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:nuevoanimal?"animal":""
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                await addNewObservacionSQL(db,data)
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con éxito","success")
+                totaleventos.observaciones += 1
             }
         }
     }
@@ -1756,10 +1867,11 @@
  
 </script>
 <Navbarr>
-    <button onclick={reinicarDB} class="hidden btn">Reiniciar bd</button>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="hidden btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+
     {#if caboff.exist}
-    
+        
         <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
                 <StatCard urlto={"/animales"}  titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
@@ -2474,7 +2586,7 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
               <!-- if there is a button, it will close the modal -->
-              <button class="btn btn-success text-white" disabled='{!botonhabilitadonac}' onclick={guardarNacimiento} >Guardar</button>
+              <button class="btn btn-success text-white" disabled='{!botonhabilitadonac}' onclick={guardarNacimiento2} >Guardar</button>
             </form>
         </div>
     </div>
@@ -2592,7 +2704,7 @@
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >
-                <button class="btn btn-success text-white" disabled='{!botonhabilitadotrat}' onclick={guardarTrat} >Guardar</button>
+                <button class="btn btn-success text-white" disabled='{!botonhabilitadotrat}' onclick={guardarTrat2} >Guardar</button>
             </form>
         </div>
     </div>
@@ -2711,7 +2823,7 @@
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >
-                <button class="btn btn-success text-white" disabled='{!botonhabilitadoins}' onclick={guardarInseminacion} >Guardar</button>
+                <button class="btn btn-success text-white" disabled='{!botonhabilitadoins}' onclick={guardarInseminacion2} >Guardar</button>
                 
                 
             </form>
@@ -2826,7 +2938,7 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
                 <!-- if there is a button, it will close the modal -->
-                <button class="btn btn-success text-white" disabled='{!botonhabilitadoobs}' onclick={guardarObs} >Guardar</button>
+                <button class="btn btn-success text-white" disabled='{!botonhabilitadoobs}' onclick={guardarObs2} >Guardar</button>
             </form>
         </div>
     </div>
@@ -2990,7 +3102,7 @@
             <div class="modal-action justify-start ">
                 <form method="dialog" >
                     <!-- if there is a button, it will close the modal -->
-                    <button class="btn btn-success text-white" disabled='{!botonhabilitadoser}' onclick={guardarServicio} >Guardar</button>
+                    <button class="btn btn-success text-white" disabled='{!botonhabilitadoser}' onclick={guardarServicio2} >Guardar</button>
                 </form>
             </div>
             

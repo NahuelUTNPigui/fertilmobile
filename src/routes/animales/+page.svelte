@@ -1,6 +1,4 @@
 <script>
-    //En esta pagina solo se van a crear y ver animales
-    //Se pueden crear nuevos animales con un nacimientos
     import Navbarr from '$lib/components/Navbarr.svelte';
     import Exportar from '$lib/components/Exportar.svelte';
     import PocketBase from 'pocketbase'
@@ -21,6 +19,40 @@
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
     import { getSexoNombre,capitalize } from '$lib/stringutil/lib';
+    ///ofline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {getCabData} from "$lib/stores/cabsdata"
+    import {
+        getAnimalesSQL,
+        setAnimalesSQL,
+        addNewAnimalSQL,
+        updateLocalAnimalesSQL,
+        
+    } from "$lib/stores/sqlite/dbanimales"
+
+    import {
+        getLotesSQL,
+        getRodeosSQL,
+        updateLocalLotesSQL,
+        updateLocalRodeosSQL,
+        addNewPesajeSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
+    import {getTotalAnimales} from "$lib/stores/totaldata"
+    //Banco pero esta dificil ahora que traiga los animales actuales
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    //OFLINE
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
     //pre
@@ -31,7 +63,6 @@
     let per = createPer()
     let cab = caber.cab
     let userpermisos = getPermisosList(per.per.permisos)
-    let usuarioid = $state("")
     let filtros = false
 
 
@@ -184,6 +215,187 @@
         rodeo = animal.rodeo
         rp = animal.rp
         nuevoModal.showModal()
+    }
+    async function guardarOffline() {
+        let idprov = "nuevo_animal_"+generarIDAleatorio() 
+        let idnac = "nuevo_nac"+generarIDAleatorio() 
+        let idpes = "nuevo_pesaje"+generarIDAleatorio()
+        let recordparicion = {id:idnac}
+        if (conparicion){
+            let dataparicion = {
+                madre,
+                padre,
+                fecha:fechanacimiento + " 03:00:00",
+                nombremadre,
+                nombrepadre,
+                observacion,
+                cab:caboff.id,
+                id:idnac
+            }
+            let comandonac = {
+                tipo:"add",
+                coleccion:"nacimientos",
+                data:{...dataparicion},
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idnac,
+                camposprov:""
+            }
+            //Debo guardar el nacimiento, cuando guardo el id del nacimiento si quiero hacerle referencia
+            await addNewNacimientoSQL(db,dataparicion)
+            comandos.push(comandonac)
+        }
+        let data = {
+            caravana,
+            active:true,
+            delete:false,
+            prenada,
+            fechanacimiento:fechanacimiento +" 03:00:00",
+            sexo,
+            peso,
+            lote,
+            rodeo,
+            categoria,
+            cab:cab.id,
+            rp,
+            id:idprov
+        }
+        if(conparicion){
+            data.nacimiento = recordparicion.id
+        }
+        let comandoani = {
+                tipo:"add",
+                coleccion:"animales",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:3,
+                idprov,    
+                camposprov:conparicion?"nacimiento":""
+        }
+        comandos.push(comando)
+        await addNewAnimalSQL(db,data)
+        if(fechanacimiento){
+            let datapesaje = {
+                animal:idprov,
+                fecha:fechanacimiento +" 03:00:00",
+                pesoanterior:0,
+                pesonuevo:peso,
+                id:idpes
+            }
+            let comandoani = {
+                tipo:"add",
+                coleccion:"pesajes",
+                data:{...datapesaje},
+                hora:Date.now(),
+                prioridad:5,
+                idprov,    
+                camposprov:"animal"
+            }
+            comandos.push(comando)
+            await addNewPesajeSQL(db,datapesaje);
+        }
+        await setComandosSQL(db,comandos)
+        animales.push(data)
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        madres = animales.filter(a=>a.sexo=="H")
+        padres = animales.filter(a=>a.sexo=="M")
+        filterUpdate()
+        caravana = ""
+        nacimiento = ""
+        fechanacimiento = ""
+        sexo = "H"
+        Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
+    }
+    async function guardarOnline() {
+        try{
+            let recordparicion = null
+            if(conparicion){
+                let dataparicion = {
+                    madre,
+                    padre,
+                    fecha:fechanacimiento + " 03:00:00",
+                    nombremadre,
+                    nombrepadre,
+                    observacion,
+                    
+                    cab:caboff.id
+                }
+                recordparicion = await pb.collection('nacimientos').create(dataparicion);
+                
+
+            }
+            let data = {
+                caravana,
+                active:true,
+                delete:false,
+                prenada,
+                fechanacimiento:fechanacimiento +" 03:00:00",
+                sexo,
+                peso,
+                lote,
+                rodeo,
+                categoria,
+                cab:caboff.id,
+                rp
+            }
+            if(conparicion){
+                data.nacimiento = recordparicion.id
+            }
+            let recorda = await pb.collection('animales').create(data);
+            if(conparicion){
+                recorda.expand = {
+                    nacimiento : recordparicion
+                }
+            }
+            if(fechanacimiento){
+                let datapesaje = {
+                    animal:recorda.id,
+                    fecha:fechanacimiento +" 03:00:00",
+                    pesoanterior:0,
+                    pesonuevo:peso
+                }
+                await pb.collection('pesaje').create(datapesaje)
+            }
+            
+
+            
+            animales.push(recorda)
+            animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+            madres = animales.filter(a=>a.sexo=="H")
+            padres = animales.filter(a=>a.sexo=="M")
+            filterUpdate()
+            caravana = ""
+            nacimiento = ""
+            fechanacimiento = ""
+            sexo = "H"
+            Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
+
+        }
+        catch(e){
+            console.error(e)
+            Swal.fire("Error guardar","Hubo un error para guardar el animal","error")
+        }
+    }
+    //Si los lotes sigue sin guardarse
+    async function guardar2() {
+        let totalanimals = await getTotalSQL(db)
+        let verificar = true
+        
+        if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
+            verificar =  false
+        }
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
+            return {id:-1}
+        }
+        
+        if(coninternet.connected){
+            await guardarOnline()
+        }
+        else{
+            await guardarOffline()
+        }
+    
     }
     //Se puede guardar un animal con su nacimiento
     async function guardar(){
@@ -360,13 +572,66 @@
         }
         
     }
-    onMount(async()=>{
+    async function onMountOriginal(){
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         await getAnimales()
         await getRodeos()
         await getLotes()
         filterUpdate()
+    }
+    async function updateLocalSQL() {
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let reslotes = await getLotesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        animales = resanimales.lista
+        lotes = reslotes.lista
+        rodeos = resrodeos.lista
+        filterUpdate()
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async()=>{
+        await initPage()
+        await getDataSQL()
     })
     function cerrarModal(){
         idanimal=""
@@ -1239,7 +1504,7 @@
                     <!-- if there is a button, it will close the modal -->
                     {#if idanimal==""}
                         <button class="btn btn-error text-white" onclick={cerrarModal}>Cancelar</button>    
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar2} >Guardar</button>
                         
                     {:else}
                         <button class="btn btn-error text-white" onclick={cerrarModal}>Cerrar</button>

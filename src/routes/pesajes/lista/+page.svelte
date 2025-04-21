@@ -9,6 +9,27 @@
     import {isEmpty} from "$lib/stringutil/lib"
     import estilos from '$lib/stores/estilos';
     import * as XLSX from "xlsx"
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {getCabData} from "$lib/stores/cabsdata"
+    import {
+        getPesajesSQL,
+        updateLocalPesajesSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    //ofline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -200,9 +221,56 @@
         columnas.sort((a,b)=>new Date(a)<new Date(b)?-1:1)
         
     }
-    onMount(async ()=>{
+    async function onMountOriginal(){
         await getPesajes()
         filterUpdate()
+    }
+    async function updateLocalSQL(){
+        pesajes = await updateLocalPesajesSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let respesajes = await getPesajesSQL(db)
+        pesajes = respesajes.lista
+        filterUpdate()
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    } 
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>
@@ -360,13 +428,13 @@
                             {f.animal}
                         </td>
                         {#each Array(3) as _,idx}
-                            {#if f.pesajes.length < ultimos - idx}
+                            {#if f.pesajes.length < ultimos - (idx+2)}
                                 <td>
                                     {"-"}
                                 </td>
                             {:else}
-                                <td onclick={()=>openDetalle(f.pesajes[ultimos - idx - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
-                                    {new Date(f.pesajes[ultimos - idx - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - idx - 1].peso}
+                                <td onclick={()=>openDetalle(f.pesajes[ultimos - (idx+2) - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
+                                    {new Date(f.pesajes[ultimos - (idx+2) - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - (idx+2) - 1].peso}
                                 </td>
                             {/if}
                                 

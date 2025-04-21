@@ -23,7 +23,27 @@
     import HistoriaClinica from "$lib/components/animal/HistoriaClinica.svelte";
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {
+        getAnimalSQLByID
+        
+    } from "$lib/stores/sqlite/dbanimales"
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
+    //let pre 
     const pb = new PocketBase(ruta);
     let caber = createCaber()
     let cab = caber.cab
@@ -31,7 +51,6 @@
     // Datos
     let slug = $state("")
     let caravana = $state("")
-    let usuarioid =$state("")
     let active = $state(true)
     let fechanacimiento = $state("")
     let sexo = $state("")
@@ -141,7 +160,8 @@
         }
         
     }
-    onMount(async ()=>{
+
+    async function onMountOriginal() {
         slug = $page.params.slug
         if(slug != ""){
             try{
@@ -178,6 +198,49 @@
             }
 
         }
+    }
+    async function initPage(){
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        let data = await getAnimalSQLByID(db,slug)
+        caravana = data.caravana
+        active = data.active
+        fechanacimiento = data.fechanacimiento.split(" ")[0]
+        
+        nacimiento = ""
+        nacimientoobj = {}
+        if(data.nacimiento != ""){
+            nacimiento =data.nacimiento
+            nacimientoobj = data.expand.nacimiento
+        }
+        peso = data.peso
+        sexo = data.sexo
+        rodeo = data.rodeo
+        lote = data.lote
+        categoria = data.categoria
+        prenada = data.prenada==1?0:data.prenada
+        if(data.fechafallecimiento != ""){
+            fechafall = data.fechafallecimiento.split(" ")[0]
+            motivobaja = data.motivobaja
+        }
+        cargado = true
+    }
+    onMount(async ()=>{
+        slug = $page.params.slug
+        await initPage()
+        if(slug!=""){
+            
+            await getDataSQL()
+            
+        }
+        
     })
 </script>
 <Navbarr>
@@ -189,33 +252,33 @@
             <Pesajes pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
         </CardAnimal>
         {#if cargado}
-        <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-            <Tratamientos cabid={cab.id} {categoria} ></Tratamientos>
-        </CardAnimal>
-        <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-            <Observaciones cabid={cab.id} {categoria}/>
-        </CardAnimal>
+            <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
+                <Tratamientos cabid={cab.id} {categoria} ></Tratamientos>
+            </CardAnimal>
+            <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
+                <Observaciones cabid={cab.id} {categoria}/>
+            </CardAnimal>
         {/if}
         
         {#if sexo=="H"}
             {#if cargado}
-            <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
-                <Pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
-            </CardAnimal>
-            
-            <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
+                <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
+                    <Pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
+                </CardAnimal>
                 
-                <Tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
-                
-            </CardAnimal>
-            <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
-                <Inseminaciones cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
-            </CardAnimal>
+                <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
+                    
+                    <Tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
+                    
+                </CardAnimal>
+                <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
+                    <Inseminaciones cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
+                </CardAnimal>
 
-            <!--<CardAnimal cardsize="max-w-7xl" titulo="Servicios">
-                <Servicios cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
-            </CardAnimal>
-            -->
+                <!--<CardAnimal cardsize="max-w-7xl" titulo="Servicios">
+                    <Servicios cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
+                </CardAnimal>
+                -->
             {/if}
         {/if}
         <CardAnimal cardsize="max-w-7xl" titulo="Historial">

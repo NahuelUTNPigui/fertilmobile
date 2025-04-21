@@ -63,7 +63,7 @@
                     usuario.set(pb.authStore.token)
                     
                     enabled.set("si")
-                    //Cuando me logeo si o si debo poner si soy de iotra cabaña
+                    // Cuando me logeo si o si debo poner si soy de otra cabaña
                     // Cuando te logeas, deberia revisar si tenes una cabaña
                     await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel)
                     try{
@@ -80,6 +80,7 @@
                                 expand: 'colab,cab,colab.user',
                             })
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
+                            //Debo establecer el nivel que tiene el dueño de la cabaña y cuantos animales puede tener
                             await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos)
                             //let cab = getCabData(pb,recordcab.id)
                             per.setPer(recordper.permisos,authData.record.id)

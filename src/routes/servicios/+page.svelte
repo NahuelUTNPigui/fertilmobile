@@ -16,8 +16,36 @@
     import { isEmpty,getWholeWordButLastLetter,addDays } from '$lib/stringutil/lib';
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
+    //Offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {getCabData} from "$lib/stores/cabsdata"
+    import {
+        getServiciosSQL,
+        getInseminacionesSQL,
+        updateLocalInseminacionesSQL,
+        updateLocalServiciosSQL,
+        
+    } from "$lib/stores/sqlite/dbeventos"
+    import {
+        getAnimalesSQL,
+        updateLocalAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { Award } from 'lucide-svelte';
     let ruta = import.meta.env.VITE_RUTA
+    //let pre
 
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -26,7 +54,6 @@
     let caber = createCaber()
     let userer = createUserer()
     let cab = caber.cab
-    let usuarioid = userer.userid
     let caravana = $state("")
     let cargado = $state(false)
     let esservicio = $state(false)
@@ -81,7 +108,7 @@
     //Validaciones
     let botonhabilitado = $state(true)
     
-    //No se que poner
+    
     function clickFilter(){
         isOpenFilter = !isOpenFilter
     }
@@ -116,6 +143,10 @@
             categoria = ser.categoria
             nuevoModalIns.showModal()
         }
+    }
+    //Aca va el offline
+    async function editar2() {
+        
     }
     async function editar(){
         if(esservicio){
@@ -164,6 +195,10 @@
                 Swal.fire("Error editar","Hubo un error para editar la inseminación","error")
             }
         }
+        
+    }
+    //Aca va el offline
+    async function eliminar2() {
         
     }
     async function eliminar(id){
@@ -245,7 +280,7 @@
             
         }
         serviciosrow = serviciosrow.sort((s1,s2)=>new Date(s1.fechaparto)>new Date(s2.fechaparto)?-1:1)
-        
+
         
         totalServicios = serviciosrow.length
     }
@@ -272,11 +307,97 @@
         return getWholeWordButLastLetter(nombres)
 
     }
-    onMount(async ()=>{
+    async function onMountOriginal() {
         await getAnimales()
         await getServicios()
         await getInseminaciones()
+        filterUpdate() 
+    }
+    async function initPage() {
+        //coninternet = {connected:false} // await Network.getStatus();
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function updateLocalSQL() {
+        
+        let animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        
+        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animales.filter(a=>a.sexo == "M")
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,
+                nombre:item.caravana
+            }
+        })
+        cargado = true
+        
+        
+        servicios = await updateLocalServiciosSQL(db,pb,caboff.id)
+        
+        
+        inseminaciones = await updateLocalInseminacionesSQL(db,pb,caboff.id)
+        
         filterUpdate()
+    }
+    async function getLocalSQL() {
+        
+        let resanimales = await getAnimalesSQL(db)
+        
+        let animales = resanimales.lista
+        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animales.filter(a=>a.sexo == "M")
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,
+                nombre:item.caravana
+            }
+        })
+        cargado = true
+        let resservicios = await getServiciosSQL(db)
+        
+        servicios = resservicios.lista
+        let resinseminaciones = await getInseminacionesSQL(db)
+        
+        inseminaciones = resinseminaciones.lista
+
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>

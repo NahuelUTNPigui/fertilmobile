@@ -7,8 +7,30 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
     import { getPermisosList } from '$lib/permisosutil/lib';
-    let ruta = import.meta.env.VITE_RUTA
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {
+        getLotesSQL,
+        updateLocalLotesSQL,
+        addnewLoteSQL,
+    } from "$lib/stores/sqlite/dbeventos"
 
+
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
+    let ruta = import.meta.env.VITE_RUTA
+    //pre
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let caber = createCaber()
@@ -56,6 +78,57 @@
             Swal.fire("Error lotes","No tienes permisos para guardar lotes","error")
         }
         
+    }
+    async function guardarOnline() {
+        try{
+            let data = {
+                nombre,
+                active:true,
+                cab:caboff.id
+            }
+            let record = await pb.collection('lotes').create(data);
+            record.total = 0
+            lotes.push(record)
+            await addnewLoteSQL(db,record)
+            ordenar(lotes)
+            filterUpdate()
+            Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
+        }catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar el lote","error")
+        }
+    }
+    async function guardarOffline() {
+        let idprov = "nuevo_lote_"+generarIDAleatorio() 
+        let data = {
+            nombre,
+            active:true,
+            cab:caboff.id,
+            id:idprov
+        }
+        let comando = {
+            tipo:"add",
+            coleccion:"lotes",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:0,
+            idprov,    
+            camposprov:""
+        }
+        comandos.push(comando)
+        await addnewLoteSQL(db,data)
+        await setComandosSQL(db,comandos)
+        lotes.push(lote)
+        ordenar(lotes)
+        filterUpdate()
+    }
+    async function guardar2() {
+        if(coninternet.connected){
+            await guardarOnline()
+        }
+        else{
+            await guardarOffline()
+        }
     }
     async function guardar(){
         try{
@@ -153,8 +226,58 @@
         });
         return results.totalItems
     }
-    onMount(async ()=>{
+    async function onMountOriginal() {
         await getLotes()
+    }
+    async function initPage() {
+        //coninternet = {connected:false} // await Network.getStatus();
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function getLocalSQL() {
+        let reslotes = getLotesSQL(db)
+        lotes = reslotes.lista
+        filterUpdate()
+    }
+    async function updateLocalSQL() {
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
     function isEmpty(str){
         return (!str || str.length === 0 );
@@ -268,7 +391,7 @@
                 <form method="dialog" >
                     <!-- if there is a button, it will close the modal -->
                     {#if idlote==""}
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>  
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar2} >Guardar</button>  
                     {:else}
                         <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>  
                         <button class="btn btn-error text-white" onclick={()=>eliminar(idlote)}>Cancelar</button>

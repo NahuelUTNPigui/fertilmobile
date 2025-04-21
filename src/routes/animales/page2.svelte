@@ -1,6 +1,5 @@
 <script>
-    //En esta pagina solo se van a crear y ver animales
-    //Se pueden crear nuevos animales con un nacimientos
+
     import Navbarr from '$lib/components/Navbarr.svelte';
     import Exportar from '$lib/components/Exportar.svelte';
     import PocketBase from 'pocketbase'
@@ -25,11 +24,6 @@
     let caber = createCaber()
     let gruper = managerGrupos()
     let animaler = managerAnimales()
-    //let per = createPer()
-    //let cab = caber.cab
-    //let userpermisos = getPermisosList(per.per.permisos)
-    //let usuarioid = userer.userid
-    //let filtros = false
 
 
     //Datos para mostrar

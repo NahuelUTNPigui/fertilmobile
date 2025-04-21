@@ -15,6 +15,33 @@
     import { getPermisosList } from "$lib/permisosutil/lib";
     import { guardarHistorial } from "$lib/historial/lib";
     import PredictSelect from "../PredictSelect.svelte";
+    //ofline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {
+        updateLocalLotesSQL,
+        getLotesSQL,
+        updateLocalRodeosSQL,
+        getRodeosSQL,
+        addNewNacimientoSQL
+
+    } from "$lib/stores/sqlite/dbeventos";
+    import {
+        updateLocalAnimalesSQL,
+        getAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales";
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     let {
         caravana,
         rodeo,
@@ -43,6 +70,7 @@
     let nombrerodeo = $state("")
     let nombrelote = $state("")
     let modoedicion = $state(false)
+    let animales = $state([])
     let cargadoanimales = $state(false)
     //Datos edicion
     let pesoviejo = $state("")
@@ -216,6 +244,98 @@
         }
         
     }
+    async function guardarNacimientoOnline() {
+        try{
+            let dataparicion = {
+                madre,
+                padre,
+                fecha:fecha + " 03:00:00",
+                nombremadre,
+                nombrepadre,
+                observacion,
+                cab:caboff.id
+            }
+            const recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            await addNewNacimientoSQL(db,recordparicion)
+            let datanimal = {
+                nacimiento:recordparicion.id,
+                fechanacimiento:fecha + " 03:00:00",
+            }
+            let datahistorial = {
+                prenada,
+                sexo,
+                peso,
+                caravana,
+                active:true,
+                delete: false,
+                fechanacimiento:fechaviejo+ " 03:00:00",
+                lote,
+                rodeo,
+                user:userid,
+                categoria,
+                animal:id
+            }
+            const record = await pb.collection('animales').update(id, datanimal);
+            //NO va porque tengo que evaluar las fechas
+            await pb.collection("historialanimales").create(datahistorial)
+            await guardarHistorial(pb,madre)
+            // Pero si las fechas no me coinciden, si guardo un nacimiento viejo
+            let datamadre = {
+                prenada : 0
+            }
+            //Si guardo un nacimiento viejo, no deberia cambiar la categoria
+            if(tipomadre == "vaquillona"){
+                datamadre.categoria = "vaca"
+                
+            }
+            
+            await pb.collection('animales').update(madre, datamadre);
+            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
+            connacimiento = true
+            nacimiento = recordparicion
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar el nacimiento","error")
+        }
+    }
+    async function guardarNaciminentoOffline() {
+        let idprov = "nuevo_nac_"+generarIDAleatorio()
+        let nuevomadre = madre.split("_")[0]=="nuevo"
+        let nuevopadre = padre.split("_")[0]=="nuevo"
+        let dataparicion = {
+            madre,
+            padre,
+            fecha:fecha + " 03:00:00",
+            nombremadre,
+            nombrepadre,
+            observacion,
+            cab:caboff.id
+        }
+        await addNewNacimientoSQL(db,dataparicion)
+
+        //Comandos
+        let comandonac = {
+            tipo:"add",
+            coleccion:"nacimientos",
+            data:{...dataparicion},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov:nuevomadre && nuevopadre?"madre,padre":nuevomadre?"madre":nuevopadre?"padre":""        
+        }
+        comandos.push(comandonac)
+        await setComandosSQL(db,comandos)
+        Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
+    }
+    async function guardarNacimiento2() {
+        if(coninternet.connected){
+            await guardarNacimientoOnline()
+        }
+        else{
+            await guardarNaciminentoOffline()
+        }
+    }
     async function guardarNaciminento(){
         try{
             let dataparicion = {
@@ -255,7 +375,6 @@
             }
             if(tipomadre == "vaquillona"){
                 datamadre.categoria = "vaca"
-                
             }
             
             await pb.collection('animales').update(madre, datamadre);
@@ -266,6 +385,20 @@
         catch(err){
             console.error(err)
             Swal.fire("Error guardar","No se pudo guardar el nacimiento","error")
+        }
+    }
+    async function editarNacimientoOfline() {
+        
+    }
+    async function editarNacimientoOnline() {
+        
+    }
+    async function editarNacimiento2() {
+        if(coninternet.connected){
+            await editarNacimientoOfline()
+        }
+        else{
+            await editarNacimientoOnline()
         }
     }
     async function editarNacimiento(){
@@ -319,7 +452,8 @@
             rodeo:rodeo,
             lote,
             prenada,
-            categoria
+            categoria,
+            rp
         }
         //let datahistorial = {
         //    prenada:prenadaviejo,
@@ -345,6 +479,7 @@
             rodeo = data.rodeo
             lote = data.lote
             categoria = data.categoria
+            rp = data.rp
             prenada = data.prenada
             if(rodeo != ""){
                 nombrerodeo = rodeos.filter(t=>t.id==rodeo)[0].nombre
@@ -386,7 +521,7 @@
         }
         nuevoModal.close()
     }
-    onMount(async ()=>{
+    async function onMountOriginal(){
         id = $page.params.slug
         
         await getAnimales()
@@ -402,6 +537,80 @@
 
             observacion = nacimiento.observacion
         }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    function processAnimales(){
+        madres = animales.filter(a=>a.sexo == "H" && a.delete==false)
+        padres = animales.filter(a=>a.sexo == "M" && a.delete==false)
+        listamadres = madres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        cargadoanimales = true
+        alert(cargadoanimales)
+    }
+    async function updateLocalSQL(){
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        processAnimales()
+
+    }
+    
+    async function getLocalSQL() {
+        let reslotes = await getLotesSQL(db)
+        lotes = reslotes.lista
+        let resrodeo = await getRodeosSQL(db)
+        rodeos = resrodeo.lista
+        let resanimales = await getAnimalesSQL(db)
+        animales = resanimales.lista 
+        processAnimales()
+    }
+    async function getDataSQL(params) {
+        db = await openDB()
+        id = $page.params.slug
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
     //cancelar class="btn btn-error text-white font-medium text-lg "
     //Editar animal class="btn text-lg px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"

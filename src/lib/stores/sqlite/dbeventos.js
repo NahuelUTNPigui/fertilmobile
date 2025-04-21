@@ -141,6 +141,17 @@ export async function setPesajesSQL(db,pesajes) {
 export async function setUltimoPesajesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 12`)
 }
+export async function updateLocalPesajesSQL(db,pb,cabid) {
+    const records = await pb.collection('pesaje').getFullList({
+            sort: '-fecha',
+            expand:"animal,animal.cab",
+            filter:`animal.cab = '${cabid}'`
+    });
+    let pesajes = records
+    await setPesajesSQL(db,pesajes)
+    await setUltimoPesajesSQL(db)
+    return pesajes
+}
 export async function addNewTactoSQL(db,tacto) {
     let tactos = await getTactosSQL(db)
     let lista = tactos.lista
@@ -154,7 +165,17 @@ export async function setTactosSQL(db,tactos) {
 export async function setUltimoTactosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 11`)
 }
-
+export async function updateLocalServiciosSQL(db,pb,cabid) {
+    const records = await pb.collection('servicios').getFullList({
+        sort: '-fechadesde ',
+        filter :`cab = '${cabid}' && active = true`,
+        expand:"madre"
+    });
+    let servicios = records
+    await setServiciosSQL(db,servicios)
+    await setUltimoServiciosSQL(db)
+    return servicios
+}
 export async function addNewServicioSQL(db,ser) {
     let servicios = await getTactosSQL(db)
     let lista = servicios.lista
@@ -168,6 +189,17 @@ export async function setUltimoServiciosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 10`)
 }
 
+export async function updateLocalInseminacionesSQL(db,pb,cabid) {
+    const records = await pb.collection('inseminacion').getFullList({
+        sort: '-fechainseminacion ',
+        filter :`cab = '${cabid}' && active = true`,
+        expand:"animal"
+    });
+    let inseminaciones = records
+    await setInseminacionesSQL(db,inseminaciones)
+    await setUltimoInseminacionesSQL(db)
+    return inseminaciones
+}
 export async function addnewInseminacionSQL(db,ins) {
     let inseminaciones = await getTactosSQL(db)
     let lista = inseminaciones.lista

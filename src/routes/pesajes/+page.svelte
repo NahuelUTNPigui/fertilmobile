@@ -13,6 +13,32 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos'; 
+    import {
+        getLotesSQL,
+        updateLocalLotesSQL,
+        getRodeosSQL,
+        updateLocalRodeosSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    import {
+        getAnimalesSQL,
+        updateLocalAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
+
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
     let ruta = import.meta.env.VITE_RUTA
     //let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
@@ -258,11 +284,63 @@
         selecthashmap = {}
         selectanimales = []
     }
-    onMount(async ()=>{
+    async function onMountOriginal(){
         await getAnimales()
         await getRodeos()
         await getLotes()
-        await getTipos()
+    }
+    async function initPage(){
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function getLocalSQL(){
+        let resanimales = await getAnimalesSQL(db)
+        let reslotes = await getLotesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        animales = resanimales.lista
+        lotes = reslotes.lista
+        rodeos = resrodeos.lista
+        filterUpdate()
+    }
+    async function updateLocalSQL() {
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>

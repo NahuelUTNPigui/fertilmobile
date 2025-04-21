@@ -33,7 +33,7 @@
         updateLocalTipoTratsSQL
 
     } from '$lib/stores/sqlite/dbeventos';
-    import {addNewAnimal, getAnimalesSQL,updateLocalAnimalesSQL } from '$lib/stores/sqlite/dbanimales';
+    import {addNewAnimalSQL, getAnimalesSQL,updateLocalAnimalesSQL } from '$lib/stores/sqlite/dbanimales';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
 

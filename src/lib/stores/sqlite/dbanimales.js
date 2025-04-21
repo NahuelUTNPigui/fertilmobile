@@ -8,13 +8,25 @@ export async function getAnimalesSQL(db){
     coleccion.lista = lista
     return coleccion
 }
+export async function getAnimalSQLByID(db,id) {
+    let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 1")
+    let fila = lista_json.values[0]
+    let lista = JSON.parse(fila.lista)
+    let animals = lista.filter((a) => a.id == id)
+    if(animals.length > 0){
+       return animals[0]
+    }
+    else{
+        return null
+    }
+}
 export async function setAnimalesSQL(db,animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 1`)
 }
 export async function setUltimoAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 1`)
 }
-export async function addNewAnimal(db,animal) {
+export async function addNewAnimalSQL(db,animal) {
     let animales = await getAnimalesSQL(db)
     let lista = animales.lista
     lista.push(animal)
@@ -24,7 +36,7 @@ export async function addNewAnimal(db,animal) {
 export async function updateLocalAnimalesSQL(db,pb,cabid) {
     const recordsa = await pb.collection("animales").getFullList({
         filter:`active=true && delete=false && cab='${cabid}'`,
-        expand:"rodeo,lote,cab"
+        expand:"rodeo,lote,cab,nacimiento"
     })
     let animales = recordsa
     await setAnimalesSQL(db,animales)
