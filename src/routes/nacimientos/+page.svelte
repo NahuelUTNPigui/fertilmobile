@@ -10,7 +10,7 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {guardarHistorial} from "$lib/historial/lib"
     import PredictSelect from '$lib/components/PredictSelect.svelte';
-    import cuentas from '$lib/stores/cuentas';
+    import{verificarNivel} from "$lib/permisosutil/lib"
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -92,20 +92,13 @@
         nacimientosrow = nacimientos
     }
     async function guardar(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        
-        let verificar = true
+        let verificar = await verificarNivel(cab.id)
         if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
             verificar =  false
         }
         
         if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
             return
         }
         try{
@@ -518,6 +511,7 @@
                         </label>
                         <input id ="fechadesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -530,6 +524,7 @@
                         </label>
                         <input id ="fechadesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -540,7 +535,7 @@
                         <label for = "nombremadre" class="label">
                             <span class="label-text text-base">Madre</span>
                         </label>
-                        <label class="input-group">
+                        <label class="input-group md:w-1/2 md:flex">
                             <input 
                                 id ="nombremadre" 
                                 type="text"  
@@ -563,7 +558,7 @@
                         <label for = "nombrepadre" class="label">
                             <span class="label-text text-base">Padre</span>
                         </label>
-                        <label class="input-group">
+                        <label class="input-group md:w-1/2 md:flex">
                             <input 
                                 id ="nombrepadre" 
                                 type="text"  

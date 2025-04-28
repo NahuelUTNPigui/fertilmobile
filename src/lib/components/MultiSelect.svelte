@@ -1,6 +1,6 @@
 <script>
     import estilos from '$lib/stores/estilos';
-    import {ChevronDown} from 'lucide-svelte'
+    
     import { slide } from 'svelte/transition';
     let {opciones,etiqueta,valores=$bindable([]),filterUpdate,margintop="mt-2",labelmargin="m-0"} = $props()
     //Logica de las opciones
@@ -62,8 +62,11 @@
             </div>
 
         {/if}
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class={`size-6 w-5 h-5 ml-2 -mr-1 text-gray-400 transition-all duration-150 ${isOpen? 'transform rotate-180':''}`}>
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
+        </svg>
+          
         
-        <ChevronDown class={`w-5 h-5 ml-2 -mr-1 text-gray-400 transition-all duration-150 ${isOpen? 'transform rotate-180':''}`} />
     </button>
     {#if isOpen}
 

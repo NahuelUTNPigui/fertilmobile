@@ -35,7 +35,7 @@
         updateLocalAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import { Award } from 'lucide-svelte';
+    
     let ruta = import.meta.env.VITE_RUTA
     //let pre
 
@@ -201,14 +201,31 @@
     async function eliminar2() {
         
     }
-    async function eliminar(id){
-        try{
-            await pb.collection("servicios").update(id,{active:false})
-            await getServicios()
+    async function eliminar(id,esInseminacion){
+        if(!esInseminacion){
+            try{
+                await pb.collection("servicios").update(id,{active:false})
+                await getServicios()
+                filterUpdate()
+                Swal.fire("Éxito eliminar","Se eliminó con éxito el servicio","success")
+            }
+            catch(err){
+                console.error(err)
+            }
         }
-        catch(err){
-            console.error(err)
+        else{
+            try{
+                await pb.collection("inseminacion").update(id,{active:false})
+                await getInseminaciones()
+                filterUpdate()
+                Swal.fire("Éxito eliminar","Se eliminó con éxito la inseminación","success")
+
+            }
+            catch(err){
+                console.error(err)
+            }  
         }
+        
     }
     function cerrarModal(){
         
@@ -277,11 +294,39 @@
         }
         else{
             serviciosrow = inseminaciones
-            
         }
-        serviciosrow = serviciosrow.sort((s1,s2)=>new Date(s1.fechaparto)>new Date(s2.fechaparto)?-1:1)
-
+        if(fechaservdesdefiltro != ""){
+            serviciosrow = serviciosrow.filter(s=>{
+                let f = s.fechadesde?s.fechadesde:s.fechainseminacion?s.fechainseminacion:""
+                return f>=fechaservdesdefiltro
+            })
+        }
+        if(fechaservhastafiltro != ""){
+            serviciosrow = serviciosrow.filter(s=>{
+                let f = s.fechadesde?s.fechadesde:s.fechainseminacion?s.fechainseminacion:""
+                return f<=fechaservhastafiltro
+            })
+        }
+        if(fechapartodesde != ""){
+            serviciosrow = serviciosrow.filter(s=>{
+                let f = s.fechaparto
+                return f>=fechapartodesde
+            })
+        }
+        if(fechapartohasta != ""){
+            serviciosrow = serviciosrow.filter(s=>{
+                let f = s.fechaparto
+                return f<=fechapartohasta
+            })
+        }
+        if(buscarpadre != ""){
+            serviciosrow = serviciosrow.filter(s=>{
+                let s_padres = s.fechadesde?getNombrePadres(s.padres).split(","):[s.pajuela]
+                return incluidoPadre(buscarpadre,s_padres)
+            })
+        }
         
+        ordenarServicios(forma)
         totalServicios = serviciosrow.length
     }
     function prepararData(item){
@@ -399,6 +444,57 @@
         await initPage()
         await getDataSQL()
     })
+    //Para los ordenar
+    let ascendente = $state(true)
+    let forma = $state("fecha")
+    let selectforma = $state("fecha")
+    //Ordenar servicios
+    function ordenarServiciosDescendente(p_forma){
+        
+        let escalar = 1
+        if(!ascendente){
+            escalar = -1
+        }
+        forma = p_forma
+        if(forma=="fecha"){
+            
+            serviciosrow.sort((a1,a2)=>{
+                let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
+                let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
+                return escalar * f1.localeCompare(f2)
+            })
+        }
+        else if(forma=="fechaparto"){
+            
+            serviciosrow.sort((a1,a2)=>escalar * a1.fechaparto.localeCompare(a2.fechaparto))
+        }
+        else if(forma=="madre"){
+            serviciosrow.sort((a1,a2)=>{
+                let m1 = a1.fechadesde?a1.expand.madre.caravana:a1.expand.animal.caravana
+                let m2 = a2.fechadesde?a2.expand.madre.caravana:a2.expand.animal.caravana
+                return escalar * m1.localeCompare(m2)
+
+            })
+        }
+        else if(forma=="tipo"){
+            serviciosrow.sort((a1,a2)=>{
+                let t1 = a1.fechadesde?1:0
+                let t2 = a2.fechadesde?1:0
+                return escalar * (t1<t2?-1:1)
+            })
+        }
+    }
+    function ordenarServicios(p_forma){
+        
+        if(p_forma == forma){
+            ascendente = !ascendente
+            
+        }
+        else{
+            ascendente = true
+        }
+        ordenarServiciosDescendente(p_forma)
+    }
 </script>
 <Navbarr>
     <div class="grid grid-cols-1 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
@@ -454,7 +550,7 @@
             </div> 
         </button>
         <div>
-            <span class = "text-lg mx-1">Total de servicios encontrados: {totalServicios}</span>
+            <span class = "text-lg my-1">Total de servicios encontrados: {totalServicios}</span>
         </div>
         {#if isOpenFilter}
             <div transition:slide>
@@ -465,6 +561,7 @@
                         </label>
                         <input id ="fechainseminaciondesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -477,6 +574,7 @@
                         </label>
                         <input id ="fechainseminacionhasta" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -489,6 +587,7 @@
                         </label>
                         <input id ="fechainseminaciondesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -501,6 +600,7 @@
                         </label>
                         <input id ="fechainseminacionhasta" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -537,7 +637,7 @@
                         <label for = "nombrepadre" class="label">
                             <span class="label-text text-base">Pajuela</span>
                         </label>
-                        <label class="input-group">
+                        <label class="input-group md:w-1/2 md:flex">
                             <input 
                                 id ="nombrepadre" 
                                 type="text"  
@@ -811,7 +911,7 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar(idserv)}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idserv,false)}>Eliminar</button>
                 <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
             </form>
         </div>
@@ -945,7 +1045,7 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar(idins)}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar(idserv,true)}>Eliminar</button>
                 <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
             </form>
         </div>

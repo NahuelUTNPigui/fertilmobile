@@ -9,6 +9,7 @@
     import cuentas from '$lib/stores/cuentas';
     import categorias from "$lib/stores/categorias";
     let {animales,animalesusuario} = $props()
+    import{verificarNivelCantidad} from "$lib/permisosutil/lib"
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -154,18 +155,34 @@
                 }      
             }
         }
+        let nuevoanimales = 0
+        let errornuevoanimales = false
         for (const [key, value ] of Object.entries(animaleshashmap)) {
-            animales.push(value)
+            nacimientos.push(value)
+            let conocido = animales.filter(a=>a.caravana == value.caravana).length == 0
+            if(!conocido ){
+                nuevoanimales += 1
+            }
         }
-        for(let i = 0;i<animales.length;i++){
-            let an = animales[i]
+        let verificar = await verificarNivelCantidad(cab.id,nuevoanimales)
+        if(!verificar){
+            errornuevoanimales = true
+            filename = ""
+            loading = false
+            wkbk = null
+            Swal.fire("Error importar","No tienes el plan para agregar mas animales","error")
+            return 
+            
+        }
+        for(let i = 0;i<nacimientos.length;i++){
+            let an = nacimientos[i]
             let conlote = false
             let lote = lotes.filter(l=>l.nombre==an.lote)[0]
             let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
-            let padre = animales.filter(p=>p.caravana==an.nombrepadre)[0]
-            let madre = animales.filter(m=>m.caravana==an.nombremadre)[0]
             let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
-            //Falta comprobar el nivel de las cuentas
+            let padre = animales.filter(p=>p.caravana==an.nombrepadre)
+            let madre = animales.filter(m=>m.caravana==an.nombremadre)
+            
             // Agregar animal si no existe y nacimiento
             let dataadd = {
                 caravana:an.caravana,
@@ -174,15 +191,15 @@
                 sexo:an.sexo,
                 peso:an.peso,
                 fechanacimiento: an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
-                nombremadre: an.nombremadre,
-                nombrepadre: an.nombrepadre,
+                nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+                nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
                 cab:cab.id
             }
             //Modificar nacimiento cuando existe
             let datanacimiento = {
-                fecha:an.fechanacimiento + " 03:00:00",
-                nombremadre: an.nombremadre,
-                nombrepadre: an.nombrepadre,
+                fecha:an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+                nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+                nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
                 observacion:an.observaciones,
                 cab:cab.id
             }
@@ -196,6 +213,7 @@
             if(categoria){
                 dataadd.categoria = categoria.id
             }
+
             if(padre){
                 datanacimiento.padre=padre.id
             }
@@ -231,9 +249,13 @@
                 }
             }
             catch(err){
-                const recordnacimiento = await pb.collection('nacimientos').create( datanacimiento);
-                dataadd.nacimiento = recordnacimiento.id
-                await pb.collection('animales').create(dataadd);
+                
+                if(!errornuevoanimales){
+                    const recordnacimiento = await pb.collection('nacimientos').create( datanacimiento);
+                    dataadd.nacimiento = recordnacimiento.id
+                    await pb.collection('animales').create(dataadd);
+                }
+                
             }
         }
         filename = ""

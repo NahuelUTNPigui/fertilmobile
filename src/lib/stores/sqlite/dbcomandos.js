@@ -9,7 +9,7 @@ export async function getComandosSQL(db) {
 export async function setComandosSQL(db,lista) {
     await db.run(`UPDATE Comandos SET lista = '${JSON.stringify(lista)}' WHERE id = 1`)
 }
-async function processData(data,campos,coleccion,tablaids) {
+function processData(data,campos,coleccion,tablaids) {
     let newData = {...data}
     if(coleccion=="inseminacion"){
         if(campos.includes("padre")){
@@ -109,19 +109,38 @@ async function processData(data,campos,coleccion,tablaids) {
             newData.padre = idnuevo
         }
     }
+    else if(coleccion == "observaciones"){
+        if(campos.includes("animal")){
+            let idnuevo = tablaids[data.animal]
+            newData.animal = idnuevo
+        }
+    }
     return newData
 }
 async function addComando(pb,c,tablaids) {
-    let id = c.idprov[i]
+    let id = c.idprov
     //Campos deberia tener el nombre del atributo
     let campos = c.camposprov.split(",")
     let coleccion = c.coleccion
+    alert(coleccion)
     let data = processData(c.data,campos,coleccion,tablaids)
-    return await pb.collection(coleccion).create(data)
+    
+    //DATA TIENE EL CAMPO ID LO CUAL ES UN PROBLEMA
+    delete data.id
+    let res = {id:"x"}
+    try{
+        return await pb.collection(coleccion).create(data)
+    }
+    catch(err){
+        console.error(err)
+        
+        return res
+    }
+    
     
 }
 async function modComando(pb,c,tablaids) {
-    let id = c.idprov[i]
+    let id = c.idprov
     // Aca veo si editor un registro local y por ende necesito revisar el id asignado
     if(id.split("_").length > 0){
         let id = tablaids[id]
@@ -130,11 +149,12 @@ async function modComando(pb,c,tablaids) {
     let campos = c.camposprov.split(",")
     let coleccion = c.coleccion
     let data = processData(c.data,campos,coleccion,tablaids)
+    delete data.id
     await pb.collection(coleccion).update(id,data)
     //let idnuevo = await pb.collection(coleccion).update(id,data)
 }
 async function delComando(pb,c,tablaids) {
-    let id = c.idprov[i]
+    let id = c.idprov
     // Aca veo si editor un registro local y por ende necesito revisar el id asignado
     if(id.split("_").length > 0){
         let id = tablaids[id]
@@ -153,17 +173,19 @@ export async function flushComandosSQL(db,pb) {
         let c = rescoms.lista[i]
         listacomandos.push(c)
     }
+    alert("size: "+listacomandos.length)
     //No puedo usar batchs porquequiero los 
     for(let i = 0;i<listacomandos.length;i++){
         let c = listacomandos[i]
-        let id = c.idprov[i]
+        
+        let id = c.idprov
         let accion = c.tipo
-        let campos = c.camposprov.split(",")
-        let coleccion = c.coleccion
-        let data = c.data
         if(accion=="add"){
-            let idnuevo = await addComando(pb,c,tablaids)
-            tablaids[id] = idnuevo
+            let datanuevo = await addComando(pb,c,tablaids)
+            
+
+            tablaids[id] = datanuevo.id
+            alert(JSON.stringify(tablaids))
         }
         else if(accion=="update"){
             await modComando(pb,c,tablaids)

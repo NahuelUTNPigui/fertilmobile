@@ -106,7 +106,10 @@
         
         
     }
-    async function eliminar(){
+    async function eliminarOffline() {
+        
+    }
+    async function eliminarOnline() {
         try{
             const data = {
                 delete: true,
@@ -124,9 +127,17 @@
             
         }
     }
+    async function eliminar(){
+        if(coninternet.connected){
+            eliminarOnline()
+        }
+        else{
+            eliminarOffline()
+        }
+    }
     async function transferir(codigo){
         const resultcab = await pb.collection('cabs').getList(1, 1, {
-            filter: `active = true && codigo = '${codigo}'`,
+            filter: `active = true && renspa = '${codigo}'`,
             
         });
         try{
@@ -143,7 +154,7 @@
         
             let origenusuarioid =  pb_json.record.id
             let datatrans = {
-                texto:"Se transfirió a "+caravana,
+                texto:"Se transfirió a "+codigo,
                 titulo:"Transferencia de 1 animal",
                 tipo:tiponoti[1].id,
                 origen:origenusuarioid,
@@ -213,7 +224,6 @@
         caravana = data.caravana
         active = data.active
         fechanacimiento = data.fechanacimiento.split(" ")[0]
-        
         nacimiento = ""
         nacimientoobj = {}
         if(data.nacimiento != ""){

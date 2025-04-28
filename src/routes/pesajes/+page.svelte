@@ -353,7 +353,7 @@
                 <span  class="text-xl">{capitalize("nuevo")}</span>
             </button>
             <a class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" href={"/pesajes/lista"}>
-                <span  class="text-xl">Historia</span>
+                <span  class="text-xl">Ultimos</span>
             </a>
         </div>
         

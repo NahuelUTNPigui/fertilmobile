@@ -18,7 +18,8 @@
     import { getEstadoNombre,getEstadoColor } from '$lib/components/estadosutils/lib';
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
-    import { getSexoNombre,capitalize } from '$lib/stringutil/lib';
+    import { getSexoNombre,capitalize,shorterWord } from '$lib/stringutil/lib';
+    import{verificarNivel} from "$lib/permisosutil/lib"
     ///ofline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -123,21 +124,6 @@
     }
     function isEmpty(str){
         return (!str || str.length === 0 );
-    }
-    async function verificarNivel() {
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        
-        if(animals.totalItems >= nivel.animales){
-            return false
-        }
-        else{
-            return true
-        }
-
     }
     async function getRodeos(){
         const records = await pb.collection('rodeos').getFullList({
@@ -399,18 +385,9 @@
     }
     //Se puede guardar un animal con su nacimiento
     async function guardar(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        let verificar = true
-        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
-            verificar =  false
-        }
-        
+        let verificar = await verificarNivel(cab.id)
         if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
             return
         }
         
@@ -454,13 +431,15 @@
                     nacimiento : recordparicion
                 }
             }
-            let datapesaje = {
-                animal:recorda.id,
-                fecha:fechanacimiento +" 03:00:00",
-                pesoanterior:0,
-                pesonuevo:peso
+            if(fechanacimiento){
+                let datapesaje = {
+                    animal:recorda.id,
+                    fecha:fechanacimiento +" 03:00:00",
+                    pesoanterior:0,
+                    pesonuevo:peso
+                }
+                await pb.collection('pesaje').create(datapesaje)
             }
-            await pb.collection('pesaje').create(datapesaje)
             animales.push(recorda)
             animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
 
@@ -682,7 +661,7 @@
                 "":
                 "",
             CATEGORIA:capitalize(item.categoria),
-            ESTADO:getEstadoNombre(item.prenada),
+            ESTADO:item.sexo=="M"?"-":getEstadoNombre(item.prenada),
             FALLECIMIENTO:item.fechafallecimiento?new Date(item.fechafallecimiento).toLocaleDateString():""
 
         }
@@ -849,7 +828,7 @@
             
         </button>
         <div>
-            <span class = "text-lg mx-1">Total de animales encontrados: {totalAnimalesEncontrados}</span>
+            <span class = "text-lg my-1">Total de animales encontrados: {totalAnimalesEncontrados}</span>
         </div>
         {#if isOpenFilter}
                 <div transition:slide>
@@ -895,7 +874,7 @@
                                 filterUpdate = {filterUpdate}
                             />
                         </div>
-                        <div class="">
+                        <div class="mt-1">
                             <MultiSelect
                                 opciones={[{id:"-1",nombre:"Sin categoria"}].concat(categorias)}
                                 bind:valores={categoriaseleccion}
@@ -1021,32 +1000,39 @@
                             text-base p-3 border-b dark:border-gray-600 
                             hover:cursor-pointer hover:bg-gray-200 
                             dark:hover:bg-gray-800
-                        `}  >
+                        `}  
+                    >
                         Animal
                     </th>
                     <th 
                         onclick={()=>ordenarAnimales("sexo")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+                    >
                         Sexo
                     </th>
                     <th 
                         onclick={()=>ordenarAnimales("categoria")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  
+                    >
                         Categoria
                     </th>
                     <th 
                         onclick={()=>ordenarAnimales("estado")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800" 
+                    >
                         Estado
                     </th>
                     <th 
                         onclick={()=>ordenarAnimales("lote")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  
+                    >
+
                         Lote
                     </th>
                     <th 
                         onclick={()=>ordenarAnimales("rodeo")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  >
+                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+                    >
                         Rodeo
                     </th>
                     <!--<th class="text-base"  >Acciones</th>-->
@@ -1109,7 +1095,7 @@
             <button  onclick={()=>goto(`/animales/${a.id}`)}>
                 <div class="block p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-medium">{a.caravana}</h3>
+                        <h3 class="font-medium">{shorterWord(a.caravana)}</h3>
                         {#if a.sexo == "H" && a.prenada != 1}
                             <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
                         {/if}
@@ -1164,7 +1150,7 @@
     
     
 </Navbarr>
-<dialog id="nuevoModal" 
+k<dialog id="nuevoModal" 
         class="
             modal modal-top mt-10 ml-5 
             lg:items-start 

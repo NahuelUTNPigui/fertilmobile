@@ -48,7 +48,9 @@ const config = {
 				
 				"/user/nivel",
 				"/servicios",
-				"/servicios/movimiento"
+				"/servicios/movimiento",
+				"/pendientes"
+
 
 			]
 		}

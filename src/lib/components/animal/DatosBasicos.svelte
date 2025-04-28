@@ -15,6 +15,7 @@
     import { getPermisosList } from "$lib/permisosutil/lib";
     import { guardarHistorial } from "$lib/historial/lib";
     import PredictSelect from "../PredictSelect.svelte";
+    import {shorterWord} from "$lib/stringutil/lib"
     //ofline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -615,7 +616,7 @@
     //cancelar class="btn btn-error text-white font-medium text-lg "
     //Editar animal class="btn text-lg px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
 </script>
-<div class="grid grid-cols-2 lg:grid-cols-3">
+<div class="grid grid-cols-2 lg:grid-cols-2">
     <button
         onclick={()=>goto("/animales")}
     >
@@ -624,10 +625,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 mt-1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
-            Caravana: {caravana}
+            Caravana: {shorterWord(caravana)}
         </h2>
     </button>
-    <div class="flex w-11/12">
+    <div class="flex w-11/12 justify-end">
         <button
             onclick={openEditar}
             class={`
@@ -637,9 +638,9 @@
                 `}
                 aria-label="Editar"
         >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-          </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+            </svg>
           
         </button>    
     </div>
@@ -661,7 +662,7 @@
             <label for="rp" 
                 class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
             >
-                {rp}
+            {shorterWord(rp)}
             </label>
         {/if}
     </div>
@@ -870,7 +871,7 @@
         <h3 class="text-2xl font-bold mt-2 mb-1 text-left">
             Nacimiento
         </h3>
-        <div class="flex w-11/12">
+        <div class="flex w-11/12 justify-end">
             <button
                 onclick={openEditModal}
                 class={`

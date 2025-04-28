@@ -13,15 +13,16 @@
     let caber = createCaber()
     let cab = caber.cab
     
-
+    //Los templates en el cellphobe
+    //Con internet te de este excel sin internet te de uno comun
+    function exportarTemplate2(){
+        goto(`${ruta}/Modelo tactos.xlsx`)
+    }
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
-    //Pero si es offline, como hago?
-    function exportarTemplate2(){
-        goto(`${ruta}/Modelo tactos validados.xlsx`)
-    }
+    
     function exportarTemplate(){
         let csvData = [{
             fecha:"MM/DD/AAAA",

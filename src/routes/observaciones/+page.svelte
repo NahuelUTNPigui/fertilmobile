@@ -558,6 +558,7 @@
                         </label>
                         <input id ="fechadesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `} 
@@ -570,6 +571,7 @@
                         </label>
                         <input id ="fechadesde" type="date"  
                             class={`
+                            w-full md:w-1/2
                                 input input-bordered
                                 ${estilos.bgdark2}
                             `}  

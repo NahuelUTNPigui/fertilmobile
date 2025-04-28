@@ -586,7 +586,7 @@
                 
             </div>
             <Colaboradores {mostrarcolab} {guardarColab} {desasociar} {asociado}/>
-            <ListaColabs {colabs}/>
+            <ListaColabs bind:colabs={colabs}/>
         </CardBase>
     {:else}
         <CardBase titulo="Registra tu establecimiento">

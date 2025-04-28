@@ -3,9 +3,12 @@
     import estilos from "$lib/stores/estilos";
     import {isEmpty} from "$lib/stringutil/lib"
     import { randomString } from "$lib/stringutil/lib";
-    import { PenBox } from "lucide-svelte";
     import Swal from "sweetalert2";
-    
+    import { slide } from 'svelte/transition';
+    import tiponoti from '$lib/stores/tiponoti';
+    import {verificarNivelColab} from "$lib/permisosutil/lib"
+    let ruta = import.meta.env.VITE_RUTA
+    const pb = new PocketBase(ruta);
     let {colabs = $bindable(),mostrarcolab,guardarColab,desasociar,asociado} = $props()
     let titulo = $state("Colaboradores")
     
@@ -23,6 +26,150 @@
     let malcontra = $state(false)
     let malconfirmcontra = $state(false)
     let botonhabilitadocolab = $state(false)
+    // asociar
+    let mostrarasociacion = $state(false)
+    let correoasociar = $state("")
+    let malcorreo = $state(false)
+    let codigoasociar = $state("")
+    async function asociar() {
+        if(correoasociar==""){
+            malcorreo = true
+            return
+        }
+        let verificar = await verificarNivelColab(cabid)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más colaboradores`,"error")
+            return
+        }
+        const resultList = await pb.collection('users').getList(1, 1, {
+            filter: `codigo ~ '${correoasociar}'`,
+            skipTotal:true
+        });        
+        if(resultList.items.length == 0){
+            Swal.fire("Error colaborador","No existe un usuario con ese codigo","error")
+            return
+        }
+    
+
+        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        
+        let origenusuarioid =  pb_json.record.id
+        let userid = resultList.items[0].id
+        let nombre = resultList.items[0].nombre
+        let apellido = resultList.items[0].apellido
+        if(userid == origenusuarioid){
+            Swal.fire("Error colaborador","No puedes asociarte al establecimiento","error")
+            return
+        }
+        const resultcolab = await pb.collection('colaboradores').getList(1,1,{
+            filter:`user = '${userid}'`,
+            skipTotal:true
+        })
+        let existecolab = resultcolab.items.length > 0
+        if(existecolab){
+            let colabid = resultcolab.items[0].id
+            //verificar si ya esta asociado
+            const recordasoci = await pb.collection('estxcolabs').getList(1,1,{
+                filter:`cab = '${cabid}' && colab = '${colabid}'`
+            })
+            if(recordasoci.items.length>0){
+                Swal.fire("Error asociar","El usuario ya esta asociado","error")
+                return
+            }
+            try{    
+                let colabid = resultcolab.items[0].id
+                //Creo la asociación
+                let dataestxcolab = {
+                    cab:cabid,
+                    colab:colabid
+                }
+                const recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+                //Debo crear los permisos para el colaborador
+                let datapermisos = {
+                    estxcolab:recordestxcolab.id,
+                    permisos:""
+                }
+                const recordpermisos = await pb.collection('permisos').create(datapermisos);
+                Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
+                const records = await pb.collection('estxcolabs').getFullList({
+                    expand:"colab",
+                    filter:`cab='${cab.id}'`,
+                    sort:"colab.apellido"
+                });
+                colabs = records
+
+            }
+            catch(err){
+                console.error(err)
+                Swal.fire("Error asociar","No se pudo asociar el usuario","error")
+                
+  
+                return
+            }
+        }
+        else{
+            try{
+                //Debo crear el colaborador
+                let data = {
+                    nombre:nombre,
+                    apellido:apellido,
+                    user:userid,
+                    telefono:"",
+                    rol:""
+                }
+                const record = await pb.collection('colaboradores').create(data);
+                //Creo la asociación
+                let dataestxcolab = {
+                    cab:cabid,
+                    colab:record.id
+                }
+                const recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+                //Debo crear los permisos para el colaborador
+                let datapermisos = {
+                    estxcolab:recordestxcolab.id,
+                    permisos:""
+                }
+                const recordpermisos = await pb.collection('permisos').create(datapermisos);
+                Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
+                const records = await pb.collection('estxcolabs').getFullList({
+                    expand:"colab",
+                    filter:`cab='${cab.id}'`,
+                    sort:"colab.apellido"
+                });
+                colabs = records
+            }   
+            catch(err){
+                console.error(err)
+                Swal.fire("Error asociar","No se pudo asociar el usuario","error")
+                return
+
+            }
+        }
+        //Creo las notificaciones
+        try{
+            let data = {
+                texto:"Se te asoció al establecimiento "+ cab.nombre,
+                titulo:"Asociado a "+ cab.nombre,
+                tipo:tiponoti[0].id,
+                origen:origenusuarioid,
+                destino:userid,
+                leido:false
+            }
+            const record = await pb.collection('notificaciones').create(data);
+        }
+        catch(err){
+            console.error(err)
+        }
+
+    }
+    function openAsociar(){
+        mostrarasociacion = true
+    }
+    function closeAsociar(){
+        mostrarasociacion = false
+        correoasociar = ""
+        malcorreo = false
+    }
     async function guardarColaborador(){
         
         let data = {
@@ -134,10 +281,11 @@
         </button>
     </div>
     <div>
-        <button class={estilos.mediumsolidgreen} onclick={()=>goto("/colaboradores/asociar")}>
+        <button class={estilos.mediumsolidgreen} onclick={()=>!mostrarasociacion?openAsociar():closeAsociar()}>
             Asociar
         </button>
     </div>
+
     {#if asociado}
         <div>
             <button class={estilos.mediumsolidred}
@@ -148,6 +296,34 @@
         </div>
     {/if}
 </div>
+{#if mostrarasociacion}
+    <div transition:slide>
+        <label for = "correo" class="label">
+            <span class="label-text text-base">Codigo usuario</span>
+        </label>
+        <label class="input-group">
+            <input id ="correo" type="text"  
+                class={`
+                    input input-bordered 
+                    w-full
+                    border border-gray-300 rounded-md
+                    focus:outline-none focus:ring-2 
+                    focus:ring-green-500 
+                    focus:border-green-500
+                    ${estilos.bgdark2}   
+                `}
+                bind:value={correoasociar}
+               
+            />
+            {#if malcorreo}
+                <div class="label">
+                    <span class="label-text-alt text-red-500">Debe escribir el correo de un usuario de esta aplicación</span>                    
+                </div>
+            {/if}
+        </label>
+        <button class="btn btn-success text-white mt-1" disabled='{correoasociar==""}' onclick={asociar} >Asociar</button>
+    </div>
+{/if}
 <dialog id="modalNuevoColaborador" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 
         class="

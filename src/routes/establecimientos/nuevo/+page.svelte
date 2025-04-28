@@ -78,7 +78,7 @@
         let cabs = await pb.collection('cabs').getList(1,1,{filter:`user='${usuarioid}' && active = true`})
         
         if(nivel.establecimientos != -1 && cabs.totalItems >= nivel.establecimientos){
-          Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.establecimientos} establecimientos`,"error")
+          Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más de ${nivel.establecimientos} establecimientos`,"error")
           return
         }
         

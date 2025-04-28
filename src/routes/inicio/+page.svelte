@@ -21,6 +21,7 @@
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import cuentas from '$lib/stores/cuentas';
     import MultipleToros from '$lib/components/MultipleToros.svelte';
+    import{verificarNivel} from "$lib/permisosutil/lib"
     //Offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -371,12 +372,12 @@
             data.fechanacimiento=fechanacimiento +" 03:00:00"
         }
         //Verificar si las fechas coinciden
-        if(esTacto){
-            data.prenada = prenadatacto
-        }
-        if(esInseminacion){
-            data.prenada = 3
-        }
+        //if(esTacto){
+        //    data.prenada = prenadatacto
+        //}
+        //if(esInseminacion){
+        //    data.prenada = 3
+        //}
         let idprov = "nuevo_animal_"+generarIDAleatorio() 
         let isOnline = await Network.getStatus();
         if(coninternet.connected){
@@ -395,6 +396,7 @@
                 //No tiene poque no lotes y rodeos
                 camposprov:""
             }
+            alert("animal: "+idprov)
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             
@@ -405,18 +407,13 @@
     }
     async function guardarAnimal(esTacto,esInseminacion) {
         
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        let verificar = true
-        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
+        let verificar = await verificarNivel(cab.id)
+        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
             verificar =  false
         }
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
-            return {id:-1}
+            return
         }
         let data = {
             caravana,
@@ -722,12 +719,7 @@
         }
     }
     async function guardarNacimiento(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        let verificar = true
+        let verificar = await verificarNivel(cab.id)
         if(nivel.animales != -1 && animals.totalItems > nivel.animales){
             verificar =  false
         }
@@ -1278,6 +1270,7 @@
                     idprov,
                     camposprov:"animal"
                 }
+                alert("obs: "+idprov)
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
                 await addNewObservacionSQL(db,data)
@@ -1822,8 +1815,8 @@
             comandos = rescom.lista
             if (coninternet.connected){
                 
-                //await flushComandosSQL(db)
-                //comandos = []
+                await flushComandosSQL(db,pb)
+                comandos = []
                 if(lastinter.internet == 0){
                     
                     await updateLocalSQL(db)
@@ -1872,7 +1865,7 @@
 
     {#if caboff.exist}
         
-        <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
+        <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
                 <StatCard urlto={"/animales"}  titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
                 <StatCard urlto={"/lotes"}  titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
@@ -2168,7 +2161,7 @@
             </div>
         </CardBase>
     {:else}
-    <CardBase titulo="Bienvenido a Creciente Fertil" cardsize="max-w-5xl">
+    <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">
             <div class="grid grid-cols-1 gap-6">
                 <a class={classbutton}
                     href="/establecimiento"

@@ -10,42 +10,52 @@
     const niveles = [
         {
             nivel:0,precio:0,
+            nombre:"Gratuito",
             descripcion:"Ideal para empezar con el establecimiento",
             items:[
-                {nombre:"3 Establecimientos"},
+                {nombre:"1 establecimientos"},
+                {nombre:"3 usuarios"},
                 {nombre:"50 animales"}
             ]
         },
         {
-            nivel:1,precio:10,
+            nivel:1,precio:20,
+            nombre:"Inicio",
             descripcion:"Ideal para pequeños establecimientos",
             items:[
-                {nombre:"5 Establecimientos"},
-                {nombre:"100 Animales"}
+                {nombre:"1 establecimiento"},
+                {nombre:"3 usuarios"},
+                {nombre:"50 a 250 animales"}
             ]
         },
         {
-            nivel:2,precio:50,
+            nivel:2,precio:35,
+            nombre:"Intermedio",
             descripcion:"Ideal para establecimientos mediano",
             items:[
-                {nombre:"5 Establecimientos"},
-                {nombre:"250 Animales"}
+                {nombre:"2 establecimientos"},
+                {nombre:"5 usuarios"},
+                {nombre:"251 a 500 animales"}
             ]
         },
         {
-            nivel:3,precio:100,
+            nivel:3,precio:65,
+            nombre:"Avanzado",
             descripcion:"Ideal para establecimientos con muchos animales",
             items:[
-                {nombre:"Establecimientos ilimitados"},
-                {nombre:"500 Animales"}
+                {nombre:"3 establecimientos"},
+                {nombre:"5 usuarios"},
+                {nombre:"501 a 1000 animales"}
             ]
         },
         {
-            nivel:4,precio:1000,
+            nivel:4,precio:110,
+            nombre:"Ilimitados",
             descripcion:"Pensado para grandes establecimientos",
             items:[
                 {nombre:"Establecimientos ilimitados"},
-                {nombre:"Animales ilimtados"}
+                {nombre:"Usuarios ilimitados"},
+                {nombre:"Animales ilimitados"}
             ]
         },    
     ]
@@ -150,12 +160,12 @@
                     <div class="p-6 space-y-4">
                         <ul class="space-y-3">
                             {#each n.items as it}
-                            <li class="flex items-start">
-                                <svg class="h-5 w-5 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="ml-3 " >{it.nombre}</span>
-                            </li>
+                                <li class="flex items-start">
+                                    <svg class="h-5 w-5 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="ml-3 " >{it.nombre}</span>
+                                </li>
                             {/each}
                             
                         </ul>
@@ -177,7 +187,9 @@
                 </div>
                 {/each}
             </div>
-            
+            <div class="flex items-center">
+                <span class="text-md font-semibold">*Valores expresados en dólares americanos.</span> 
+            </div>
         </div>
     </div>
 </Navbarr>
