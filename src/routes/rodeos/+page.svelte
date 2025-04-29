@@ -5,7 +5,8 @@
     import { onMount } from 'svelte';
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
-    
+    //ofline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -15,7 +16,10 @@
     import {
         getRodeosSQL,
         updateLocalRodeosSQL,
-        addNewRodeoSQL
+        addNewRodeoSQL,
+        updateRodeoSQL,
+        deleteRodeoSQL,
+        setRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
     //offline
     let db = $state(null)
@@ -66,7 +70,42 @@
         nombre = ""
         nuevoModal.showModal()
     }
-    async function guardar(){
+    async function guardarOffline() {
+        let idprov = "nuevo_rodeo_"+generarIDAleatorio() 
+        try{
+            let data = {
+                nombre,
+                active:true,
+                cab:caboff.id,
+                id:idprov
+            }
+            let comando = {
+                tipo:"add",
+                coleccion:"rodeos",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:0,
+                idprov,    
+                camposprov:""
+            }
+            comandos.push(comando)
+            await addNewRodeoSQL(db,data)
+            data.total = 0
+            await setComandosSQL(db,comandos)
+            rodeos.push(data)
+            ordenar(rodeos)
+            filterUpdate()
+            nombre = ""
+            Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
+
+        }
+        catch(err){
+            console.error(err)
+            nombre = ""
+            Swal.fire("Error guardar","No se pudo guardar el rodeo","error")
+        }    
+    }
+    async function guardarOnline() {
         try{
             let data = {
                 nombre,
@@ -79,10 +118,21 @@
             ordenar(rodeos)
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
+            nombre = ""
         }catch(err){
             console.error(err)
+            nombre = ""
             Swal.fire("Error guardar","No se pudo guardar el rodeo","error")
         }
+    }
+    async function guardar(){
+        if(coninternet.connected){
+            await guardarOnline()
+        }
+        else{
+            await guardarOffline()
+        }
+        
     }
     function openEditModal(id){
         idrodeo = id
@@ -91,8 +141,41 @@
     
         nuevoModal.showModal()
     }
-    async function editar(id){
-        
+    async function editarOffline(id) {
+        try{
+            let data = {
+                id,
+                nombre,
+                
+            }
+            let comando = {
+                tipo:"update",
+                coleccion:"rodeos",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:0,
+                idprov:id,    
+                camposprov:""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            await updateRodeoSQL(db,id,data)
+            let idx = rodeos.findIndex(r=>r.id==idrodeo)
+            let total = rodeos[idx].total
+            rodeos[idx] = data
+            rodeos[idx].total = total
+            ordenar(rodeos)
+            filterUpdate()
+            Swal.fire("Éxito editar","Se pudo editar el rodeo","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar","No se pudo editar el rodeo","error")
+        }
+        idrodeo = ""
+        nombre = ""
+    }
+    async function editarOnline(id) {
         try{
             let data = {
                 nombre
@@ -112,9 +195,18 @@
         }
         idrodeo = ""
         nombre = ""
+    }
+    async function editar(id){
+        if(coninternet.connected){
+            await guardarOnline(id)
+        }
+        else{
+            await guardarOffline(id)
+        }
+        
 
     }
-    async function eliminar(id){
+    function eliminarOnline(id) {
         Swal.fire({
             title: 'Eliminar rodeo',
             text: '¿Seguro que deseas eliminar el rodeo?',
@@ -131,6 +223,7 @@
                     }
                     const record = await pb.collection('rodeos').update(idrodeo, data);
                     rodeos = rodeos.filter(r=>r.id!=idrodeo)
+                    await setRodeosSQL(db,rodeos)
                     ordenar(rodeos)
                     filterUpdate()
                     //ver como hago para actualizar la lista
@@ -144,6 +237,57 @@
                 
             }
         })
+    }
+    function eliminarOffline(id) {
+        Swal.fire({
+            title: 'Eliminar rodeo',
+            text: '¿Seguro que deseas eliminar el rodeo?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idrodeo = id
+                try{
+                    let data = {
+                        active : false
+                    }
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"rodeos",
+                        data:{...data},
+                        hora:Date.now(),
+                        prioridad:0,
+                        idprov:id,    
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+
+                    rodeos = rodeos.filter(r=>r.id!=idrodeo)
+                    await setRodeosSQL(db,rodeos)
+                    ordenar(rodeos)
+                    filterUpdate()
+                    
+                    Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar el rodeo', 'error');
+                }
+                idrodeo = ""
+                nombre = ""
+                
+            }
+        })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
     }
     function filterUpdate(){
         rodeosrows = rodeos
@@ -179,7 +323,7 @@
         filterUpdate()
     }
     async function getLocalSQL() {
-        let resrodeos = getRodeosSQL(db)
+        let resrodeos = await getRodeosSQL(db)
         rodeos = resrodeos.lista
         filterUpdate()
     }

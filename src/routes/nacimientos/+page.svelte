@@ -10,7 +10,36 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {guardarHistorial} from "$lib/historial/lib"
     import PredictSelect from '$lib/components/PredictSelect.svelte';
-    import{verificarNivel} from "$lib/permisosutil/lib"
+    import{verificarNivel,verificarNivelOffline} from "$lib/permisosutil/lib"
+    //offline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {
+        getNacimientosSQL,
+        updateLocalNacimientosSQL,
+        setNacimientosSQL,
+        addNewNacimientoSQL        
+
+    } from "$lib/stores/sqlite/dbeventos"
+    import { 
+        setAnimalesSQL,
+        getAnimalesSQL,
+        updateLocalAnimalesSQL
+    } from '$lib/stores/sqlite/dbanimales';
+    import { animator } from 'chart.js';
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -19,7 +48,7 @@
     const today = new Date();
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    let usuarioid = $state("")
+    
     //Datos filtrar
     let nacimientos = $state([])
     let nacimientosrow = $state([])
@@ -68,6 +97,7 @@
             filter:`active=true && cab='${cab.id}' && delete = false`,
             expand:"nacimiento"
         })
+        animales = recordsa
         madres = recordsa.filter(a=>a.sexo == "H" || a.sexo == "F")
         padres = recordsa.filter(a=>a.sexo == "M")
         cargadoanimales = true
@@ -91,12 +121,114 @@
         nacimientos = recordsn
         nacimientosrow = nacimientos
     }
-    async function guardar(){
-        let verificar = await verificarNivel(cab.id)
-        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
-            verificar =  false
+    //falta el historial
+    async function guardarOffline() {
+        let idprov = "nuevo_nac_"+generarIDAleatorio()
+        let idanimal = "nuevo_animal_"+generarIDAleatorio()
+        let verificar = await verificarNivelOffline(caboff.id)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
+            return
         }
-        
+        try{
+            
+            let ms = madres.filter(ma=>ma.id==madre)
+            let m = {
+                id:"",
+                nombremadre:"",
+                rodeo:"",
+                lote:""
+            }
+            if(ms.length > 0){
+                m.id = ms[0].id
+                m.nombremadre = ms[0].caravana
+                m.lote = ms[0].lote
+                m.rodeo = ms[0].rodeo
+            }
+            let tipomadre = m.categoria
+            let esnuevopadre = padre.split("_").length>0
+            let esnuevomadre = m.id.split("_").length>0
+            let dataparicion = {
+                madre:m.id,
+                padre,
+                fecha:fecha + " 03:00:00",
+                nombremadre:m.nombremadre,
+                nombrepadre,
+                observacion,
+                cab:caboff.id,
+                id:idprov
+            }
+            let comando = {
+                tipo:"add",
+                coleccion:"nacimientos",
+                data:{...dataparicion},
+                hora:Date.now(),
+                prioridad:0,
+                idprov,    
+                camposprov:`${(esnuevomadre && esnuevopadre)?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
+            }
+            //Agregar el expan
+            let dataanimal = {
+                caravana,
+                active:true,
+                delete:false,
+                fechanacimiento:fecha +" 03:00:00",
+                sexo,
+                cab:caboff.id,
+                peso,
+                lote:m.lote,
+                rodeo:m.rodeo,
+                nacimiento:idprov,
+                id:idanimal
+            }
+            let nlote = m.lote.split("_").length>0
+            let nrodeo = m.rodeo.split("_").length>0
+            let comandoani = {
+                tipo:"add",
+                coleccion:"animales",
+                data:{...dataanimal},
+                hora:Date.now(),
+                prioridad:3,
+                idprov,    
+                camposprov:`nacimiento${(nlote&nrodeo)?",lote,rodeo":nlote?",lote":nrodeo?",rodeo":""}`
+            }
+            comandos.push(comando)
+            comandos.push(comandoani)
+            await setComandosSQL(db,comandos)
+            nacimientos.push(dataparicion)
+            
+            animales.push(dataanimal)
+            animales.sort((a,b)=>a.caravana<b.caravana?-1:1)
+            madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+            padres = animales.filter(a=>a.sexo == "M")
+            cargadoanimales = true
+            listamadres = madres.map(item=>{
+                return {
+                    id:item.id,nombre:item.caravana
+                }
+            })
+            listapadres = padres.map(item=>{
+                return {
+                    id:item.id,nombre:item.caravana
+                }
+            })
+            nacimientos.sort((n1,n2)=>new Date(n1.fecha)<new Date(n2.fecha)?-1:1)
+            filterUpdate()
+            await setNacimientosSQL(db,nacimientos)
+            await setAnimalesSQL(db,animales)
+
+            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
+            filterUpdate()
+
+            
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
+        }
+    }
+    async function guardarOnline() {
+        let verificar = await verificarNivel(caboff.id)
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
             return
@@ -124,7 +256,7 @@
                 nombremadre:m.nombremadre,
                 nombrepadre,
                 observacion,
-                cab:cab.id
+                cab:caboff.id
             }
             const recordparicion = await pb.collection('nacimientos').create(dataparicion);
             let data = {
@@ -133,7 +265,7 @@
                 delete:false,
                 fechanacimiento:fecha +" 03:00:00",
                 sexo,
-                cab:cab.id,
+                cab:caboff.id,
                 peso,
                 lote:m.lote,
                 rodeo:m.rodeo,
@@ -142,16 +274,16 @@
             let recorda = await pb.collection('animales').create(data); 
             if(m.id != ""){
                 let datamadre = {
-                prenada:0
-            }
-            if(m.categoria == "vaquillona"){
-                datamadre.categoria = "vaca"
-                let datamadre = {
-                    categoria:"vaca"
+                    prenada:0
                 }
-            }
-            await guardarHistorial(pb,madre)
-            await pb.collection('animales').update(madre,datamadre)
+                if(m.categoria == "vaquillona"){
+                    datamadre.categoria = "vaca"
+                    let datamadre = {
+                        categoria:"vaca"
+                    }
+                }
+                await guardarHistorial(pb,madre)
+                await pb.collection('animales').update(madre,datamadre)
             }
             
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
@@ -166,7 +298,15 @@
             Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
         }
     }
-    async function editar(){
+    async function guardar(){
+        if(coninternet.connected){
+            await guardarOnline()
+        }
+        else{
+            await guardarOffline()
+        }
+    }
+    async function editarOnline() {
         let ms = madres.filter(ma=>ma.id==madre)
         let m = {
             id:"",
@@ -215,6 +355,120 @@
             console.error(err)
             Swal.fire("Error editar","Hubo un error para editar el nacimiento","error")
         }
+    }
+    async function editarOffline() {
+        let ms = madres.filter(ma=>ma.id==madre)
+        let m = {
+            id:"",
+            nombremadre:"",
+            rodeo:"",
+            lote:""
+        }
+        if(ms.length > 0){
+            m.id = ms[0].id
+            m.nombremadre = ms[0].caravana
+            m.lote = ms[0].lote
+            m.rodeo = ms[0].rodeo
+        }
+        let datanimal={
+            fechanacimiento:fecha+" 03:00:00"
+        }
+
+        let dataparicion = {
+            madre:m.id,
+            padre,
+            fecha:fecha + " 03:00:00",
+            nombremadre:m.nombremadre,
+            nombrepadre,
+            observacion,    
+        }
+        try{
+            
+            let nidx = nacimientos.findIndex(n=>n.id == idnacimiento)
+            if (nidx != -1){
+                let comandonac = {
+                    tipo:"update",
+                    coleccion:"nacimientos",
+                    data:{...dataparicion},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:idnacimiento,    
+                    camposprov:`${(esnuevomadre && esnuevopadre)?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
+                }
+                comandos.push(comandonac)
+                nacimientos[idx].madre = dataparicion.madre
+                nacimientos[idx].padre = dataparicion.padre
+                nacimientos[idx].fecha = dataparicion.fecha
+                nacimientos[idx].nombremadre = dataparicion.nombremadre
+                nacimientos[idx].nombrepadre = dataparicion.nombrepadre
+                nacimientos[idx].observacion = dataparicion.observacion
+                await setNacimientosSQL(db,nacimientos)
+                await setComandosSQL(db,comandos)
+
+            }
+            let aidx = animales.findIndex(a=>a.id == idanimal)
+            if(aidx != -1){
+                let esnuevonacimiento= idnacimiento.split("_").length>0
+                let comandoani = {
+                    tipo:"update",
+                    coleccion:"animales",
+                    data:{...datanimal},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:idanimal,    
+                    camposprov:`${esnuevonacimiento ?"nacimiento":""}`
+                }
+                comandos.push(comandoani)
+                await setComandosSQL(db,comandos)
+                animales[aidx].fechanacimiento = datanimal.fechanacimiento
+                madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+                padres = animales.filter(a=>a.sexo == "M")
+                cargadoanimales = true
+                listamadres = madres.map(item=>{
+                    return {
+                        id:item.id,nombre:item.caravana
+                    }
+                })
+                listapadres = padres.map(item=>{
+                    return {
+                        id:item.id,nombre:item.caravana
+                    }
+                })
+                await setAnimalesSQL(db,animales)
+                
+            }
+            
+            Swal.fire("Éxito editar","Se pudo editar el nacimiento con exito","success")
+            
+            
+            filterUpdate()
+            idnacimiento = ""
+            caravana = ""
+            sexo = ""
+            padre = ""
+            madre = ""
+            nombremadre = ""
+            nombrepadre = ""
+            fecha = ""
+            observacion = ""
+            peso=""
+            idanimal = ""
+            
+
+        }catch(err){
+            console.error(err)
+            Swal.fire("Error editar","Hubo un error para editar el nacimiento","error")
+        }
+    }
+    //que podemos editar
+    async function editar(){
+        if(coninternet.connected){
+            await editarOnline()
+        }
+        else{
+            await editarOffline()
+        }
+        
     }
     function filterUpdate(){
         nacimientosrow = nacimientos
@@ -296,7 +550,7 @@
         nuevoModal.showModal()
 
     }
-    function eliminar(id){
+    function eliminarOnline(id){
         Swal.fire({
             title: 'Eliminar nacimiento',
             text: '¿Seguro que deseas eliminar el nacimiento?',
@@ -311,10 +565,8 @@
                 try{
                     await pb.collection('nacimientos').delete(idnacimiento);
                     nacimientos = nacimientos.filter(n=>n.id!=idnacimiento)
+                    await setNacimientosSQL(db,nacimientos)
                     filterUpdate()
-                    const recorda = await pb.collection('animales').getFirstListItem(`nacimiento='${idnacimiento}'`, {});
-                    const recordupdate = await pb.collection('animales').update(recorda.id, {nacimiento:""});
-
                     Swal.fire('Nacimiento eliminado!', 'Se eliminó el nacimiento correctamente.', 'success');
                 }
                 catch(e){
@@ -326,12 +578,134 @@
             }
         })
     }
-    onMount(async ()=>{
+    function eliminarOffline(id){
+        Swal.fire({
+            title: 'Eliminar nacimiento',
+            text: '¿Seguro que deseas eliminar el nacimiento?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idnacimiento = id
+                try{
+                    let comando = {
+                        tipo:"delete",
+                        coleccion:"nacimientos",
+                        data:{},
+                        hora:Date.now(),
+                        prioridad:0,
+                        idprov:id,    
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    nacimientos = nacimientos.filter(n=>n.id!=idnacimiento)
+                    await setNacimientosSQL(db,nacimientos)
+                    filterUpdate()
+                    Swal.fire('Nacimiento eliminado!', 'Se eliminó el nacimiento correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar al nacimiento', 'error');
+                }
+                idnacimiento = ""
+                nacimiento = null
+                
+            }
+        })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
+    }
+    async function onMountOriginal(){
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         await getNacimientos()
         filterUpdate()
         await getAnimales()
+    }
+    async function  getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let resnacimientos = await getNacimientosSQL(db)
+        animales = resanimales.lista
+        nacimientos =resnacimientos.lista
+        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animales.filter(a=>a.sexo == "M")
+        cargadoanimales = true
+        listamadres = madres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        filterUpdate()
+    }
+    async function updateLocalSQL(params) {
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        nacimientos = await updateLocalNacimientosSQL(db,pb,caboff.id)
+        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animales.filter(a=>a.sexo == "M")
+        listamadres = madres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        filterUpdate()
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            //await flushComandosSQL(db)
+            //comandos = []
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
     function onwriteMadre(){
         

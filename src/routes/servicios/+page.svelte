@@ -28,6 +28,8 @@
         getInseminacionesSQL,
         updateLocalInseminacionesSQL,
         updateLocalServiciosSQL,
+        setServiciosSQL,
+        setInseminacionesSQL
         
     } from "$lib/stores/sqlite/dbeventos"
     import {
@@ -35,6 +37,8 @@
         updateLocalAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { DatasetController } from 'chart.js';
+    import { cp } from 'fs';
     
     let ruta = import.meta.env.VITE_RUTA
     //let pre
@@ -144,11 +148,7 @@
             nuevoModalIns.showModal()
         }
     }
-    //Aca va el offline
-    async function editar2() {
-        
-    }
-    async function editar(){
+    async function editarOnline() {
         if(esservicio){
             try{
                 let dataser = {
@@ -195,13 +195,160 @@
                 Swal.fire("Error editar","Hubo un error para editar la inseminación","error")
             }
         }
+    }
+    async function editarOffline() {
+        if(esservicio){
+            try{
+                let dataser = {
+                    fechadesde : fechadesdeserv + " 03:00:00",
+                    fechaparto: fechaparto + " 03:00:00",
+                    observacion: observacion,
+                    madre:madre,
+                    padres:padreslist.join()
+                }
+                let sidx = servicios.findIndex(s=>s.id == idserv)
+                if(sidx){
+                    servicios[sidx].fechadesde = dataser.fechadesde
+                    servicios[sidx].fechaparto = dataser.fechaparto
+                    servicios[sidx].observacion = dataser.observacion
+                    servicios[sidx].madre = dataser.madre
+                    servicios[sidx].padres = dataser.padres
+                    if(fechahastaserv != ""){
+                        dataser.fechahasta = fechahastaserv + " 03:00:00"
+                        servicios[sidx].fechahasta = dataser.fechahasta
+                    }
+                    await setServiciosSQL(db,servicios)
+                    let nuevamadre = dataser.madre.split("_").length>0
+                    let nuevopadre = dataser.padres.split("_").length>0
+                    let comando= {
+                        tipo:"update",
+                        coleccion:"servicios",
+                        data:{...dataser},
+                        hora:Date.now(),
+                        prioridad:0,
+                        idprov:idserv,    
+                        camposprov:`${nuevamadre && nuevopadre ? "madre,padres":nuevamadre?"madre":nuevopadre?"padres":""}`
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    filterUpdate()
+                }
+                
+                esservicio = false
+                filterUpdate()
+            }
+            catch(err){
+                esservicio = false
+                console.error(err)
+            }
+        }
+        if(esinseminacion){
+            try {
+                let data = {
+                    fechaparto: fechaparto +' 03:00:00',
+                    fechainseminacion: fechainseminacion + ' 03:00:00',
+                    padre,
+                    pajuela,
+                    observacion,
+                    categoria
+                }
+                let idx  = inseminaciones.findIndex(ins=>ins.id == idserv)
+                if(idx != -1){
+                    inseminaciones[idx].fechaparto = data.fechaparto
+                    inseminaciones[idx].fechainseminacion = data.fechainseminacion
+                    inseminaciones[idx].padre = data.padre
+                    inseminaciones[idx].pajuela = data.pajuela
+                    inseminaciones[idx].observacion = data.observacion
+                    inseminaciones[idx].categoria = data.categoria
+                    await setInseminacionesSQL(db,inseminaciones)
+                    let nuevamadre = dataser.madre.split("_").length>0
+                    let nuevopadre = dataser.padres.split("_").length>0
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"inseminacion",
+                        data:{active:false},
+                        hora:Date.now(),
+                        prioridad:0,
+                        idprov:idserv,    
+                        camposprov:`${nuevamadre && nuevopadre ? "madre,padre":nuevamadre?"madre":nuevopadre?"padre":""}`
+
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    
+                    
+                }
+                
+                filterUpdate()
+                Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
+                esinseminacion = false
+            }catch(err){
+                console.error(err)
+                esinseminacion = false
+                Swal.fire("Error editar","Hubo un error para editar la inseminación","error")
+            }
+        }
+    }
+    async function editar(){
+        if(coninternet.connected){
+            await editarOnline()
+        }
+        else{
+            await editarOffline()
+        }
         
     }
     //Aca va el offline
-    async function eliminar2() {
-        
+    async function eliminarOffline(id,esInseminacion) {
+        if(!esInseminacion){
+            try{
+                servicios = servicios.filter(s=>s.id!=id)
+                await setServiciosSQL(db,servicios)
+                let comando = {
+                    tipo:"update",
+                    coleccion:"servicios",
+                    data:{active:false},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:id,    
+                    camposprov:""
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                
+                filterUpdate()
+                Swal.fire("Éxito eliminar","Se eliminó con éxito el servicio","success")
+            }
+            catch(err){
+                console.error(err)
+            }
+        }
+        else{
+            try{
+                inseminaciones = inseminaciones.filter(s=>s.id!=id)
+                await setInseminacionesSQL(db,inseminaciones)
+                let comando = {
+                    tipo:"update",
+                    coleccion:"inseminacion",
+                    data:{active:false},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:id,    
+                    camposprov:""
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                
+                filterUpdate()
+                Swal.fire("Éxito eliminar","Se eliminó con éxito la inseminación","success")
+
+            }
+            catch(err){
+                console.error(err)
+            }  
+        }
     }
-    async function eliminar(id,esInseminacion){
+    async function eliminarOnline(id,esInseminacion) {
         if(!esInseminacion){
             try{
                 await pb.collection("servicios").update(id,{active:false})
@@ -225,6 +372,15 @@
                 console.error(err)
             }  
         }
+    }
+    async function eliminar(id,esInseminacion){
+        if(coninternet.connected){
+            await eliminarOnline(id,esInseminacion)
+        }
+        else{
+            await eliminarOffline(id,esInseminacion)
+        }
+        
         
     }
     function cerrarModal(){
@@ -352,6 +508,7 @@
         return getWholeWordButLastLetter(nombres)
 
     }
+
     async function onMountOriginal() {
         await getAnimales()
         await getServicios()

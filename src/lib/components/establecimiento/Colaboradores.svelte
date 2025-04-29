@@ -7,6 +7,7 @@
     import { slide } from 'svelte/transition';
     import tiponoti from '$lib/stores/tiponoti';
     import {verificarNivelColab} from "$lib/permisosutil/lib"
+    import PocketBase from 'pocketbase'
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let {colabs = $bindable(),mostrarcolab,guardarColab,desasociar,asociado} = $props()

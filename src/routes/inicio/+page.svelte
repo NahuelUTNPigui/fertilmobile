@@ -396,7 +396,7 @@
                 //No tiene poque no lotes y rodeos
                 camposprov:""
             }
-            alert("animal: "+idprov)
+            
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             
@@ -408,11 +408,9 @@
     async function guardarAnimal(esTacto,esInseminacion) {
         
         let verificar = await verificarNivel(cab.id)
-        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
-            verificar =  false
-        }
+        
         if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas  animales`,"error")
             return
         }
         let data = {
@@ -653,6 +651,7 @@
             cab:caboff.id
         }
         if(coninternet.connected){
+            //debo agregar el lote y rodeo de la madre
             const recordparicion = await pb.collection('nacimientos').create(dataparicion);
             let data = {
                 caravana:caravananac,
@@ -694,6 +693,8 @@
             totaleventos.nacimientos += 1
             //Debo guardar el animal
             await setAnimalesSQL(animales)
+            let esnuevopadre = padrenac.split("_").length>0
+            let esnuevomadre = madrenac.split("_").length>0
             //Comandos
             let comandonac = {
                 tipo:"add",
@@ -720,11 +721,9 @@
     }
     async function guardarNacimiento(){
         let verificar = await verificarNivel(cab.id)
-        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
-            verificar =  false
-        }
+        
         if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
             return
         }
         try{
@@ -1270,7 +1269,7 @@
                     idprov,
                     camposprov:"animal"
                 }
-                alert("obs: "+idprov)
+                
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
                 await addNewObservacionSQL(db,data)

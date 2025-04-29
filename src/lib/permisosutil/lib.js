@@ -51,3 +51,12 @@ export async function verificarNivelColab(cabid) {
         return true
     }
 }
+export async function verificarNivelOffline(cabid) {
+    return true
+}
+export async function verificarNivelCantidad(cabid,nuevos) {
+    return true
+}
+export async function verificarNivelColabOffline(cabid) {
+    return true
+}

@@ -152,6 +152,17 @@ export async function updateLocalPesajesSQL(db,pb,cabid) {
     await setUltimoPesajesSQL(db)
     return pesajes
 }
+export async function updateLocalTactosSQL(db,pb,cabid) {
+    const recordst = await pb.collection('tactos').getFullList({
+        filter:`cab='${cabid}' && active=true`,
+        sort: '-fecha',
+        expand:"animal"
+    });
+    let tactos = recordst
+    await setTactosSQL(db,tactos)
+    await setUltimoTactosSQL(db)
+    return tactos
+}
 export async function addNewTactoSQL(db,tacto) {
     let tactos = await getTactosSQL(db)
     let lista = tactos.lista
@@ -246,6 +257,24 @@ export async function updateLocalLotesSQL(db,pb,cabid) {
     await setUltimoLotesSQL(db)
     return lotes
 }
+export async function updateLoteSQL(db,id,lote) {
+    let lotes = await getLotesSQL(db)
+    let lista = lotes.lista
+    let idx = lista.findIndex(a=>a.id==id)
+    if(idx != -1){
+        let total = lista[idx].total
+        lista[idx] = lote
+        lista[idx].total = total
+        lista[idx].id = id
+    }
+    await setLotesSQL(db,lista)
+}
+export async function deleteLoteSQL(db,id) {
+    let lotes = await getLotesSQL(db)
+    let lista = lotes.lista
+    let idx = lista.filter(a=>a.id!=id)
+    await setLotesSQL(db,lista)
+}
 export async function addnewLoteSQL(db,lote) {
     let lotes = await getLotesSQL(db)
     let lista = observaciones.lista
@@ -258,7 +287,25 @@ export async function setLotesSQL(db,lotes) {
 export async function setUltimoLotesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 7`)
 }
-
+export async function updateRodeoSQL(db,id,rodeo) {
+    let rodeos = await getRodeosSQL(db)
+    let lista = rodeos.lista
+    let idx = lista.findIndex(a=>a.id==id)
+    if(idx != -1){
+        let total = lista[idx].total
+        lista[idx] = rodeo
+        lista[idx].total = total
+        lista[idx].id = id
+    }
+    await setRodeosSQL(db,lista)
+}
+export async function deleteRodeoSQL(db,id) {
+    let rodeos = await getRodeosSQL(db)
+    let lista = rodeos.lista
+    let idx = lista.filter(a=>a.id!=id)
+    
+    await setRodeosSQL(db,lista)
+}
 export async function updateLocalRodeosSQL(db,pb,cabid) {
     const records = await pb.collection('rodeos').getFullList({
         filter:`active = true && cab ~ '${cabid}'`,
@@ -334,6 +381,18 @@ export async function setTratsSQL(db,trats) {
 }
 export async function setUltimoTratsSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 4`)
+}
+export async function updateLocalNacimientosSQL(db,pb,cabid) {
+    
+    const recordsn = await pb.collection("nacimientosall").getFullList({
+        filter:`cab='${cabid}'`,
+        sort:"-fecha",
+        expand:"madre,padre"
+    })
+    let nacimientos = recordsn
+    await setNacimientosSQL(db,nacimientos)
+    await setUltimoNacimientosSQL(db)
+    return nacimientos
 }
 export async function addNewNacimientoSQL(db,nac) {
     let nacs = await getNacimientosSQL(db)

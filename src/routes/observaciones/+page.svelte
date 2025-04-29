@@ -141,7 +141,51 @@
         animal = obs.animal
         nuevoModal.showModal()
     }
-    function eliminar(id){
+    function eliminarOffline(id) {
+        Swal.fire({
+            title: 'Eliminar observación',
+            text: '¿Seguro que deseas eliminar la observacion?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result=>{
+          if(result.value){
+            idobservacion = id
+            let data = {
+                active:false
+            }
+            try{
+
+                let comando = {
+                    tipo:"update",
+                    coleccion:"observaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:id,    
+                    camposprov:""
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                observaciones = observaciones.filter(o=>o.id!=idobservacion)
+                await setObservacionesSQL(db,observaciones)
+                filterUpdate()
+                Swal.fire('Observación eliminada!', 'Se eliminó la observación correctamente.', 'success');
+            }
+            catch(err){
+                Swal.fire('Acción cancelada', 'No se pudo eliminar la observacion', 'error');
+                console.error(err)
+            }
+            idobservacion = ""
+            observacion = ""
+            categoria = ""
+            fecha = ""
+            
+          }
+        })   
+    }
+    function eliminarOnline(id) {
         Swal.fire({
             title: 'Eliminar observación',
             text: '¿Seguro que deseas eliminar la observacion?',
@@ -173,6 +217,14 @@
             
           }
         })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
         
     }
     function cerrar(){
@@ -403,8 +455,43 @@
         let recorda = await pb.collection('animales').create(data); 
         return recorda
     }
-    
-    async function editar(){
+    async function editarOffline() {
+        try{
+            let data = {
+                animal,
+                fecha:fecha +" 03:00:00",
+                categoria,
+                observacion,
+                id:idobservacion
+            }
+            
+            let comando = {
+                tipo:"update",
+                coleccion:"observaciones",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:0,
+                idprov:id,    
+                camposprov:animal.split("_").length>0?"animal":""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            let a = animales.filter(an=>an.id==animal)[0]
+            let idx = observaciones.findIndex(o=>o.id==idobservacion)
+            observaciones[idx] = data
+            observaciones[idx].expand = {animal:a}
+            observaciones.sort((o1,o2)=>new Date(o1.fecha)>new Date(o2.fecha)?-1:1)
+            await setObservacionesSQL(db,observaciones)
+            filterUpdate()
+            Swal.fire("Éxito editar","Se pudo editar la observación","success")
+
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar","No se pudo editar la observación","error")
+        }
+    }
+    async function editarOnline(params) {
         try{
             let data = {
                 animal,
@@ -426,6 +513,15 @@
             console.error(err)
             Swal.fire("Error editar","No se pudo editar la observación","error")
         }
+    }
+    async function editar(){
+        if(coninternet.connected){
+            await editarOnline()
+        }
+        else{
+            await editarOffline()
+        }
+        
     }
     function validarBoton(){
         botonhabilitado = true

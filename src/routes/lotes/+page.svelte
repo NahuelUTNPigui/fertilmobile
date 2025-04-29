@@ -8,6 +8,7 @@
     import {createPer} from "$lib/stores/permisos.svelte"
     import { getPermisosList } from '$lib/permisosutil/lib';
     //offline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -18,6 +19,10 @@
         getLotesSQL,
         updateLocalLotesSQL,
         addnewLoteSQL,
+        updateLoteSQL,
+        deleteLoteSQL,
+        setLotesSQL
+
     } from "$lib/stores/sqlite/dbeventos"
 
 
@@ -117,8 +122,9 @@
         }
         comandos.push(comando)
         await addnewLoteSQL(db,data)
+        data.total = 0 
         await setComandosSQL(db,comandos)
-        lotes.push(lote)
+        lotes.push(data)
         ordenar(lotes)
         filterUpdate()
     }
@@ -155,10 +161,10 @@
     
         nuevoModal.showModal()
     }
-    async function editar(id){
-        
+    async function editarOnline(idlote) {
         try{
             let data = {
+                
                 nombre
             }
             const record = await pb.collection('lotes').update(idlote, data);
@@ -176,9 +182,81 @@
         }
         idlote = ""
         nombre = ""
+    }
+    async function editarOffline(id) {
+        let data = {
+            id,
+            nombre
+        }
+        let comando = {
+            tipo:"update",
+            coleccion:"lotes",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:0,
+            idprov:id,    
+            camposprov:""
+        }
+        comandos.push(comando)
+        //Creo que esto es lo correcot
+        let idx = lotes.findIndex(r=>r.id==idlote)
+        let total = lotes[idx].total
+        lotes[idx] = data
+        lotes[idx].total = total
+        comandos.push(comando)
+        await updateLoteSQL(db,id,data)
+        await setComandosSQL(db,comandos)
+    }
+    async function editar(idlote){
+        if (coninternet.connected){
+            await  editarOnline(idlote)
+        }
+        else{
+            await  editarOffline(idlote)
+        }
+        
 
     }
-    async function eliminar(id){
+    function eliminarOffline(id) {
+        Swal.fire({
+            title: 'Eliminar lote',
+            text: '¿Seguro que deseas eliminar el lote?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idlote = id
+                try{
+                    let data = {
+                        active : false
+                    }
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"lotes",
+                        data:{...data},
+                        hora:Date.now(),
+                        prioridad:0,
+                        idprov:id,    
+                        camposprov:""
+                    }
+                    await deleteLoteSQL(db,id)
+                    lotes = lotes.filter(r=>r.id!=idlote)
+                    ordenar(lotes)
+                    filterUpdate()
+                    
+                    Swal.fire('Lote eliminada!', 'Se eliminó el lote correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar el lote', 'error');
+                }
+                idlote = ""
+                nombre = ""
+            }
+        })
+    }
+    function eliminarOnline(id) {
         Swal.fire({
             title: 'Eliminar lote',
             text: '¿Seguro que deseas eliminar el lote?',
@@ -195,6 +273,7 @@
                     }
                     const record = await pb.collection('lotes').update(idlote, data);
                     lotes = lotes.filter(r=>r.id!=idlote)
+                    await setLotesSQL(db,lotes)
                     ordenar(lotes)
                     filterUpdate()
                     //ver como hago para actualizar la lista
@@ -205,9 +284,16 @@
                 }
                 idlote = ""
                 nombre = ""
-                
             }
         })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
     }
     function filterUpdate(){
         lotesrows = lotes
@@ -237,7 +323,7 @@
         usuarioid = useroff.id
     }
     async function getLocalSQL() {
-        let reslotes = getLotesSQL(db)
+        let reslotes = await getLotesSQL(db)
         lotes = reslotes.lista
         filterUpdate()
     }

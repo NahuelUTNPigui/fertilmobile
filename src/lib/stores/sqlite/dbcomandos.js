@@ -9,6 +9,7 @@ export async function getComandosSQL(db) {
 export async function setComandosSQL(db,lista) {
     await db.run(`UPDATE Comandos SET lista = '${JSON.stringify(lista)}' WHERE id = 1`)
 }
+
 function processData(data,campos,coleccion,tablaids) {
     let newData = {...data}
     if(coleccion=="inseminacion"){
@@ -122,7 +123,7 @@ async function addComando(pb,c,tablaids) {
     //Campos deberia tener el nombre del atributo
     let campos = c.camposprov.split(",")
     let coleccion = c.coleccion
-    alert(coleccion)
+    
     let data = processData(c.data,campos,coleccion,tablaids)
     
     //DATA TIENE EL CAMPO ID LO CUAL ES UN PROBLEMA
@@ -163,7 +164,7 @@ async function delComando(pb,c,tablaids) {
     await pb.collection(coleccion).delete(id)
 }
 export async function flushComandosSQL(db,pb) {
-    let rescoms  = await getComandosSQL(db)
+    let rescoms = await getComandosSQL(db)
     let listacomandos = []
     // Aca guardo los id de los nuevos registros con su id en la base de datos
     let tablaids = {}
@@ -173,7 +174,7 @@ export async function flushComandosSQL(db,pb) {
         let c = rescoms.lista[i]
         listacomandos.push(c)
     }
-    alert("size: "+listacomandos.length)
+    
     //No puedo usar batchs porquequiero los 
     for(let i = 0;i<listacomandos.length;i++){
         let c = listacomandos[i]
@@ -185,7 +186,7 @@ export async function flushComandosSQL(db,pb) {
             
 
             tablaids[id] = datanuevo.id
-            alert(JSON.stringify(tablaids))
+            
         }
         else if(accion=="update"){
             await modComando(pb,c,tablaids)

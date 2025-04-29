@@ -559,7 +559,7 @@
             }
         })
         cargadoanimales = true
-        alert(cargadoanimales)
+        
     }
     async function updateLocalSQL(){
         lotes = await updateLocalLotesSQL(db,pb,caboff.id)

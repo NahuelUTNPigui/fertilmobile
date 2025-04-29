@@ -13,7 +13,7 @@
     import Pariciones from "$lib/components/animal/Pariciones.svelte";
     import Tactos from "$lib/components/animal/Tactos.svelte";
     import Historial from "$lib/components/animal/Historial.svelte";
-    import {guardarHistorial} from "$lib/historial/lib"
+    import {guardarHistorial,guardarHistorialOffline} from "$lib/historial/lib"
     import Acciones from "$lib/components/animal/Acciones.svelte";
     import { createCaber } from "$lib/stores/cab.svelte";
     import Inseminaciones from "$lib/components/animal/Inseminaciones.svelte";
@@ -24,15 +24,24 @@
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
     //offline
-    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import {getAnimalesDB, openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
-        getAnimalSQLByID
+        getAnimalSQLByID,
+        deleteAnimalSQL,
+        updateAnimalSQL
         
     } from "$lib/stores/sqlite/dbanimales"
+    import {
+        updateLocalTactosSQL,
+        updateLocalNacimientosSQL,
+
+        getNacimientosSQL
+
+    } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
 
@@ -67,6 +76,7 @@
     let prenada = $state(0)
     
     let modohistoria = $state(false)
+   
     
     async function  getPariciones(id){
         const recordpariciones =  await pb.collection('nacimientos').getFullList({
@@ -83,7 +93,38 @@
 
         tactos = recordtactos
     }
-    async function darBaja(fechafallecimiento,motivo){
+    async function darBajaOffline(fechafallecimiento,motivo){
+        const data = {
+            id:slug,
+            active: false,
+            lote:"",
+            rodeo:"",
+            fechafallecimiento: fechafallecimiento +  " 03:00:00",
+            motivobaja:motivo
+        };
+        let comando = {
+            tipo:"update",
+            coleccion:"animales",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:0,
+            idprov:slug,
+            camposprov:""
+        }
+        comandos.push(comando)
+        let esnuevo = slug.split("_").length > 0
+        if(!esnuevo){
+            let c = await guardarHistorialOffline(db,slug,useroff.id)
+            comandos.push(c)
+        }
+        await setComandosSQL(db,comandos)
+        await updateAnimalSQL(db,slug,data)
+        Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
+        
+
+        goto("/animales") 
+    }
+    async function darBajaOnline(fechafallecimiento,motivo){
         try{
             const data = {
                 active: false,
@@ -100,14 +141,40 @@
         }
         catch(err){
             Swal.fire("Error dar de baja","No se pudo dar de baja al animal","error")
-            
-
+        }
+    }
+    async function darBaja(fechafallecimiento,motivo){
+        if(coninternet.connected){
+            darBajaOnline(fechafallecimiento,motivo)
+        }
+        else{
+            darBajaOffline(fechafallecimiento,motivo)
         }
         
         
     }
     async function eliminarOffline() {
-        
+        const data = {
+            id:slug,
+            delete: true,
+            active:false,
+            lote:"",
+            rodeo:""
+        };
+        let comando = {
+            tipo:"update",
+            coleccion:"animales",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:0,
+            idprov:slug,
+            camposprov:""
+        }
+        comandos.push(comando)
+        await setComandosSQL(db,comandos)
+        await updateAnimalSQL(db,slug,data)
+        Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
+        goto("/animales") 
     }
     async function eliminarOnline() {
         try{
@@ -129,13 +196,16 @@
     }
     async function eliminar(){
         if(coninternet.connected){
-            eliminarOnline()
+            await eliminarOnline()
         }
         else{
-            eliminarOffline()
+            await eliminarOffline()
         }
     }
-    async function transferir(codigo){
+    function transferirOffline(codigo) {
+        Swal.fire("Error transferencia","No se pueden hacer transferencias sin internet","error")
+    }
+    async function transferirOnline(codigo) {
         const resultcab = await pb.collection('cabs').getList(1, 1, {
             filter: `active = true && renspa = '${codigo}'`,
             
@@ -169,6 +239,15 @@
             console.error(err)
             Swal.fire("Error transferencia","No se pudo transferir al animal","error")
         }
+    }
+    async function transferir(codigo){
+        if(coninternet.connected){
+            await transferirOnline(codigo)
+        }
+        else{
+            transferirOffline(codigo)
+        }
+        
         
     }
 
@@ -216,6 +295,22 @@
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
+    async function getLocalSQL() {
+        
+        let tactostodos = await getTactosSQL(db)
+        let nacimientostodos = await getNacimientosSQL(db)
+        pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
+        tactos = tactostodos.lista.filter(t=>t.animal == slug)
+
+    }
+    async function updateLocalSQL() {
+        let tactostodos = await updateLocalTactosSQL(db,pb,caboff.id)
+        let nacimientostodos = await updateLocalNacimientosSQL(db,pb,caboff.id)
+        pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
+
+        tactos = tactostodos.filter(t=>t.animal == slug)
+
+    }
     async function getDataSQL() {
         db = await openDB()
         let rescom = await getComandosSQL(db)
@@ -239,6 +334,28 @@
         if(data.fechafallecimiento != ""){
             fechafall = data.fechafallecimiento.split(" ")[0]
             motivobaja = data.motivobaja
+        }
+        let lastinter = await getInternetSQL(db)
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
         }
         cargado = true
     }

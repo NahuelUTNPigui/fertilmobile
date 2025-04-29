@@ -26,11 +26,29 @@ export async function setAnimalesSQL(db,animales) {
 export async function setUltimoAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 1`)
 }
+export async function deleteAnimalSQL(db,id) {
+    let animales = await getAnimalesSQL(db)
+    let lista = animales.lista
+    lista = lista.filter(a=>a.id!= id)
+    await setAnimalesSQL(db,lista)
+}
+//Que hacemos con los expand?
+export async function updateAnimalSQL(db,id,animal) {
+    let animales = await getAnimalesSQL(db)
+    let lista = animales.lista
+    let idx = lista.findIndex(a=>a.id==id)
+    if(idx != -1){
+        lista[idx] = animal
+    }
+    await setAnimalesSQL(db,lista)
+}
+//Que hacemos con los expand?
 export async function addNewAnimalSQL(db,animal) {
     let animales = await getAnimalesSQL(db)
     let lista = animales.lista
     lista.push(animal)
-    await setUltimoAnimalesSQL(db,lista)
+    await setAnimalesSQL(db,animales)
+    return animales
     
 }
 export async function updateLocalAnimalesSQL(db,pb,cabid) {

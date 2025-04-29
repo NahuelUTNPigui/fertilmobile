@@ -1,8 +1,37 @@
+import { getAnimalSQLByID } from "$lib/stores/sqlite/dbanimales"
+export async function guardarHistorialOffline(db,idanimal,user) {
+    let a = await getAnimalSQLByID(db,idanimal)
+    let histo = {
+        animal:idanimal,
+        caravana:a.caravana,
+        user:user,
+        active:true,
+        delete:false,
+        fechanacimiento:a.fechanacimiento,
+        sexo:a.sexo,
+        peso:a.peso,
+        lote:a.lote,
+        rodeo:a.rodeo,
+        categoria:a.categoria,
+        prenada:a.prenada,
+        rp:a.rp
+    }
+    let comando = {
+        tipo:"add",
+        coleccion:"historialanimales",
+        data:{...histo},
+        hora:Date.now(),
+        prioridad:0,
+        idprov:historialanimales,
+        camposprov:""
+    }
+}
 export async function guardarHistorial(pb,idanimal){
     let record = await pb.collection("animales").getOne(idanimal,{expand:"cab"})
     let histo ={
         animal:idanimal,
         caravana:record.caravana,
+        
         user:record.expand.cab.user,
         active:true,
         delete:false,
@@ -14,7 +43,6 @@ export async function guardarHistorial(pb,idanimal){
         categoria:record.categoria,
         prenada:record.prenada,
         rp:record.rp
-
     }
     await pb.collection("historialanimales").create(histo)
 }

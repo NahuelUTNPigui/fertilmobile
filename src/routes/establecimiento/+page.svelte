@@ -16,7 +16,7 @@
     import localidades from '$lib/stores/geo/localidades';
     import estilos from '$lib/stores/estilos';
     let ruta = import.meta.env.VITE_RUTA
-    //rp
+    let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
     const regexRenspa = /^\d{2}\.\d{3}\.\d\.\d{5}\.\d{2}$/;
     let usuarioid = $state("")
@@ -45,6 +45,7 @@
     //Desasociar
     let asociado = $state(false)
     let idestxcolab = $state("")
+    
     async function getCabaña(){
         try{
             const record = await pb.collection('cabs').getFirstListItem(`id='${cab.id}' && active=true`, {});
@@ -74,7 +75,7 @@
             provincia=""
             telefono=""
             mail=""
-            goto("/")
+            goto(pre+"/")
         }
         
     }
@@ -148,7 +149,7 @@
             Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
             caber.setCab(nombre,record.id)
             per.setPer("0,1,2,3,4,5",usuarioid)
-            goto("/")
+            goto(pre+"/")
         }
         catch(err){
             console.error(err)
@@ -206,7 +207,7 @@
             }
             
         }
-        goto('/')
+        goto(pre+'/')
     }
     function mostrarcolab(data){
         console.log("padre: "+data)
@@ -233,7 +234,6 @@
         localidad = ""
         localidadesProv = localidades.filter(lo => lo.idProv == idProv)
     }
-
     function escribirRenspa(){
         if(!renspaValido){
             renspaValido = regexRenspa.test(renspa)
@@ -243,11 +243,12 @@
     onMount(async ()=>{
         
         cab = caber.cab
+        alert(JSON.stringify(cab))
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         if(cab.exist){
-           await getCabaña()
-           await getColabs()
+           //await getCabaña()
+           //await getColabs()
            const recordcolab = await pb.collection('colaboradores').getList(1,1,{
             filter:`user = '${usuarioid}'`
            })
@@ -289,25 +290,26 @@
                             {renspa}
                         </label>
                     {:else}
-                    <label class="form-control">
-                        <input 
-                            type="text" 
-                            id="renspa"
-                            bind:value={renspa}
-                            
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                            `}
-                        />
-                        <div class="label">
-                            <span class="label-text-alt">Formato: 00.000.0.00000.00</span>
-                            
-                        </div>
-                    </label>
+                        <label class="form-control">
+                            <input 
+                                type="text" 
+                                id="renspa"
+                                bind:value={renspa}
+                                
+                                required 
+                                class={`
+                                    w-full px-3 py-2 border rounded-md shadow-sm
+                                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                                    transition duration-150 ease-in-out
+                                    border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                `}
+                            />
+                            <div class="label">
+                                <span class="label-text-alt">Formato: 00.000.0.00000.00</span>
+                                
+                            </div>
+                        </label>
+                        
                     {/if}
                 </div>
                 <div>
@@ -585,7 +587,7 @@
                 {/if}
                 
             </div>
-            <Colaboradores {mostrarcolab} {guardarColab} {desasociar} {asociado}/>
+            <Colaboradores bind:colabs={colabs} {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cab.id} {cab}/>
             <ListaColabs bind:colabs={colabs}/>
         </CardBase>
     {:else}
