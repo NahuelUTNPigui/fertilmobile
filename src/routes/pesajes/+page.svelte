@@ -24,12 +24,17 @@
         getLotesSQL,
         updateLocalLotesSQL,
         getRodeosSQL,
-        updateLocalRodeosSQL
+        updateLocalRodeosSQL,
+        getPesajesSQL,
+        setPesajesSQL,
+        updateLocalPesajesSQL,
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        setAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
 
     //offline
     let db = $state(null)
@@ -66,7 +71,6 @@
 
     let lotes = $state([])
     let rodeos = $state([])
-    let tipos = $state([])
     let isOpenFilter = $state(false)
     //Seleccionados
     let selectanimales = $state([])
@@ -209,14 +213,7 @@
         rodeos = records
         //ordenarNombre(rodeos)
     }
-    async function getTipos(){
-        const records = await pb.collection('tipotratamientos').getFullList({
-            filter : `(cab='${cab.id}' || generico = true) && active = true`,
-            sort: '-created',
-        });
-        tipos = records
-        tipos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
-    }
+    
     async function getAnimales(){
         const recordsa = await pb.collection("animales").getFullList({
             filter:`active=true && delete=false && cab='${cab.id}'`,
@@ -247,13 +244,10 @@
         
 
     }
-    async function crearPesaje(){
+    async function crearPesajeOnline() {
         let errores = false
-        
         for(let i = 0;i<selectanimales.length ;i++){
-            
             let ps = selectanimales[i]
-            
             try{
                 let dataupdate = {
                     peso:ps.pesonuevo
@@ -267,6 +261,7 @@
                 await guardarHistorial(pb,selectanimales[i].id)
                 let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
                 await pb.collection("pesaje").create(data)
+
             }
             catch(err){
                 console.error(err)
@@ -279,10 +274,86 @@
         else{
             Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
         }
-        await getAnimales()
+        await updateLocalPesajesSQL(db,pb,caboff.id)
+        animales  = updateLocalAnimalesSQL(db,pb,caboff.id)
         filterUpdate()
         selecthashmap = {}
         selectanimales = []
+    }
+    async function crearPesajeOffline() {
+        let respesajes = await getPesajesSQL(db)
+        let pesajes = respesajes.lista
+        let errores = false
+        for(let i = 0;i<selectanimales.length ;i++){
+            let ps = selectanimales[i]
+            try{
+                let idprov = "nuevo_pesaje_"+generarIDAleatorio()
+                let dataupdate = {
+                    peso:ps.pesonuevo
+                }
+                let data ={
+                    pesonuevo:ps.pesonuevo,
+                    pesoanterior:ps.peso,
+                    fecha:fecha+" 03:00:00",
+                    id:idprov,
+                    animal:ps.id
+                }
+                pesajes.push(data)
+                let aidx = animales.findIndex(a=>a.id==ps.id)
+                
+                if(aidx != -1){
+                    animales[aidx].peso = ps.pesonuevo
+                }
+                let idanimal = aidx!=-1?animales[aidx]:""
+                let nanimal = idanimal.split("_").length>0
+                let comandopesaje = {
+                    tipo:"add",
+                    coleccion:"pesaje",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:2,
+                    idprov,
+                    camposprov:nanimal?"animal":""
+                }
+                let comandoani = {
+                    tipo:"update",
+                    coleccion:"animal",
+                    data:{...dataupdate},
+                    hora:Date.now(),
+                    prioridad:2,
+                    idprov:idanimal,
+                    camposprov:""
+                }
+                comandos.push(comandopesaje)
+                comandos.push(comandoani)
+                await pb.collection("pesaje").create(data)
+
+            }
+            catch(err){
+                console.error(err)
+                errores = true
+            }
+        }
+        if(errores){
+            Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
+        }
+        else{
+            Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
+        }
+        await setPesajesSQL(db,pesajes)
+        await setAnimalesSQL(db,animales)
+        await set_cptable
+        filterUpdate()
+        selecthashmap = {}
+        selectanimales = []
+    }
+    async function crearPesaje(){
+        if(coninternet.connected){
+            await crearPesajeOnline()
+        }
+        else{
+            await crearPesajeOffline()
+        }
     }
     async function onMountOriginal(){
         await getAnimales()

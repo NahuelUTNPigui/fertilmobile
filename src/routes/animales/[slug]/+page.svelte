@@ -24,7 +24,7 @@
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
     //offline
-    import {getAnimalesDB, openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"

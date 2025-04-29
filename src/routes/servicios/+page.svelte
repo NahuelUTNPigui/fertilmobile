@@ -37,8 +37,8 @@
         updateLocalAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import { DatasetController } from 'chart.js';
-    import { cp } from 'fs';
+    
+    
     
     let ruta = import.meta.env.VITE_RUTA
     //let pre
@@ -275,7 +275,7 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-                    
+
                     
                 }
                 

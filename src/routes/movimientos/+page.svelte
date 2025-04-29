@@ -16,6 +16,30 @@
     import tiponoti from "$lib/stores/tiponoti";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import {
+        getLotesSQL,
+        getRodeosSQL,
+        setLotesSQL,
+        updateLocalLotesSQL,
+        updateLocalRodeosSQL,
+        getTratsSQL,
+        setTratsSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    import{
+    addNewAnimalSQL,
+        getAnimalesSQL,
+        setAnimalesSQL,
+        updateLocalAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -224,7 +248,144 @@
         }
         
     }
-    async function mover(){
+    async function moverOffline() {
+        if(ninguno){
+            Swal.fire("Error movimiento","No hay animales seleccionados","error")
+            nuevorodeo = ""
+            nuevolote = ""
+            nuevacategoria = ""
+            return
+        }
+        let lista = []
+        for (const [key, value ] of Object.entries(selecthashmap)) {
+            if(value != null){
+                lista.push(value)
+            }
+        }
+        if(lista.length==0){
+            Swal.fire("Error movimiento","No hay animales seleccionados","error")
+            nuevorodeo = ""
+            nuevolote = ""
+            nuevacategoria = ""
+            return
+        }
+        let data = {}
+        let nombrelote = ""
+        let nombrerodeo = ""
+        if(selectcategoria){
+            data.categoria = nuevacategoria
+            
+        }
+        if(selectlote){
+            data.lote = nuevolote
+            nombrelote = lotes.filter(l =>l.id==nuevolote)[0]
+        }
+        if(selectrodeo){
+            data.rodeo = nuevorodeo
+            nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0]
+        }
+        let trats = []
+        if(selecttratamiento){
+            let restratamientos = await getTratsSQL(db)
+            trats = restratamientos.lista
+            data.fecha = fecha + " 03:00:00"
+            data.tipo = tipotratamiento
+            data.active = true
+            data.cab = caboff.id
+        }
+        if(selectbaja){
+            data.active = false
+            data.motivobaja = motivo
+            data.fechafallecimiento = fechabaja + " 03:00:00" 
+        }
+        if(selecttransfer){
+            Swal.fire("Error movimiento","Sin internet no se pueden hacer movimientos","error")
+        }
+        //inicio movimiento
+        for(let i = 0;i<lista.length;i++){
+            let a = lista[i]
+            if(!selecttratamiento){
+                let datacambio={
+                    ...data
+                }
+                let aidx= animales.findIndex(an=>an.id==a.id)
+                if(aidx != -1){
+                    animales[aidx] = {
+                        ...animales[aidx],
+                        ...datacambio
+                    }
+                    let nlote =  data.lote?data.lote.split("_").length>0:false
+                    let nrodeo =  data.rodeo?data.rodeo.split("_").length>0:false
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"animales",
+                        data:{...datacambio},
+                        hora:Date.now(),
+                        prioridad:3,
+                        idprov:a.id,
+                        camposprov:`${nlote?"lote":nrodeo?"rodeo":""}`
+                    }
+                    comandos.push(comando)
+                }
+            }
+            else{
+                let idprov = "nuevo_trat_"+generarIDAleatorio()
+                let datatratamiento = {
+                    ...data,
+                    animal:a.id,
+                    categoria:a.categoria,
+                    id:idprov
+                }
+                trats.push(datatratamiento)
+                let nanimal = a.id.split("_").length>0
+                let ntipo = data.tipo.split("_").length>0
+                let comando = {
+                    tipo:"add",
+                    coleccion:"tratamientos",
+                    data:{...datatratamiento},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov:a.id,
+                    camposprov:`${(nanimal && ntipo)?"animal,tipo":nanimal?"animal":ntipo?"tipo":""}`
+
+                }
+                comandos.push(comando)
+
+            }
+        }
+        if(!selecttratamiento){
+            await setAnimalesSQL(db,animales)
+            await setComandosSQL(db,comandos)
+        }
+        else{
+            await setTratsSQL(db,trats)
+            await setComandosSQL(db,comandos)
+        }
+        //fin del metodo
+        algunos = false
+        todos = false
+        ninguno = true
+        selectcategoria = true
+        selectlote = false
+        selectrodeo = false
+        selecttratamiento = false
+        selectbaja = false
+        selecttransfer
+        nuevacategoria = ""
+        nuevolote = ""
+        nuevorodeo = ""
+        fecha = ""
+        tipotratamiento = ""
+        fechabaja = ""
+        motivo = ""
+        codigo = ""
+        habilitarboton = false
+        
+        await setAnimalesSQL(animales)
+
+        filterUpdate()
+    }
+    async function moverOnline() {
         if(ninguno){
             Swal.fire("Error movimiento","No hay animales seleccionados","error")
             nuevorodeo = ""
@@ -275,7 +436,7 @@
         }
         if(selecttransfer){
             const resultList = await pb.collection('cabs').getList(1, 1, {
-                filter: `active = true && codigo = '${codigo}'`,
+                filter: `active = true && renspa = '${codigo}'`,
             });
             if(resultList.items.length == 0){
                 malcodigo = true
@@ -329,7 +490,6 @@
                 //await pb.collection('animales').update(lista[i].id, data);
             }
             else{
-                let a = lista[i]
                 let datatratamiento = {
                     ...data,
                     animal:a.id,
@@ -380,6 +540,14 @@
         
         await getAnimales()
         filterUpdate()
+    }
+    async function mover(){
+        if(coninternet.connected){
+            await moverOnline()
+        }
+        else{
+            await moverOffline()
+        }
 
     }
     function onChangeCollapse(seccion){
@@ -553,12 +721,65 @@
             }
         }
     }
-    
-    onMount(async ()=>{
+    async function onMountOriginal() {
         await getAnimales()
         await getRodeos()
         await getLotes()
-        await getTipos()
+        
+    }
+    async function updateLocalSQL() {
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let reslotes = await getLotesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        animales = resanimales.lista
+        lotes = reslotes.lista
+        rodeos = resrodeos.lista
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    onMount(async ()=>{
+        
     })
 
 </script>

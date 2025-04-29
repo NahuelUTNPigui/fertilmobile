@@ -18,7 +18,8 @@
     import {getCabData} from "$lib/stores/cabsdata"
     import {
         getPesajesSQL,
-        updateLocalPesajesSQL
+        updateLocalPesajesSQL,
+        setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
     
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
@@ -86,19 +87,68 @@
         //procesarPesajes()
         procesarUltimosPesajes()
     }
+    function eliminarOffline(){
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
+                    let comando = {
+                        tipo:"delet",
+                        coleccion:"pesaje",
+                        data:{},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:idpesaje,
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    filterUpdate()
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
+        })
+    }
+    function eliminarOnline() {
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+            
+                    await pb.collection("pesaje").delete(idpesaje)
+                    await getPesajes()
+                    filterUpdate()
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
+            
+        })
+    }
     async function eliminar(){
         
-        try{
-            
-            await pb.collection("pesaje").delete(idpesaje)
-            await getPesajes()
-            filterUpdate()
-            detallePesaje.close()
-        }
-        catch(err){
-            console.error(err)
-            detallePesaje.close()
-        }
+        
     }
     function openDetalle(id){
         idpesaje = id

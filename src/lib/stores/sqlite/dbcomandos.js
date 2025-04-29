@@ -9,6 +9,14 @@ export async function getComandosSQL(db) {
 export async function setComandosSQL(db,lista) {
     await db.run(`UPDATE Comandos SET lista = '${JSON.stringify(lista)}' WHERE id = 1`)
 }
+export async function concatComandosSQL(db,comandos) {
+    let rowcommand = await db.query("select id,lista from Comandos where id = 1")
+    
+    let comands = rowcommand.values[0]
+    let lista = JSON.parse(comands.lista)
+    let nuevalista = lista.concat(comandos)
+    await setComandosSQL(db,nuevalista)
+}
 
 function processData(data,campos,coleccion,tablaids) {
     let newData = {...data}

@@ -18,7 +18,39 @@
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import MultiSelect from '$lib/components/MultiSelect.svelte';
-
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import {
+        updateLocalServiciosSQL,
+        setServiciosSQL,
+        getServiciosSQL,
+        getInseminacionesSQL,
+        setInseminacionesSQL,
+        getLotesSQL,
+        getRodeosSQL,
+        updateLocalLotesSQL,
+        updateLocalRodeosSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    import {
+        getAnimalesSQL,
+        setAnimalesSQL,    
+        updateLocalAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
+    
+    //OFLINE
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -509,44 +541,180 @@
             esinseminacion = false
        } 
     }
-    async function guardar() {
+    async function guardarServicioOnline() {
+        let errores = false
+        for(let i = 0;i<selectanimales.length;i++){
+            let servicio = selectanimales[i]
+            try{
+                let dataser = {
+                    fechadesde : fechadesdeserv + " 03:00:00",
+                    fechaparto: fechaparto + " 03:00:00",
+                    observacion: servicio.observacion,
+                    madre:servicio.id,
+                    padres:padreslist.join(),
+                    active:true,
+                    cab:caboff.id,
+                }
+                
+                if(fechahastaserv != ""){
+                    dataser.fechahasta = fechahastaserv + " 03:00:00"
+                }
+                await pb.collection("servicios").create(dataser)
+                await guardarHistorial(pb,servicio.id)
+                await pb.collection("animales").update(servicio.id,{prenada:3})
+                animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+            }   
+            catch(err){
+                console.error(err)
+                errores = true
+            }
+        }
+        if(errores){
+            Swal.fire("Error servicios","Hubo algun error en algun servico","error")
+        }
+        else{
+            Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
+        }
+    }
+    async function guardarServicioOffline() {
+        let errores = false
+        let resservicios = await getServiciosSQL(db)
+        let servicios = resservicios.lista
+        for(let i = 0;i<selectanimales.length;i++){
+            let idprov = "nuevo_servicio_"+generarIDAleatorio()
+            let servicio = selectanimales[i]
+            try{
+                //si necesito expand la madre y los padres
+                let dataser = {
+                    fechadesde : fechadesdeserv + " 03:00:00",
+                    fechaparto: fechaparto + " 03:00:00",
+                    observacion: servicio.observacion,
+                    madre:servicio.id,
+                    padres:padreslist.join(),
+                    active:true,
+                    cab:caboff.id,
+                    id:idprov
+                }
+                
+                if(fechahastaserv != ""){
+                    dataser.fechahasta = fechahastaserv + " 03:00:00"
+                }
+                let nmadre = dataser.madre.split("_").length>0
+                let npadres = dataser.padres.split("_").length>0
+                let comando = {
+                    tipo:"add",
+                    coleccion:"servicios",
+                    data:{...dataser},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,    
+                    camposprov:`${(nmadre && npadres)?"madre,padres":nmadre?"madre":npadres?"padres":""}`
+                }
+                servicios.push(dataser)
+                comandos.push(comando)
+                
+            }   
+            catch(err){
+                console.error(err)
+                errores = true
+            }
+        }
+        if(errores){
+            Swal.fire("Error servicios","Hubo algun error en algun servico","error")
+        }
+        else{
+            Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
+        }
+        await setServiciosSQL(db,servicios)
+        await setComandosSQL(db,comandos)
+    }
+    async function guardarInseminacionOnline() {
+        let errores = false
+        for(let i = 0;i<selectanimales.length;i++){
+            let inseminacion = selectanimales[i]
+            let data = {
+                cab:caboff.id,
+                animal: inseminacion.id,
+                fechaparto: fechaparto +' 03:00:00',
+                fechainseminacion: fechainseminacion + ' 03:00:00',
+                active:true,
+                padre:inseminacion.padre,
+                pajuela:inseminacion.pajuela,
+                categoria:inseminacion.categoria,
+                observacion:inseminacion.observacion
+            }
+            try{
+                const record = await pb.collection('inseminacion').create(data);
+                await guardarHistorial(pb,inseminacion.id)
+                await pb.collection('animales').update(inseminacion.id, {prenada:3});
+                animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+                
+            }catch(err){
+                console.error(err)
+            }
+        }
+        if(errores){
+            Swal.fire("Error inseminaciones","Hubo algun error en alguna inseminación","error")
+        }
+        else{
+            Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
+        }
+    }
+    async function guardarInseminacionOffline() {
+        let resinseminaciones = await getInseminacionesSQL(db)
+        let inseminaciones = resinseminaciones.lista
+        let errores = false
+        for(let i = 0;i<selectanimales.length;i++){
+            let idprov = "nuevo_ins_"+generarIDAleatorio()
+            let inseminacion = selectanimales[i]
+            //Agregar los expand
+            let data = {
+                cab:caboff.id,
+                animal: inseminacion.id,
+                fechaparto: fechaparto +' 03:00:00',
+                fechainseminacion: fechainseminacion + ' 03:00:00',
+                active:true,
+                padre:inseminacion.padre,
+                pajuela:inseminacion.pajuela,
+                categoria:inseminacion.categoria,
+                observacion:inseminacion.observacion,
+                id:idprov
+            }
+            try{
+                inseminaciones.push(data)
+                let nmadre = data.animal.split("_").length>0
+                let npadre = data.padre.split("_").length>0
+                let comando = {
+                    tipo:"add",
+                    coleccion:"inseminacion",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,    
+                    camposprov:`${(nmadre && npadre)?"animal,padre":nmadre?"animal":npadre?"padre":""}`
+                }
+                comandos.push(comando)
+                
+                
+            }catch(err){
+                console.error(err)
+            }
+        }
+        if(errores){
+            Swal.fire("Error inseminaciones","Hubo algun error en alguna inseminación","error")
+        }
+        else{
+            Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
+        }
+        await setInseminacionesSQL(db,inseminaciones)
+        await setComandosSQL(db,comandos)
+    }
+    async function guardarOnline() {
         if(esservicio){
             if(listapadres.length == 0){
                 Swal.fire("Sin padres","No hay padres seleccionados","error")
             }
-            let errores = false
-            for(let i = 0;i<selectanimales.length;i++){
-                let servicio = selectanimales[i]
-                try{
-                    let dataser = {
-                        fechadesde : fechadesdeserv + " 03:00:00",
-                        fechaparto: fechaparto + " 03:00:00",
-                        observacion: servicio.observacion,
-                        madre:servicio.id,
-                        padres:padreslist.join(),
-                        active:true,
-                        cab:cab.id
-                    }
-                    
-                    if(fechahastaserv != ""){
-                        dataser.fechahasta = fechahastaserv + " 03:00:00"
-                    }
-                    await pb.collection("servicios").create(dataser)
-                    await guardarHistorial(pb,servicio.id)
-                    await pb.collection("animales").update(servicio.id,{prenada:3})
-                    await getAnimales()
-                }   
-                catch(err){
-                    console.error(err)
-                    errores = true
-                }
-            }
-            if(errores){
-                Swal.fire("Error servicios","Hubo algun error en algun servico","error")
-            }
-            else{
-                Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
-            }
+            await guardarServicioOnline()
             selectanimales = []
             selecthashmap = {}
             fechadesdeserv = ""
@@ -562,36 +730,7 @@
                 esinseminacion = false
                 return 
             }
-            let errores = false
-            for(let i = 0;i<selectanimales.length;i++){
-                let inseminacion = selectanimales[i]
-                let data = {
-                    cab:cab.id,
-                    animal: inseminacion.id,
-                    fechaparto: fechaparto +' 03:00:00',
-                    fechainseminacion: fechainseminacion + ' 03:00:00',
-                    active:true,
-                    padre:inseminacion.padre,
-                    pajuela:inseminacion.pajuela,
-                    categoria:inseminacion.categoria,
-                    observacion:inseminacion.observacion
-                }
-                try{
-                    const record = await pb.collection('inseminacion').create(data);
-                    await guardarHistorial(pb,inseminacion.id)
-                    await pb.collection('animales').update(inseminacion.id, {prenada:3});
-                    await getAnimales()
-                    
-                }catch(err){
-                    console.error(err)
-                }
-            }
-            if(errores){
-                Swal.fire("Error inseminaciones","Hubo algun error en alguna inseminación","error")
-            }
-            else{
-                Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
-            }
+            await guardarInseminacionOnline()
             fechainseminacion = ""
             fechaparto = ""
             pajuela = ""
@@ -602,6 +741,48 @@
             selecthashmap = {}
             selectanimales = []
             esinseminacion = false
+        }
+    }
+    async function guardarOffline() {
+        if(esservicio){
+            if(listapadres.length == 0){
+                Swal.fire("Sin padres","No hay padres seleccionados","error")
+            }
+            await guardarServicioOffline()
+            selectanimales = []
+            selecthashmap = {}
+            fechadesdeserv = ""
+            fechahastaserv = ""
+            padreslist = []
+            padresserv = ""
+            esservicio = false
+            servicioMasivo.close()
+        }
+        if(esinseminacion){
+            if(fechainseminacion == ""){
+                Swal.fire("Error inseminaciones","Debe seleccionar una fecha","error")
+                esinseminacion = false
+                return 
+            }
+            await guardarInseminacionOffline()
+            fechainseminacion = ""
+            fechaparto = ""
+            pajuela = ""
+            padre = ""
+            botonhabilitado = false
+            malfecha = false
+            malpadre = false
+            selecthashmap = {}
+            selectanimales = []
+            esinseminacion = false
+        }
+    }
+    async function guardar() {
+        if(coninternet.connected){
+            await guardarOnline()
+        }
+        else{
+            await guardarOffline()
         }
     }
     function validarBoton(){
@@ -633,11 +814,86 @@
         }
         onInput("PAJUELA")
     }
-    onMount(async ()=>{
+    async function onMountOriginal() {
         await getAnimales()
         await getRodeos()
         await getLotes()
         cargado = true
+    }
+    async function updateLocalSQL() {
+        lotes = updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = updateLocalAnimalesSQL(db,pb,caboff.id)
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        madres = animales.filter(a=>a.sexo == "H")
+        padres = animales.filter(a=>a.sexo == "M")
+        cargadoanimales = true
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,
+                nombre:item.caravana
+            }
+        })
+    }
+    async function getLocalSQL() {
+        let reslotes = await getLotesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        let resanimales = await getAnimalesSQL(db)
+        lotes = reslotes.lista
+        rodeos = resrodeos.lista
+        animales = resanimales.lista
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        madres = animales.filter(a=>a.sexo == "H")
+        padres = animales.filter(a=>a.sexo == "M")
+        cargadoanimales = true
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,
+                nombre:item.caravana
+            }
+        })
+        
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+            cargado = true
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+            cargado = true
+        }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
         
     })
 </script>

@@ -256,8 +256,53 @@
         }
         await getAnimales()
     }
+    async function editarOffline() {
+        try{
+            let data = {
+                //animal,
+                categoria,
+                tipo,
+                observacion,
+                fecha:fecha +" 03:00:00",
+                id:idtratamiento
+            }
+            let tidx = tratamientos.findIndex(t=>t.id==idtipotratamiento)
+            let tips = tipotratamientos.filter(ti=>ti.id == tipo)
+            if(tidx != -1){
+                tratamientos[tidx].categoria = data.categoria
+                tratamientos[tidx].tipo = data.tipo
+                tratamientos[tidx].observacion = data.observacion
+                tratamientos[tidx].fecha = data.fecha
+                if(tips.length>0){
+                    tratamientos[tidx].expand = {tipo:tips[0]}
+                }
+                await setTratsSQL(db,tratamientos)
+                //Muy confuso pero basicamente si existe el tipo, fijarse si es nuevo, sino es falso tanto como viejo como inexistente
+                let ntipo = tips[0]?tips[0].split("_").length>0:false
+                let comando={
+                    tipo:"update",
+                    coleccion:"tratamientos",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:2,
+                    idprov:idtratamiento,
+                    camposprov:ntipo?"tipo":""
+                }
+                comando.push(comando)
+                await setComandosSQL(db,comandos)
+            }
 
-    async function editar(){
+
+            
+            await getTratamientos()
+            Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar","Hubo un error para editar el tratamiento","error")
+        }
+    }
+    async function editarOnline() {
         try{
             let data = {
                 //animal,
@@ -275,7 +320,54 @@
             Swal.fire("Error editar","Hubo un error para editar el tratamiento","error")
         }
     }
-    async function eliminar(id){
+    async function editar(){
+        if(coninternet.connected){
+            await editarOnline()
+        }   
+        else{
+            await editarOffline()
+        }
+    }
+    function eliminarOffline(id) {
+        Swal.fire({
+            title: 'Eliminar tratamiento',
+            text: '¿Seguro que deseas eliminar el tratamiento?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result=>{
+            if(result.value){
+                
+                let data = {active:false}
+                try{
+                    
+                    tratamientos = tratamientos.filter(t=>t.id != id)
+                    await setTratsSQL(db,tratamientos)
+                    let comando = {
+                        tipo:"add",
+                        coleccion:"tratamientos",
+                        data:{...dataparicion},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:id,
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db.comandos)
+                    tratamientosrow = tratamientos
+                    Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
+                }
+                catch(err){
+                    console.error(err)
+                    Swal.fire("Error eliminar","Hubo un error para eliminar el tratamiento","error")
+                }
+
+
+            }
+        })
+    }
+    function eliminarOnline(id) {
         Swal.fire({
             title: 'Eliminar tratamiento',
             text: '¿Seguro que deseas eliminar el tratamiento?',
@@ -301,6 +393,14 @@
 
             }
         })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
     }
     function openTiposModal(){
         tiposmodal.showModal()

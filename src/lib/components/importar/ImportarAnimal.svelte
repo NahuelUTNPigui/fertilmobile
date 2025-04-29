@@ -1,6 +1,7 @@
 <script>
     import estilos from "$lib/stores/estilos";
     import * as XLSX from 'xlsx';
+    import { Filesystem, Directory } from '@capacitor/filesystem';
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
@@ -9,9 +10,13 @@
     import { getPermisosList } from "$lib/permisosutil/lib";
     import cuentas from '$lib/stores/cuentas';
     import categorias from "$lib/stores/categorias";
-    import{verificarNivelCantidad} from "$lib/permisosutil/lib"
-    let {animales,animalesusuario} = $props()
-    let usuarioid = $state("")
+    import{verificarNivelCantidad,verificarNivelCantidadOffline} from "$lib/permisosutil/lib"
+    //offline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"  
+    import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
+    import { setAnimalesSQL, updateAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+    let {db,coninternet,useroff,caboff,usuarioid,animales,animalesusuario,lotes,rodeos} = $props()
+    
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -22,10 +27,8 @@
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
-    let lotes = $state([])
-    let rodeos = $state([])
     let loading = $state(false)
-    function exportarTemplate(){
+    async function exportarTemplate(){
         let csvData = [{
             caravana:"AAA",
             peso:"0",
@@ -44,9 +47,22 @@
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(csvData);
         XLSX.utils.book_append_sheet(wb, ws, 'Animales');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo animales.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo animales.xlsx",
+            directory: Directory.Documents
+        });
         
-        XLSX.writeFile(wb, 'Modelo animales.xlsx');
     }
+    
     function importarArchivo(event){
         let file = event.target.files[0];
         
@@ -56,9 +72,150 @@
         reader.onload = (e) => {
             const workbook = XLSX.read(e.target.result, { type: 'binary' });
             wkbk = workbook
-            
         };
         reader.readAsBinaryString(file);
+    }
+    async function procesoOffline() {
+        let verificar = await verificarNivelCantidadOffline(caboff.id,nuevoanimales)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
+            loading = false
+            return
+        }
+        let comandos = []
+        for(let i = 0;i<animalesimportar.length;i++){
+            let an = animalesimportar[i]
+            let conlote = false
+            let contropa = false
+            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
+            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+
+            let dataadd = {
+                caravana:an.caravana,
+                active:true,
+                delete:false,
+                sexo:an.sexo,
+                peso:an.peso,
+                cab:caboff.id
+            }
+
+            let datamod = {
+                caravana:an.caravana,
+                sexo:an.sexo,
+                peso:an.peso,
+                    
+            }
+            if(lote){
+                dataadd.lote = lote.id
+                datamod.lote = lote.id
+            }
+            if(rodeo){
+                dataadd.rodeo = rodeo.id
+                datamod.rodeo = rodeo.id
+            }
+            if(categoria){
+                dataadd.categoria = categoria.id
+                datamod.categoria = categoria.id
+            }
+            let aidx = animales.findIndex(a=>a.caravana == an.caravana)
+            if(aidx == -1){
+                let idprov = "nuevo_animal_"+generarIDAleatorio()
+                let data ={
+                    ...dataadd,
+                    id:idprov
+                }
+                
+                animales.push(data)
+                //ojo con los nuevos lotes
+                let comando = {
+                    tipo:"add",
+                    coleccion:"animales",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:idprov,    
+                    camposprov:``
+                }
+                comandos.push(comando)
+                
+            }
+            else{
+                let data ={
+                    ...datamod,
+                    id:animales[aidx].id
+                }
+                
+                animales[aidx] = {
+                    ...animales[aidx],
+                    ...data
+                }
+                //ojo con los nuevos lotes
+                let comando = {
+                    tipo:"update",
+                    coleccion:"animales",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov:idprov,    
+                    camposprov:``
+                }
+                comandos.push(comando)
+                
+            }
+        }
+        return comandos
+    }
+    async function procesoOnline() {
+        let verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
+            loading = false
+            return
+        }
+        for(let i = 0;i<animalesimportar.length;i++){
+            let an = animalesimportar[i]
+            let conlote = false
+            let contropa = false
+            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
+            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+
+            let dataadd = {
+                caravana:an.caravana,
+                active:true,
+                delete:false,
+                sexo:an.sexo,
+                peso:an.peso,
+                cab:cab.id
+            }
+
+            let datamod = {
+                caravana:an.caravana,
+                sexo:an.sexo,
+                peso:an.peso,
+                    
+            }
+            if(lote){
+                dataadd.lote = lote.id
+                datamod.lote = lote.id
+            }
+            if(rodeo){
+                dataadd.rodeo = rodeo.id
+                datamod.rodeo = rodeo.id
+            }
+            if(categoria){
+                dataadd.categoria = categoria.id
+                datamod.categoria = categoria.id
+            }
+            let aidx = animales.findIndex(a=>a.caravana == an.caravana)
+            if(aidx == -1){
+                await pb.collection('animales').create(dataadd);
+            }
+            else{
+                await pb.collection('animales').update(animales[aidx].id, datamod);
+            }
+        }
     }
     async function procesarArchivo(){
         if(!userpermisos[2]){
@@ -76,7 +233,6 @@
             return
         }
         
-        let animales = []
         let animaleshashmap = {}
         loading = true
         
@@ -143,61 +299,19 @@
                 nuevoanimales += 1
             }
         }
-        let verificar = await verificarNivelCantidad(cab.id,nuevoanimales)
-        if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
-            loading = false
-            return
+        //let verificar = true
+        if(coninternet.connected){
+            await procesoOnline()
+            await updateLocalAnimalesSQL(db,pb,caboff.id)
         }
-        for(let i = 0;i<animalesimportar.length;i++){
-            let an = animalesimportar[i]
-            let conlote = false
-            let contropa = false
-            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
-            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
-            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+        else{
+            let comandos = await procesoOffline()
+            await concatComandosSQL(db,comandos)
+            await setAnimalesSQL(db,animales)
 
-            let dataadd = {
-                caravana:an.caravana,
-                active:true,
-                delete:false,
-                sexo:an.sexo,
-                peso:an.peso,
-                cab:cab.id
-            }
-
-            let datamod = {
-                caravana:an.caravana,
-                sexo:an.sexo,
-                peso:an.peso,
-                    
-            }
-            if(lote){
-                dataadd.lote = lote.id
-                datamod.lote = lote.id
-            }
-            if(rodeo){
-                dataadd.rodeo = rodeo.id
-                datamod.rodeo = rodeo.id
-            }
-            if(categoria){
-                dataadd.categoria = categoria.id
-                datamod.categoria = categoria.id
-            }
-            try{
-                const record = await pb.collection('animales').getFirstListItem(`
-                    caravana="${an.caravana}" && cab='${cab.id}' && active = True`,
-                {});
-                await pb.collection('animales').update(record.id, datamod);
-
-                
-            }
-            catch(err){
-                
-                await pb.collection('animales').create(dataadd);
-
-            }
         }
+        
+        
         loading = false
         
         filename = ""
@@ -205,7 +319,7 @@
         Swal.fire("Éxito importar","Se lograron importar los datos","success")
         
     }
-    onMount(async ()=>{
+    async function onmountoriginal(params) {
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         rodeos = await pb.collection('rodeos').getFullList({
@@ -217,6 +331,18 @@
             filter:`active = true && cab ='${cab.id}'`,
             sort: '-nombre',
         });
+    }
+    async function getDataSQL() {
+        
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    onMount(async ()=>{
+        
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

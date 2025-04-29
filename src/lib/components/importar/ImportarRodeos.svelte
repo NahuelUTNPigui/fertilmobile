@@ -5,6 +5,8 @@
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
+
+    let {db,coninternet,useroff,caboff,usuarioid,rodeos} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -13,7 +15,7 @@
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
-    let rodeos = $state([])
+    
     let loading = $state(false)
     function exportarTemplate(){
         let csvData = [{

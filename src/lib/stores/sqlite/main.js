@@ -4,21 +4,6 @@ import { Capacitor } from "@capacitor/core";
 
 const DBNAME = "fertil.db"
 
-//Ademas se va a encargar de interactuar con la nube
-
-// Para mi van en otro archivo por que son funciones
-export async function getAnimalesDB(db) {
-    
-    let animales = await db.query("select id,lista from Colecciones where id=1")
-    return animales
-}
-export async function setAnimalesDB(db,lista) {
-    
-    let json_lista = JSON.stringify(lista)
-    await db.run(`UPDATE Colecciones SET lista = '${json_lista}' WHERE  id = 1`)
-
-}
-
 export async function resetTables(db) {
     
     await db.execute(`DROP TABLE IF EXISTS Colecciones`)

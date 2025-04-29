@@ -7,6 +7,12 @@
     import { onMount } from "svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
+    //offline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"  
+    import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
+    import {updateLocalLotesSQL,setLotesSQL} from "$lib/stores/sqlite/dbeventos"
+    
+    let {db,coninternet,useroff,caboff,usuarioid, lotes} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -16,9 +22,8 @@
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
-    let lotes = $state([])
     let loading = $state(false)
-    function exportarTemplate(){
+    async function exportarTemplate(){
         let csvData = [{
             nombre:"",
         }].map(item=>({
@@ -28,7 +33,19 @@
         const ws = XLSX.utils.json_to_sheet(csvData);
         XLSX.utils.book_append_sheet(wb, ws, 'Lotes');
         
-        XLSX.writeFile(wb, 'Modelo lotes.xlsx');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo lotes.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo lotes.xlsx",
+            directory: Directory.Documents
+        });
     }
     function importarArchivo(event){
         let file = event.target.files[0];
@@ -42,6 +59,91 @@
             
         };
         reader.readAsBinaryString(file);
+    }
+    async function procesarOnline() {
+        for(let i = 0;i<lotesprocesar.length;i++){
+            let lo = lotesprocesar[i]
+
+            let dataadd = {
+                nombre:lo.nombre,
+                active:true,
+                delete:false,
+                cab:caboff.id
+            }
+
+            let datamod = {
+                nombre:lo.nombre 
+            }
+            let lidx = lotes.findIndex(l=>l.nombre == lo.nombre)
+            if(lidx == -1){
+                await pb.collection('lotes').create(dataadd);
+            }
+            else{
+                await pb.collection('lotes').update(lotes[lidx].id, datamod);
+            }
+
+        }
+    }
+    async function procesarOffline() {
+        for(let i = 0;i<lotesprocesar.length;i++){
+            let lo = lotesprocesar[i]
+            
+            let dataadd = {
+                nombre:lo.nombre,
+                active:true,
+                delete:false,
+                cab:caboff.id,
+                
+            }
+
+            let datamod = {
+                nombre:lo.nombre,
+                id:idprov
+            }
+            let lidx = lotes.findIndex(l=>l.nombre == lo.nombre)
+            if(lidx == -1){
+                let idprov = "nuevo_lote_"+generarIDAleatorio()
+                let data = {
+                    ...dataadd,
+                    id:idprov
+                }
+                lotes.push(data)
+                let comando = {
+                    tipo:"add",
+                    coleccion:"lotes",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov,    
+                    camposprov:``
+                }
+                comandos.push(comando)
+                
+            }
+            else{
+                let data = {
+                    ...datamod,
+                    id:lotes[lidx].id
+                }
+                lotes[lidx] = {
+                    ...lotes[lidx],
+                    ...data
+                }
+                let comando = {
+                    tipo:"update",
+                    coleccion:"lotes",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:0,
+                    idprov,    
+                    camposprov:``
+                }
+                comandos.push(comando)
+                
+            }
+
+        }
+        return comandos
     }
     async function procesarArchivo(){
         if(!userpermisos[2]){
@@ -60,7 +162,7 @@
             return
         }
         
-        let lotes = []
+        let lotesprocesar = []
         let loteshashmap = {}
         loading = true
         for (const [key, value ] of Object.entries(sheetlotes)) {
@@ -86,33 +188,18 @@
             }
         }
         for (const [key, value ] of Object.entries(loteshashmap)) {
-            lotes.push(value)
+            lotesprocesar.push(value)
         }
-        for(let i = 0;i<lotes.length;i++){
-            let lo = lotes[i]
-
-            let dataadd = {
-                nombre:lo.nombre,
-                active:true,
-                delete:false,
-                cab:cab.id
-            }
-
-            let datamod = {
-                nombre:lo.nombre 
-            }
-
-            try{
-                const record = await pb.collection('lotes').getFirstListItem(`nombre="${lo.nombre}"`,{});
-                console.log("mod")
-                await pb.collection('lotes').update(record.id, datamod);               
-            }
-            catch(err){
-                console.log("Add")
-                await pb.collection('lotes').create(dataadd);
-
-            }
+        if(coninternet.connected){
+            await procesarOnline()
+            await updateLocalLotesSQL(db,pb,caboff.id)
         }
+        else{
+            let comandos = await procesarOffline()
+            await concatComandosSQL(db,comandos)
+            await setLotesSQL(db,lotes)
+        }
+        
         filename = ""
         loading = false
         wkbk = null

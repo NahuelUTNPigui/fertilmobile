@@ -8,7 +8,7 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import {addDays} from "$lib/stringutil/lib"
     import categorias from "$lib/stores/categorias";
-    let {animales} = $props()
+    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab

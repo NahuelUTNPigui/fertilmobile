@@ -20,8 +20,29 @@
     import { goto } from "$app/navigation";
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL, updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {
+        updateLocalTactosSQL,
+        setTactosSQL,
+        getTactosSQL
+    } from '$lib/stores/sqlite/dbeventos';
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
     
-
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
     let caber = createCaber()
     let cab = caber.cab
     let per = createPer()
@@ -33,7 +54,7 @@
     const today = new Date();
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    let usuarioid = ""
+    
     let tactos = $state([])
     let animales = $state([])
     let tactosrow = $state([])
@@ -148,7 +169,7 @@
             Swal.fire("Sin permisos","No tienes permisos para crear eventos","error")
         }
     }
-    function eliminar(id){
+    function eliminarOnline() {
         Swal.fire({
             title: 'Eliminar tacto',
             text: '¿Seguro que deseas eliminar el tacto?',
@@ -175,6 +196,42 @@
                 tacto = null
             }
         })
+    }
+    function eliminarOffline() {
+        Swal.fire({
+            title: 'Eliminar tacto',
+            text: '¿Seguro que deseas eliminar el tacto?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idtacto = id
+                let data = {
+                    active:false
+                }
+                try{
+                    let recordaedit = await pb.collection('tactos').update(idtacto,data);
+                    tactos = tactos.filter(t=>t.id!=idtacto)
+                    filterUpdate()
+                    Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
+                }
+                idtacto = ""
+                tacto = null
+            }
+        })
+    }
+    function eliminar(id){
+        if(coninternet.connected){
+            eliminarOnline(id)
+        }
+        else{
+            eliminarOffline(id)
+        }
     }
     function cerrar(){
         tacto = null
@@ -220,12 +277,62 @@
             return new Date(t1.fecha)>new Date(t2.fecha)?-1:1
         })
     }
-    onMount(async ()=>{
+    async function onmountoriginal() {
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         await getTactos()
         filterUpdate()
         await getAnimales()
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    async function updateLocalSQL() {
+        tactos = await updateLocalTactosSQL(db,pb,caboff.id)
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let restactos = await getTactosSQL(db)
+        animales = resanimales.lista
+        tactos = restactos.lista
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
     function onSelectAnimal(){
         if(animal == "agregar"){
@@ -288,7 +395,47 @@
             Swal.fire("Error guardar","No se pudo guardar el tacto","error")
         }
     }
-    async function editarTacto(){
+    async function editarOffline() {
+        
+        try{
+            
+            let data = {
+               fecha:fecha +" 03:00:00" ,
+               observacion,
+               animal,
+               categoria,
+               prenada,
+               tipo,
+               nombreveterinario,
+               id:idtacto
+            }
+            let nanimal = animal.split("_").length>0
+            let comando = {
+                tipo:"update",
+                coleccion:"tactos",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idtacto,
+                camposprov:nanimal?"animal":""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            let idx = tactos.findIndex(t=>t.id==idtacto)
+            let a = animales.filter(an=>an.id == animal)[0]
+            tactos[idx] = data
+            tactos[idx].expand = {animal:a}
+            tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
+            await setTactosSQL(db,tactos)
+            filterUpdate()
+            Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+        }
+    }
+    async function editarOnline() {
         try{
             let data = {
                fecha:fecha +" 03:00:00" ,
@@ -315,6 +462,14 @@
         catch(err){
             console.error(err)
             Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+        }
+    }
+    async function editarTacto(){
+        if(coninternet.connected){
+            await editarOnline()
+        }
+        else{
+            await editarOffline
         }
         
     }

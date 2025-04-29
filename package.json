@@ -28,6 +28,7 @@
 		"@capacitor-community/sqlite": "^7.0.0",
 		"@capacitor/android": "^7.0.1",
 		"@capacitor/core": "^7.0.1",
+		"@capacitor/filesystem": "^7.0.1",
 		"@capacitor/network": "^7.0.0",
 		"@capacitor/preferences": "^7.0.0",
 		"@sveltejs/adapter-static": "^3.0.8",

@@ -6,7 +6,7 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import {guardarHistorial} from "$lib/historial/lib"
-    let {animales} = $props()
+    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
 
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()

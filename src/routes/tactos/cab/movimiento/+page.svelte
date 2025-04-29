@@ -17,6 +17,38 @@
     import { getSexoNombre } from '$lib/stringutil/lib';
     import RadioButton from "$lib/components/RadioButton.svelte";
     import MultiSelect from '$lib/components/MultiSelect.svelte';
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
+    import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import {
+        updateLocalTactosSQL,
+        setTactosSQL,
+        getTactosSQL,
+        getRodeosSQL,
+        getLotesSQL,
+        updateLocalLotesSQL,
+        updateLocalRodeosSQL
+    } from "$lib/stores/sqlite/dbeventos"
+    import {
+        getAnimalesSQL,
+        setAnimalesSQL,    
+        updateLocalAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
+
+    //OFLINE
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state(false)
+    let comandos = $state([])
+
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -312,7 +344,91 @@
         selecthashmap = {}
         selectanimales = []
     }
-    async function crearTactos() {
+    async function crearTactosOffline(params) {
+        if(fecha == ""){
+            Swal.fire("Error tactos","Debe seleccionar una fecha","error")
+            return 
+        }
+        let restactos = await getTactosSQL(db)
+        let tactos = restactos.lista
+        let errores = false
+        //inicio movimiento
+        for(let i = 0;i<selectanimales.length;i++){
+            let tactoanimal = selectanimales[i]
+            let idprov = "nuevo_tacto_"+generarIDAleatorio()
+            try{
+                let dataupdate = {
+                    prenada:tactoanimal.estadonuevo
+                }
+                let datatacto={
+                    fecha:fecha +" 03:00:00" ,
+                    observacion:tactoanimal.observacion,
+                    animal:tactoanimal.id,
+                    categoria:tactoanimal.categoria,
+                    prenada:tactoanimal.estadonuevo,
+                    tipo:tactoanimal.tipotacto,
+                    nombreveterinario:"",
+                    cab:caboff.id,
+                    active:true,
+                    id:idprov
+                }
+                let aidx = animales.findIndex(an=>an.id==tactoanimal.id)
+                if(aidx != -1){
+                    animales[aidx] = {
+                        ...animales[aidx],
+                        ...dataupdate
+                    }
+                    datatacto.expand = animales[aidx]
+                }
+                let nanimal = aidx!=-1?animales[aidx].id.split("_").length>0:false
+                let comando = {
+                    tipo:"add",
+                    coleccion:"tactos",
+                    data:{...datatacto},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,
+                    camposprov:`${nanimal?"animal":""}`
+                }
+                comandos.push(comando)
+                let comandoani = {
+                    tipo:"update",
+                    coleccion:"animales",
+                    data:{...dataupdate},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov:animales[aidx].id,
+                    camposprov:``
+                }
+                comandos.push(comandoani)
+                tactos.push(datatacto)
+
+            }
+            catch(err){
+                console.error(err)
+                errores = true
+            }
+            
+        }
+        //fin movimiento
+        if(errores){
+            Swal.fire("Error tactos","Hubo algun error en algun tacto","error")
+        }
+        else{
+            Swal.fire("Éxito tactos","Se lograron registrar todos los tactos","success")
+        }
+        await setAnimalesSQL(db,animales)
+        await setTactosSQL(db,tactos)
+        await setComandosSQL(db,comandos)
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        filterUpdate()
+        fecha = ""
+        botonhabilitado = false
+        malfecha = false
+        selecthashmap = {}
+        selectanimales = []
+    }
+    async function crearTactosOnline() {
         if(fecha == ""){
             Swal.fire("Error tactos","Debe seleccionar una fecha","error")
             return 
@@ -322,6 +438,7 @@
         for(let i = 0;i<selectanimales.length;i++){
             let tactoanimal = selectanimales[i]
             try{
+                //ver el tema de las fechas
                 let dataupdate = {
                     prenada:tactoanimal.estadonuevo
                 }
@@ -353,7 +470,8 @@
         else{
             Swal.fire("Éxito tactos","Se lograron registrar todos los tactos","success")
         }
-        await getAnimales()
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
         fecha = ""
         botonhabilitado = false
@@ -361,16 +479,81 @@
         selecthashmap = {}
         selectanimales = []
     }
+    async function crearTactos() {
+        if(coninternet.connected){
+            await crearTactosOnline()
+        }
+        else{
+            await crearTactosOffline()
+        }
+    }
     function inputObsGeneral(){
         for(let i = 0;i<selectanimales.length;i++){
             selectanimales[i].observacion = observaciongeneral
         }
     }
-    onMount(async ()=>{
+
+    async function onMountOriginal() {
         await getAnimales()
         await getRodeos()
         await getLotes()
-        
+    }
+    async function getLocalSQL() {
+        let resanimales = await getAnimalesSQL(db)
+        let resrodeos = await getRodeosSQL(db)
+        let reslotes = await getLotesSQL(db)
+        animales = resanimales.lista
+        rodeos  = resrodeos.lista
+        lotes = reslotes.lista
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        filterUpdate()
+
+    }
+    async function updateLocalSQL() {
+        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>

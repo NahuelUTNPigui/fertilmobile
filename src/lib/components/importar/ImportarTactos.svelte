@@ -8,7 +8,7 @@
     import { guardarHistorial } from "$lib/historial/lib";
     import { goto } from "$app/navigation";
     import categorias from "$lib/stores/categorias";
-    let {animales} = $props()
+    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -223,9 +223,9 @@
         const tactos = await pb.collection('tactos').getFullList({
             filter:`active = true && cab ='${cab.id}'`
         })
-        animales = await pb.collection('animales').getFullList({
-            filter:`delete = false && cab ='${cab.id}'`,
-        }) 
+        //animales = await pb.collection('animales').getFullList({
+        //    filter:`delete = false && cab ='${cab.id}'`,
+        //}) 
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

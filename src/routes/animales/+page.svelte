@@ -250,13 +250,13 @@
             data.nacimiento = recordparicion.id
         }
         let comandoani = {
-                tipo:"add",
-                coleccion:"animales",
-                data:{...data},
-                hora:Date.now(),
-                prioridad:3,
-                idprov,    
-                camposprov:conparicion?"nacimiento":""
+            tipo:"add",
+            coleccion:"animales",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:3,
+            idprov,    
+            camposprov:conparicion?"nacimiento":""
         }
         comandos.push(comando)
         await addNewAnimalSQL(db,data)

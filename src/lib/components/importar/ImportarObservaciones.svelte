@@ -6,7 +6,7 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import categorias from "$lib/stores/categorias";
-    let {animales} = $props()
+    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -145,9 +145,9 @@
         const observaciones = await pb.collection('observaciones').getFullList({
             filter:`active = true && cab ='${cab.id}'`
         })
-        animales = await pb.collection('animales').getFullList({
-            filter:`delete = false && cab ='${cab.id}'`,
-        }) 
+        //animales = await pb.collection('animales').getFullList({
+        //    filter:`delete = false && cab ='${cab.id}'`,
+        //}) 
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

@@ -8,24 +8,31 @@
     import { onMount } from "svelte";
     import cuentas from '$lib/stores/cuentas';
     import categorias from "$lib/stores/categorias";
-    let {animales,animalesusuario} = $props()
-    import{verificarNivelCantidad} from "$lib/permisosutil/lib"
+    import{verificarNivelCantidad, verificarNivelCantidadOffline} from "$lib/permisosutil/lib"
+    //offline
+    import {generarIDAleatorio} from "$lib/stringutil/lib"  
+    import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
+    import { setAnimalesSQL, updateAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+    import {
+        getNacimientosSQL,
+        updateLocalNacimientosSQL,
+        setNacimientosSQL
+
+    } from "$lib/stores/sqlite/dbeventos"
+    let {db,coninternet,useroff,caboff,usuarioid,animales,animalesusuario,rodeos,lotes} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
-    let usuarioid = $state("")
     let loading = $state(false)
 
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
-    let lotes = $state([])
-    let rodeos = $state([])
     let nacimientos = $state([])
     let padres = $state([])
     let madres = $state([])
 
-    function exportarTemplate(){
+    async function exportarTemplate(){
         let csvData = [{
             caravana:"AAA",
             peso:"0",
@@ -51,9 +58,21 @@
         }))
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(csvData);
-        XLSX.utils.book_append_sheet(wb, ws, 'Animales');
+        XLSX.utils.book_append_sheet(wb, ws, 'Nacimientos');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo nacimientos.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo nacimientos.xlsx",
+            directory: Directory.Documents
+        });
         
-        XLSX.writeFile(wb, 'Modelo nacimientos.xlsx');
     }
     function importarArchivo(event){
         let file = event.target.files[0];
@@ -68,6 +87,12 @@
         };
         reader.readAsBinaryString(file);
     }
+    async function procesarOnline() {
+        
+    }
+    async function procesarOffline() {
+        
+    }
     async function procesarArchivo(){
         if(filename == ""){
             Swal.fire("Error","Seleccione un archivo","error")
@@ -78,7 +103,7 @@
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
         
-        let nacimientos = []
+        let nacimientosprocesar = []
         let animaleshashmap = {}
         loading = true
         for (const [key, value ] of Object.entries(sheetanimales)) {
@@ -158,13 +183,20 @@
         let nuevoanimales = 0
         let errornuevoanimales = false
         for (const [key, value ] of Object.entries(animaleshashmap)) {
-            nacimientos.push(value)
+            nacimientosprocesar.push(value)
             let conocido = animales.filter(a=>a.caravana == value.caravana).length == 0
             if(!conocido ){
                 nuevoanimales += 1
             }
         }
-        let verificar = await verificarNivelCantidad(cab.id,nuevoanimales)
+        let verificar = true
+        if(coninternet.connected){
+            verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
+        }
+        else{
+            verificar = await verificarNivelCantidadOffline(caboff.id,nuevoanimales)
+        }
+        
         if(!verificar){
             errornuevoanimales = true
             filename = ""
@@ -174,8 +206,19 @@
             return 
             
         }
-        for(let i = 0;i<nacimientos.length;i++){
-            let an = nacimientos[i]
+        //if(coninternet.connected){
+        //    await procesarOnline()
+        //    await updateLocalAnimalesSQL(db,pb,caboff.id)
+        //    await updateLocalNacimientosSQL(db,pb,caboff.id)
+        //}
+        //else{
+        //    let comandos = await procesarOffline()
+        //    await concatComandosSQL(db,comandos)
+        //    await setNacimientosSQL(db,nacimientos)
+        //    await setAnimalesSQL(db,animales)
+        //}
+        for(let i = 0;i<nacimientosprocesar.length;i++){
+            let an = nacimientosprocesar[i]
             let conlote = false
             let lote = lotes.filter(l=>l.nombre==an.lote)[0]
             let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
