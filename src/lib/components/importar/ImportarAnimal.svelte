@@ -14,7 +14,7 @@
     //offline
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
-    import { setAnimalesSQL, updateAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+    import { setAnimalesSQL, editarAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     let {db,coninternet,useroff,caboff,usuarioid,animales,animalesusuario,lotes,rodeos} = $props()
     
     let ruta = import.meta.env.VITE_RUTA

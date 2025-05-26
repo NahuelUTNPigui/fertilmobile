@@ -118,9 +118,10 @@
         }
         try{
             let nombredata = nombre.trim().split(" ").filter(w=>w !== "").join(".")
-            let apellidodata = nombre.trim().split(" ").filter(w=>w !== "").join(".")
+            let apellidodata = apellido.trim().split(" ").filter(w=>w !== "").join(".")
+            let randomnumber = randomString(5,"n")
             const data = {
-                "username": nombredata+"."+apellidodata,
+                "username": nombredata+"."+apellidodata+randomnumber,
                 "email": usuarioemail.trim(),
                 "emailVisibility": true,
                 "password": contra,

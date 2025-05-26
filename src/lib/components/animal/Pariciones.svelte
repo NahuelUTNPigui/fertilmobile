@@ -7,7 +7,21 @@
     import Swal from "sweetalert2";
     import PredictSelect from "../PredictSelect.svelte";
     import cuentas from '$lib/stores/cuentas';
-    let {cabid,sexoanimal,prenada=$bindable(0)} = $props()
+    import AgregarAnimal from "../eventos/AgregarAnimal.svelte";
+    import{verificarNivel} from "$lib/permisosutil/lib"
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {addNewNacimientoSQL} from '$lib/stores/sqlite/dbeventos';
+    import {getAnimalesSQL} from '$lib/stores/sqlite/dbanimales';
+    let {
+        useroff,
+        coninternet,
+        comandos=$bindable([]),
+        db,
+        pariciones=$bindable([]),
+        caravanamadre=$bindable(""),
+        cabid,sexoanimal,prenada=$bindable(0)
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -18,13 +32,15 @@
     let buscar = $state("")
     let fechadesde = $state("")
     let fechahasta = $state("")
-    let pariciones = $state([])
     let id = $state("")
     let cargado = $state(false)
+
     //Datos nacimiento
+    let agregaranimal  = $state(false)
     let nacimiento = $state(null)
     let idnacimiento = $state("")
     let caravana = $state("")
+    let categoria = $state("")
     let sexo = $state("")
     let padre = $state("")
     let madre = $state("")
@@ -46,12 +62,10 @@
     function onelegir(){}
     function onwrite(){}
     async function getAnimales(){
-        const recordsa = await pb.collection("animales").getFullList({
-            filter:`delete=false && cab='${cabid}'`,
-            expand:"nacimiento"
-        })
-        madres = recordsa.filter(a=>a.sexo == "H" || a.sexo == "F")
-        padres = recordsa.filter(a=>a.sexo == "M")
+        const animalestodos = await getAnimalesSQL(db)
+        let animales = animalestodos.lista.filter(a=>a.cab == cabid && a.delete == false)
+        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animales.filter(a=>a.sexo == "M")
         listapadres = padres.map(p=>({id:p.id,nombre:p.caravana}))
         cargado = true
     }
@@ -63,22 +77,13 @@
         })
         pariciones = recordsn
     }
-    async function guardarParicion(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        
-        let verificar = true
-        if(nivel.animales != -1 && animals.totalItems >= nivel.animales){
-            verificar =  false
-        }
-        
-        if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${nivel.animales} animales`,"error")
-            return
+    async function guardarParicionOnline() {
+        if(agregaranimal){
+            let verificar = await verificarNivel(cab.id)
+            if(!verificar){
+                Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
+                return
+            }
         }
         try{
             let dataparicion = {
@@ -91,7 +96,8 @@
                 cab:cabid
             }
             const recordparicion = await pb.collection('nacimientos').create(dataparicion);
-            let data = {
+            if(agregaranimal){
+                let data = {
                 caravana,
                 active:true,
                 delete:false,
@@ -102,23 +108,104 @@
                 nacimiento:recordparicion.id
             }
             let recorda = await pb.collection('animales').create(data); 
+            }
+            
             Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
-            prenada = 0
+            //Ver el tema de las fechas
+            //prenada = 0
             await getPariciones()
         }
         catch(err){
             console.error(err)
         }
     }
+    async function guardarParicionOfline() {
+        let idprov = "nuevo_nac_"+generarIDAleatorio() 
+        if(agregaranimal){
+            let totalanimals = await getTotalSQL(db)
+            let verificar = true
+            
+            if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
+                verificar =  false
+            }
+            if(!verificar){
+                Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
+                return {id:-1}
+            } 
+        }
+        //que pasa si la madre y el padre son nuevos
+        let dataparicion = {
+            madre,
+            padre,
+            fecha:fecha + " 03:00:00",
+            nombremadre,
+            nombrepadre,
+            observacion,
+            cab:cabid,
+            id:idprov
+        }
+        if(agregaranimal){
+            dataparicion.caravana = caravana
+        }
+        await addNewNacimientoSQL(db,dataparicion)
+        pariciones.push(dataparicion)
+        let comando = {
+            tipo:"add",
+            coleccion:"nacimientos",
+            data:{...dataparicion},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov:""
+        }
+        comandos.push(comando)
+        
+        if(agregaranimal){
+            let idanimal = "nuevo_animal_"+generarIDAleatorio()
+            let data = {
+                id:idanimal,
+                caravana,
+                active:true,
+                delete:false,
+                fechanacimiento:fecha +" 03:00:00",
+                sexo,
+                cab:cabid,
+                peso,
+                nacimiento:idprov
+            }
+            let comandoani = {
+                    tipo:"add",
+                    coleccion:"animales",
+                    data:{...dataanimal},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,    
+                    camposprov:"nacimiento"
+            }
+            comandos.push(comandoani)
+        }
+        await setComandosSQL(db,comandos)
+        Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
+
+    }
+    async function guardarParicion(){
+        if(coninternet.connected){
+            
+            await guardarParicionOnline()
+        }
+        else{
+            
+            await guardarParicionOfline()
+        }
+        nuevaParicion.close()
+    }
     onMount(async ()=>{
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         id = $page.params.slug
-        await getPariciones()
         await getAnimales()
         if(sexoanimal == "F" || sexoanimal == "H"){
             let m = madres.filter(item=>item.id == id)[0]
-            
             nombremadre = m.caravana
             madre = id
         }
@@ -138,41 +225,41 @@
         let p = padres.filter(item=>item.id == padre)[0]
         nombrepadre = p.caravana
     }
-    function openNewModal(){
-        
+    function openNewModal(id){
+        idnacimiento = id
         caravana = ""
         sexo = ""
         fecha = ""
         observacion = ""
         peso=""
-        if(sexoanimal == "M"){
-            madre = ""
-            nombremadre = ""
+        if(id==""){
+            if(sexoanimal == "M"){
+                madre = ""
+                nombremadre = ""
+            }
+            else{
+                padre = ""
+                nombrepadre = ""
+            }
         }
         else{
-            padre = ""
-            nombrepadre = ""
+            let i_par = pariciones.findIndex(p=>p.id==id)
+            padre = pariciones[i_par].padre
+            nombrepadre =pariciones[i_par].nombrepadre
+            fecha = new Date(pariciones[i_par].fecha).toISOString().split("T")[0]
+            observacion = pariciones[i_par].observacion
         }
+        
+        
         nuevaParicion.showModal()
     }
 </script>
 <div class="w-full flex justify-items-start gap-2">
-    <div class="hidden">
-        <button
-            aria-label="Expandir"
-            onclick={()=>expandir.showModal()}
-            class={`
-                ${estilos.basico} ${estilos.chico} ${estilos.primario} ${pariciones.length == 0?estilos.deshabilitado:""}
-            `}
-            disabled = {pariciones.length == 0}
-        >
-            Expandir                
-        </button>
-    </div>
+    
     <div>
         <button
             aria-label="Nuevo"
-            onclick={openNewModal}
+            onclick={()=>openNewModal("")}
             class={`
                 ${estilos.basico} ${estilos.chico} ${estilos.primario}
             `}
@@ -185,56 +272,13 @@
     {#if pariciones.length == 0}
         <p class="mt-5 text-lg">No hay pariciones</p>
     {:else}
-        <table class="table table-lg " >
-            <thead>
-                <tr>
-                    <th class="text-base ml-3 pl-3 mr-1 pr-1 ">Fecha</th>
-                    <th class="text-base mx-1 px-1">Caravana</th>
-                    <th class="text-base mx-1 px-1">Padre</th>
-                    <th class="text-base mx-1 px-1">Observacion</th>
-                    
-                    
-                </tr>
-            </thead>
-            <tbody>
-                {#each pariciones as n}
-                    <tr>
-                        <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(n.fecha).toLocaleDateString()}</td>
-                        <td class="text-base mx-1 px-1">
-                            {`${n.caravana}`}
-                        </td>
-                        <td class="text-base mx-1 px-1">
-                            {`${n.nombrepadre}`}
-                        </td>
-                        <td class="text-base mx-1 px-1">
-                            {`${n.observacion}`}
-                        </td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    {/if}
-    
-</div>
-<dialog id="expandir" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
-    <div
-        class="
-            modal-box w-11/12 max-w-3xl
-            bg-gradient-to-br from-white to-gray-100 
-            dark:from-gray-900 dark:to-gray-800
-        "
-    >
-        <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-        </form>
-        <h3 class="text-lg font-bold">Pariciones</h3>  
-        <div class="form-control">
+        <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+        
             <table class="table table-lg " >
                 <thead>
                     <tr>
                         <th class="text-base ml-3 pl-3 mr-1 pr-1 ">Fecha</th>
                         <th class="text-base mx-1 px-1">Caravana</th>
-                        <th class="text-base mx-1 px-1">Madre</th>
                         <th class="text-base mx-1 px-1">Padre</th>
                         <th class="text-base mx-1 px-1">Observacion</th>
                         
@@ -243,13 +287,10 @@
                 </thead>
                 <tbody>
                     {#each pariciones as n}
-                        <tr>
+                        <tr onclick={()=>openNewModal(n.id)} class="hover:bg-gray-200 dark:hover:bg-gray-900">
                             <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(n.fecha).toLocaleDateString()}</td>
                             <td class="text-base mx-1 px-1">
                                 {`${n.caravana}`}
-                            </td>
-                            <td class="text-base mx-1 px-1">
-                                {`${n.nombremadre}`}
                             </td>
                             <td class="text-base mx-1 px-1">
                                 {`${n.nombrepadre}`}
@@ -262,14 +303,41 @@
                 </tbody>
             </table>
         </div>
-        <div class="modal-action justify-start ">
-            <button class={`${estilos.basico} ${estilos.medio} ${estilos.secundario}`} onclick={()=>expandir.close()}>Cerrar</button>
+        <div class="block w-full md:hidden justify-items-center mx-1">
+            {#each pariciones as n}
+            <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+                <button onclick={()=>openNewModal(n.id)}>
+                    <div class="block p-4">
+                        <div class="grid grid-cols-2 gap-y-2">
+                            <div class="flex items-start">
+                                <span >Fecha:</span> 
+                                <span class="mx-1 font-semibold">
+                                    {new Date(n.fecha).toLocaleDateString()}
+                                </span>
+                                
+                            </div>
+                            <div class="flex items-start">
+                                <span >Padre:</span> 
+                                <span class="mx-1 font-semibold">
+                                    {`${n.nombrepadre}`}
+                                </span>
+                                
+                            </div>
+                            <div class="col-span-2 flex items-start">
+                                <span >{`${n.observacion}`}</span> 
+                                
+                            </div>
+                        </div>
+                        
+                    </div>
+                </button>
+            </div>
+            {/each}
         </div>
+    {/if}
+    
+</div>
 
-
-    </div>
-
-</dialog>
 <dialog id="nuevaParicion" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 
         class="
@@ -281,64 +349,20 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        <h3 class="text-lg font-bold">Nueva parición</h3>  
+        {#if idnacimiento == ""}
+            <h3 class="text-lg font-bold">Nuevo nacimiento</h3>  
+        {:else}
+            <h3 class="text-lg font-bold">Ver nacimiento</h3>  
+        {/if}
+        
         <div class="form-control">
-            <label for = "nombre" class="label">
-                <span class="label-text text-base">Caravana</span>
-            </label>
-            <label class="input-group">
-                <input id ="nombre" type="text"  
-                    class={`
-                        input input-bordered 
-                        w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2} 
-                        
-                    `}
-                    disabled={idnacimiento!=""}
-                    bind:value={caravana}
-                />
-            </label>
-            <label for = "sexo" class="label">
-                <span class="label-text text-base">Sexo</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={sexo}
-                >
-                    {#each sexos as s}
-                        <option value={s.id}>{s.nombre}</option>    
-                    {/each}
-                </select>
-            </label>
-            <label for = "peso" class="label">
-                <span class="label-text text-base">Peso (KG)</span>
-            </label>
-            <label class="input-group">
-                <input id ="peso" type="number"  
-                    class={`
-                        input input-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `} 
-                    bind:value={peso}
-                />
-            </label>
+            {#if idnacimiento == ""}
+            <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento = {fecha} confechanac={true}/>
+            
+            {/if}
+            
             <label for = "fechanacimiento" class="label">
-                <span class="label-text text-base">Fecha nacimiento</span>
+                <span class={estilos.labelForm}>Fecha nacimiento</span>
             </label>
             <label class="input-group ">
                 <input id ="fechanacimiento" type="date" max={HOY}  
@@ -351,7 +375,13 @@
                         ${estilos.bgdark2} 
                     `}
                     bind:value={fecha}
+                    onchange={()=>onchange("FECHA")}
                 />
+                {#if malfecha}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha del nacimiento</span>                    
+                    </div>
+                {/if}
             </label>
             {#if sexoanimal == "M"}
                 <label for = "nombremadre" class="label">
@@ -395,51 +425,19 @@
                     </select>
                 </label>
             {:else}
-                <div class="hidden">
-                    <label for = "nombrepadre" class="label">
-                        <span class="label-text text-base">Nombre padre</span>
-                    </label>
-                    <label class="input-group">
-                        <input 
-                            id ="nombrepadre" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none 
-                                focus:ring-2 focus:ring-green-500 
-                                focus:border-green-500
-                                w-full 
-                                ${estilos.bgdark2} 
-                            `}
-                            bind:value={nombrepadre}
-                        />
-                    </label>
+                {#if  idnacimiento==""}
+                    {#if cargado}
+                        <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} {onelegir} {onwrite}/>
+                    {/if}
+                {:else}
                     <label for = "padre" class="label">
                         <span class="label-text text-base">Padre</span>
                     </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2} 
-                            `}
-                            bind:value={padre}
-                            onchange={getNombrePadre}
-                        >
-                            {#each padres as p}
-                                <option value={p.id}>{p.caravana}</option>    
-                            {/each}
-                        </select>
+                    <label for = "padre" class="label">
+                        <span class="label-text text-base">{nombrepadre}</span>
                     </label>
-                </div>
-                {#if cargado}
-                    <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} {onelegir} {onwrite}/>
                 {/if}
+                
 
                 
             {/if}
@@ -464,8 +462,10 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
                 <!-- if there is a button, it will close the modal -->              
-                <button class="btn btn-success text-white" onclick={guardarParicion} >Guardar</button>
-                <button class="btn btn-error text-white" >Cancelar</button>
+                {#if idnacimiento == ""} 
+                    <button class="btn btn-success text-white" onclick={guardarParicion} >Guardar</button>
+                {/if}
+                <button class="btn btn-error text-white" >Cerrar</button>
             </form>
         </div>
     </div>

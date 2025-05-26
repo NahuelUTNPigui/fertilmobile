@@ -24,12 +24,13 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL, updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL, updateLocalAnimalesSQL, updateLocalAnimalesSQLUser} from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {
+        updateLocalTactosSQLUser,
         updateLocalTactosSQL,
         setTactosSQL,
         getTactosSQL
@@ -41,7 +42,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     let caber = createCaber()
     let cab = caber.cab
@@ -56,6 +57,7 @@
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
     let tactos = $state([])
+    let tactoscab = $state([])
     let animales = $state([])
     let tactosrow = $state([])
     let isOpenFilter = $state(false)
@@ -186,6 +188,7 @@
                 try{
                     let recordaedit = await pb.collection('tactos').update(idtacto,data);
                     tactos = tactos.filter(t=>t.id!=idtacto)
+                    //deberia modificar la base de datos
                     filterUpdate()
                     Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
                 }
@@ -291,15 +294,18 @@
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
-        tactos = await updateLocalTactosSQL(db,pb,caboff.id)
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
+        tactos = tactos.filter(t=>t.cab == caboff.id)
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = animales.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
         let restactos = await getTactosSQL(db)
-        animales = resanimales.lista
-        tactos = restactos.lista
+        animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)
+
+        tactos = restactos.lista.filter(t=>t.cab ==  caboff.id)
         filterUpdate()
     }
     async function getDataSQL() {

@@ -17,6 +17,7 @@
     import { getSexoNombre } from '$lib/stringutil/lib';
     import RadioButton from "$lib/components/RadioButton.svelte";
     import MultiSelect from '$lib/components/MultiSelect.svelte';
+    import { shorterWord } from "$lib/stringutil/lib";
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -27,18 +28,25 @@
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
+        updateLocalTactosSQLUser,
         updateLocalTactosSQL,
         setTactosSQL,
         getTactosSQL,
         getRodeosSQL,
         getLotesSQL,
+        getUpdateLocalRodeosLotesSQLUser,
+        getLotesRodeosSQL,
         updateLocalLotesSQL,
         updateLocalRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
         setAnimalesSQL,    
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser,
+        getUpdateLocalAnimalesSQLUser,
+        getAnimalesCabSQL
+
     } from "$lib/stores/sqlite/dbanimales"
 
     //OFLINE
@@ -46,7 +54,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -352,6 +360,7 @@
         let restactos = await getTactosSQL(db)
         let tactos = restactos.lista
         let errores = false
+        let tactoerrores = []
         //inicio movimiento
         for(let i = 0;i<selectanimales.length;i++){
             let tactoanimal = selectanimales[i]
@@ -405,6 +414,7 @@
 
             }
             catch(err){
+                tactoerrores.push(tactoanimal.id)
                 console.error(err)
                 errores = true
             }
@@ -425,7 +435,14 @@
         fecha = ""
         botonhabilitado = false
         malfecha = false
-        selecthashmap = {}
+        for(let i = 0;i<selectanimales.length;i++){
+            let tactoanimal = selectanimales[i]
+            let i_error = tactoerrores.findIndex(pid=>pid==tactoanimal.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[tactoanimal.id]
+            }
+        }
         selectanimales = []
     }
     async function crearTactosOnline() {
@@ -434,7 +451,7 @@
             return 
         }
         let errores = false
-
+        let tactoerrores = []
         for(let i = 0;i<selectanimales.length;i++){
             let tactoanimal = selectanimales[i]
             try{
@@ -454,12 +471,14 @@
                     active:true
                 }
                 
-                await guardarHistorial(pb,selectanimales[i].id)
-                let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                await pb.collection('tactos').create(datatacto);
+                //await guardarHistorial(pb,selectanimales[i].id)
+                //let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
+                //debo guardar el record en el sqlite    
+                let record = await pb.collection('tactos').create(datatacto);
                 
             }
             catch(err){
+                tactoerrores.push(tactoanimal.id)
                 console.error(err)
                 errores = true
             }
@@ -470,13 +489,21 @@
         else{
             Swal.fire("Éxito tactos","Se lograron registrar todos los tactos","success")
         }
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        //Prefiero guardarlos en animales
+        //animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
         fecha = ""
         botonhabilitado = false
         malfecha = false
-        selecthashmap = {}
+        for(let i = 0;i<selectanimales.length;i++){
+            let tactoanimal = selectanimales[i]
+            let i_error = tactoerrores.findIndex(pid=>pid==tactoanimal.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[tactoanimal.id]
+            }
+        }
         selectanimales = []
     }
     async function crearTactos() {
@@ -499,20 +526,19 @@
         await getLotes()
     }
     async function getLocalSQL() {
-        let resanimales = await getAnimalesSQL(db)
-        let resrodeos = await getRodeosSQL(db)
-        let reslotes = await getLotesSQL(db)
-        animales = resanimales.lista
-        rodeos  = resrodeos.lista
-        lotes = reslotes.lista
+        animales = await getAnimalesCabSQL(db,caboff.id)
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
 
     }
     async function updateLocalSQL() {
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        lotes =  lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
 
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
@@ -723,7 +749,7 @@
                             {/if}
                         </button>
                     </td>
-                    <td class="text-base mx-1 px-1">{a.caravana}</td>
+                    <td class="text-base mx-1 px-1">{shorterWord(a.caravana)}</td>
                     <td class="text-base mx-1 px-1">{getEstadoNombre(a.prenada)}</td>
                     <td class="text-base mx-1 px-1">{a.categoria}</td>
                     <td class="text-base mx-1 px-1">{a.peso}</td>
@@ -794,7 +820,7 @@
                                 </svg>
                             {/if}
                         </button>
-                        {a.caravana}
+                        {shorterWord(a.caravana)}
                     </h3>
                     {#if a.sexo == "H" && a.prenada != 1}
                         <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>

@@ -14,7 +14,9 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         rodeo:a.rodeo,
         categoria:a.categoria,
         prenada:a.prenada,
-        rp:a.rp
+        rp:record.rp,
+        raza:record.raza,
+        color:record.color,
     }
     let comando = {
         tipo:"add",

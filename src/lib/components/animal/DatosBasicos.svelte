@@ -32,7 +32,8 @@
     } from "$lib/stores/sqlite/dbeventos";
     import {
         updateLocalAnimalesSQL,
-        getAnimalesSQL
+        getAnimalesSQL,
+        editarAnimalSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
@@ -41,7 +42,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     let {
         caravana,
@@ -171,14 +172,6 @@
         else{
             return ""
         }        
-    }
-    function getFechaNacimiento(nacimiento){
-        if(nacimiento){
-            return new Date(nacimiento.fecha).toLocaleDateString()
-        }
-        else{
-            return false
-        }
     }
     function openEditar(){
         if(userpermisos[5]){
@@ -329,7 +322,7 @@
         await setComandosSQL(db,comandos)
         Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
     }
-    async function guardarNacimiento2() {
+    async function guardarNacimiento() {
         if(coninternet.connected){
             await guardarNacimientoOnline()
         }
@@ -337,72 +330,10 @@
             await guardarNaciminentoOffline()
         }
     }
-    async function guardarNaciminento(){
-        try{
-            let dataparicion = {
-                madre,
-                padre,
-                fecha:fecha + " 03:00:00",
-                nombremadre,
-                nombrepadre,
-                observacion,
-                cab:cab.id
-            }
-            const recordparicion = await pb.collection('nacimientos').create(dataparicion);
-            let datanimal = {
-                nacimiento:recordparicion.id,
-                fechanacimiento:fecha + " 03:00:00",
-            }
-            let datahistorial = {
-                prenada,
-                sexo,
-                peso,
-                caravana,
-                active:true,
-                delete: false,
-                fechanacimiento:fechaviejo+ " 03:00:00",
-                lote,
-                rodeo,
-                user:userid,
-                categoria,
-                animal:id
-            }
-            const record = await pb.collection('animales').update(id, datanimal);
-            //NO va porque tengo que evaluar las fechas
-            await pb.collection("historialanimales").create(datahistorial)
-            await guardarHistorial(pb,madre)
-            let datamadre = {
-                prenada : 0
-            }
-            if(tipomadre == "vaquillona"){
-                datamadre.categoria = "vaca"
-            }
-            
-            await pb.collection('animales').update(madre, datamadre);
-            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
-            connacimiento = true
-            nacimiento = recordparicion
-        }
-        catch(err){
-            console.error(err)
-            Swal.fire("Error guardar","No se pudo guardar el nacimiento","error")
-        }
-    }
     async function editarNacimientoOfline() {
         
     }
     async function editarNacimientoOnline() {
-        
-    }
-    async function editarNacimiento2() {
-        if(coninternet.connected){
-            await editarNacimientoOfline()
-        }
-        else{
-            await editarNacimientoOnline()
-        }
-    }
-    async function editarNacimiento(){
         let data = {
             madre,
             padre,
@@ -434,6 +365,14 @@
             console.error(err)
         }
     }
+    async function editarNacimiento() {
+        if(coninternet.connected){
+            await editarNacimientoOfline()
+        }
+        else{
+            await editarNacimientoOnline()
+        }
+    }
     function getNombreMadre(){
         let m = madres.filter(item=>item.id == madre)[0]
         nombremadre = m.caravana
@@ -445,7 +384,7 @@
         let p = padres.filter(item=>item.id == padre)[0]
         nombrepadre = p.caravana
     }
-    async function editarAnimal(){
+    async function editarAnimalOnline() {
         let data = {
             peso,
             sexo,
@@ -456,20 +395,6 @@
             categoria,
             rp
         }
-        //let datahistorial = {
-        //    prenada:prenadaviejo,
-        //    sexo:sexoviejo,
-        //    peso:pesoviejo,
-        //    caravana:caravanavieja,
-        //    active:true,
-        //    delete: false,
-        //    fechanacimiento:fecha+ " 03:00:00",
-        //    lote:loteviejo,
-        //    rodeo:rodeovieja,
-        //    user:userid,
-        //    categoria:categoriavieja,
-        //    animal:id
-        //}
         try{
             const record = await pb.collection('animales').update(id, data);
             
@@ -502,6 +427,38 @@
             Swal.fire("Error editar","No se pudo editar el animal","error")
         }
     }
+    async function editarAnimalOffline() {
+        let data = {
+            peso,
+            sexo,
+            caravana,
+            rodeo:rodeo,
+            lote,
+            prenada,
+            categoria,
+            rp
+        }
+        await editarAnimalSQL(db,id,data)
+        let comando = {
+            tipo:"update",
+            coleccion:"animales",
+            data,
+            hora:Date.now(),
+            prioridad:2,
+            idprov:id,
+        }
+        comandos.push(comando)
+        await setComandosSQL(db,comandos) 
+
+    }
+    async function editarAnimal(){
+        if(coninternet.connected){
+            await editarAnimalOnline()
+        }
+        else{
+            await editarAnimalOffline()
+        }
+    }
     function cerrarModal(){
         fecha = ""
         nombremadre = ""
@@ -521,23 +478,6 @@
             
         }
         nuevoModal.close()
-    }
-    async function onMountOriginal(){
-        id = $page.params.slug
-        
-        await getAnimales()
-        await getRodeos()
-        await getLotes()
-        if(connacimiento){
-            idnacimiento = nacimiento.id
-            fecha = nacimiento.fecha.split(" ")[0]
-            nombremadre = nacimiento.nombremadre
-            nombrepadre = nacimiento.nombrepadre
-            padre = nacimiento.padre
-            madre = nacimiento.madre
-
-            observacion = nacimiento.observacion
-        }
     }
     async function initPage() {
         coninternet = await Network.getStatus();
@@ -578,7 +518,7 @@
         animales = resanimales.lista 
         processAnimales()
     }
-    async function getDataSQL(params) {
+    async function getDataSQL() {
         db = await openDB()
         id = $page.params.slug
         //Reviso el internet
@@ -612,6 +552,16 @@
     onMount(async ()=>{
         await initPage()
         await getDataSQL()
+        if(connacimiento){
+            idnacimiento = nacimiento.id
+            fecha = nacimiento.fecha.split(" ")[0]
+            nombremadre = nacimiento.nombremadre
+            nombrepadre = nacimiento.nombrepadre
+            padre = nacimiento.padre
+            madre = nacimiento.madre
+
+            observacion = nacimiento.observacion
+        }
     })
     //cancelar class="btn btn-error text-white font-medium text-lg "
     //Editar animal class="btn text-lg px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -866,6 +816,7 @@
         </div>
     {/if}
 </div>
+<!--Componente aparte-->
 {#if connacimiento}
     <div class="grid grid-cols-2 lg:grid-cols-3">
         <h3 class="text-2xl font-bold mt-2 mb-1 text-left">
@@ -940,15 +891,8 @@
         
     </div>
 {/if}
-<div class="grid grid-cols-3 mx-0  mt-1 ">
-    
-    <div class="flex col-span-2 gap-1 justify-start">
-        <button aria-label="historiaclinica" class={` btn rounded-lg ${estilos.basico} ${estilos.primario} px-2 mx-1`} onclick={()=>modohistoria = !modohistoria}>
-            <span  class="text-lg m-1">{modohistoria?"Ocultar":"Mostrar"} historia clinica</span>      
-        </button>
-    </div>  
-</div>
 
+<!--Esto deberia ser un componente aparte-->
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 
         class="
@@ -1096,7 +1040,7 @@
                 {#if connacimiento}
                     <button class="btn btn-success text-white" onclick={editarNacimiento} >Editar</button>
                 {:else}
-                    <button class="btn btn-success text-white" onclick={guardarNaciminento} >Guardar</button>
+                    <button class="btn btn-success text-white" onclick={guardarNacimiento} >Guardar</button>
                 {/if}
               
               <button class="btn btn-error text-white" onclick={cerrarModal}>Cancelar</button>

@@ -25,7 +25,7 @@ const config = {
 				"/rodeos",
 				"/tactos/cab",
 				"/tactos/cab/movimiento",
-				
+				"/manual",
 				"/user/config",
 				"/inseminaciones",
 				"/observaciones",

@@ -8,7 +8,8 @@
         sexo=$bindable(""),
         fechanacimiento=$bindable(""),
         categoria=$bindable(""),
-        agregaranimal=$bindable(false)
+        agregaranimal=$bindable(false),
+        confechanac =  $bindable(false)
     } = $props()
     let malcaravana = $state(false)
     function onChangeAgregar(){
@@ -100,22 +101,24 @@
                 </select>
             </label>
         </div>
-        <div class="mb-1 lg:mb-0">
-            <label for = "fechanacimiento" class="label">
-                <span class="label-text text-base">Fecha nacimiento</span>
-            </label>
-            <input id ="fechanacimiento" type="date" 
-                class={`
-                    input input-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 
-                    focus:border-green-500
-                    ${estilos.bgdark2} 
-                `}
-                bind:value={fechanacimiento}
-            />
-        </div>
+        {#if !confechanac}
+            <div class="mb-1 lg:mb-0">
+                <label for = "fechanacimiento" class="label">
+                    <span class="label-text text-base">Fecha nacimiento</span>
+                </label>
+                <input id ="fechanacimiento" type="date" 
+                    class={`
+                        input input-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={fechanacimiento}
+                />
+            </div>
+        {/if}
     </div>
 {:else}
     <dir class="flex justify-start mx-0 px-0">

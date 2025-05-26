@@ -31,16 +31,33 @@
         setLotesSQL,
         updateLocalLotesSQL,
         updateLocalRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser,
+        getLotesRodeosSQL,
+        
         getTratsSQL,
-        setTratsSQL
+        setTratsSQL,
+        
     } from "$lib/stores/sqlite/dbeventos"
     import{
-    addNewAnimalSQL,
+        addNewAnimalSQL,
         getAnimalesSQL,
         setAnimalesSQL,
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        getUpdateLocalAnimalesSQLUser,
+        updateLocalAnimalesSQLUser,
     } from "$lib/stores/sqlite/dbanimales"
+
+
+     //offline
+     let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state({})
+    let comandos = $state([])
+
     let ruta = import.meta.env.VITE_RUTA
+    let pre  =""
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let caber = createCaber()
@@ -456,6 +473,7 @@
                     leido:false
                 }
                 const record = await pb.collection('notificaciones').create(datanoti);
+
             }
             catch(err){
                 console.error(err)
@@ -538,6 +556,7 @@
         codigo = ""
         habilitarboton = false
         
+        //COrregir este getanimales
         await getAnimales()
         filterUpdate()
     }
@@ -728,19 +747,21 @@
         
     }
     async function updateLocalSQL() {
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = animales.filter(a=>a.active && a.cab == caboff.id)
+        let lotesrodeos  = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
     }
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
-        let reslotes = await getLotesSQL(db)
-        let resrodeos = await getRodeosSQL(db)
-        animales = resanimales.lista
-        lotes = reslotes.lista
-        rodeos = resrodeos.lista
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
+        animales = resanimales.lista.filter(a=>a.active  && a.cab == caboff.id)
+        
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
     }
@@ -779,7 +800,8 @@
         usuarioid = useroff.id
     }
     onMount(async ()=>{
-        
+        await initPage()
+        await getDataSQL()
     })
 
 </script>

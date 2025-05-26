@@ -7,10 +7,30 @@
     import estilos from '$lib/stores/estilos';
     import Swal from 'sweetalert2';
     import { goto } from '$app/navigation';
+    //offline
+    import {openDB} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabDataByID} from "$lib/stores/cabsdata"
+    import {setEstablecimientoSQL,getEsblecimientoSQL,updateLocalEstablecimientoSQL} from '$lib/stores/sqlite/dbestablecimiento';
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getColabSQL,setColabSQL,updateLocalColabSQL,getColabSQLByID,deleteColabSQL,setPermisoColabSQL} from '$lib/stores/sqlite/dbcolaboradores';
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state({})
+    let establecimiento = $state({})
+    let comandos = $state([])
+
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id=$state("")
     let idpermiso = $state("")
+    
     let nombre = $state("")
     let apellido = $state("")
     let userpermisos = $state([false,false,false,false,false,false])
@@ -38,7 +58,10 @@
         // If the string is empty, return an empty string
         return "";
     }
-    async function guardarPermiso(){
+    async function guardarPermisoOffline(){
+       Swal.fire("Error no hay internet","No puedes guardar los permisos sin internet","error")
+    }
+    async function guardarPermisosOnline() {
         let per = ""
         for(let i= 0;i<userpermisos.length;i++){
             if(userpermisos[i]){
@@ -50,17 +73,27 @@
         }
         try{
             await pb.collection('permisos').update(idpermiso, data);
-            await getPermisos()
+            await setPermisoColabSQL(db,id,data.permisos)
             Swal.fire("Éxitos permisos","Permisos guardados con éxito","success")
         }
         catch(err){
             console.error(err)
             Swal.fire("Error permisos","No se pudieron guardar los permisos con éxito","error")
         }
+    }
+    async function guardarPermiso(){
+        if(coninternet.connected){
+            await guardarPermisosOnline()
+        }
+        else{
+            await guardarPermisoOffline()
+        }
         
     }
-
-    async function desasociar() {    
+    async function desasociarOffline() {
+        Swal.fire("Error no hay internet","No puedes desasociar al colaborador sin internet","error")
+    }
+    async function desasociarOnline(){
         Swal.fire({
             title: 'Desasociar colaborador',
             text: '¿Seguro que deseas desasociar el colaborador?',
@@ -71,26 +104,73 @@
         }).then(async result=>{
             if(result.value){
                 try{
-                    let recordper = await pb.collection('permisos').getFirstListItem(`estxcolab='${id}'`)
-                    await pb.collection("permisos").delete(recordper.id)
+                    
+                    await pb.collection("permisos").delete(idpermiso)
                     await pb.collection("estxcolabs").delete(id)
+                    await deleteColabSQL(db,id)
                     goto("/establecimiento")
                 }
                 catch(err){
                     console.error(err)
-                }
-
-                
-                
+                } 
             }
         })
+    }
+    async function desasociar() {    
+        if(coninternet.connected){
+            await desasociarOnline()
+        }
+        else{
+            await desasociarOffline()
+        }
     }
     function volver(){
         goto("/establecimiento")
     }
+    async function originalMount(){
+        await getPermisos()
+    }
+    async function initPage(){
+        coninternet = await Network.getStatus();
+        //Esto no va andar, sera siempre userer y caber
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        cab = caber.cab
+        usuarioid = useroff.id
+    }
+    
+    async function getLocalSQL() {
+        let rescolab = await getColabSQLByID(db,id)
+        nombre = rescolab.expand.colab.nombre
+        apellido = rescolab.expand.colab.apellido
+        idpermiso = rescolab.permiso
+        let per = rescolab.permisos.length == 0?[]:rescolab.permisos.split(",")
+        if(per.length!=0){
+            for(let i = 0;i<per.length;i++){
+                let idx = parseInt(per[i], 10)
+                userpermisos[idx] = true
+            }
+        }
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        //No hace falta updatear al colaborador porque lo hice
+        //en la pantalla de colaboradores
+        await getLocalSQL()
+        if (coninternet.connected){
+            await setInternetSQL(db,1,Date.now())
+            
+        }
+        else{
+            
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
     onMount(async ()=>{
         id = $page.params.id
-        await getPermisos()
+        
 
     })
 </script>

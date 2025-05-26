@@ -61,10 +61,18 @@ export async function getCabData(pb,idcab) {
         filter:`active=true && delete=false && cab='${idcab}'`,
         expand:"rodeo,lote,nacimiento"
     })
+    
     let pesajes = await pb.collection('pesaje').getFullList({
         expand:"animal",
-        filter:`animal.cab='${idcab}'`
+        
+        filter:`animal.cab='${idcab}' `
     })
+    
+    let historialanimales = await pb.collection('historialanimales').getFullList({
+        filter:`animal.cab='${idcab}'`,
+        expand:"animal"
+    })
+    cab.historialanimales = historialanimales//13
     cab.pesajes = pesajes//12
     cab.tactos = tactos//11
     cab.servicios = servicios//10
@@ -79,6 +87,10 @@ export async function getCabData(pb,idcab) {
     cab.animales = animales//1
 
     return cab
+}
+export async function getCabDataByID(pb,idcab) {
+    const record = await pb.collection('cabs').getFirstListItem(`id='${idcab}' && active=true`, {});
+    return record
 }
 //Me hace ruido
 export async function getCabsData(pb,user) {

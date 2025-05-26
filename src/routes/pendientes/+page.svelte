@@ -9,7 +9,7 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     let db = $state(null)
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
@@ -65,7 +65,7 @@
                             Fecha
                         </th>
                         <th
-                            class="text-base p-3 border-b dark:border-gray-600 "
+                            class="hidden text-base p-3 border-b dark:border-gray-600 "
                         >
                             Descripcion
                         </th>
@@ -83,11 +83,8 @@
                             <td class="text-base p-3 ">
                                 {c.hora}
                             </td>
-                            <td class="text-base p-3 ">
+                            <td class="hidden text-base p-3 ">
                                 {c.data}
-                            </td>
-                            <td class="text-base p-3 ">
-
                             </td>
                         </tr>
                     {/each}

@@ -11,6 +11,7 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import PredictSelect from '$lib/components/PredictSelect.svelte';
     import{verificarNivel,verificarNivelOffline} from "$lib/permisosutil/lib"
+    import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     //offline
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
@@ -23,26 +24,29 @@
         getNacimientosSQL,
         updateLocalNacimientosSQL,
         setNacimientosSQL,
-        addNewNacimientoSQL        
-
+        addNewNacimientoSQL,
+        updateLocalNacimientosSQLUser,
+        getUpdateLocalRodeosLotesSQLUser,
+        getLotesRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
     import { 
         setAnimalesSQL,
         getAnimalesSQL,
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser
     } from '$lib/stores/sqlite/dbanimales';
-    import { animator } from 'chart.js';
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
+    let pre = ""
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -51,6 +55,7 @@
     
     //Datos filtrar
     let nacimientos = $state([])
+    let nacimientoscab = $state([])
     let nacimientosrow = $state([])
     let buscar = $state("")
     let fechadesde = $state("")
@@ -60,6 +65,7 @@
     let buscarpadre = $state("")
     let cargadoanimales = $state(false)
     //Datos nacimiento
+    let agregaranimal = $state(false)
     let nacimiento = $state(null)
     let idnacimiento = $state("")
     let caravana = $state("")
@@ -67,11 +73,14 @@
     let padre = $state("")
     let madre = $state("")
     let peso = $state("")
+    let categoria = $state("")
     let nombremadre = $state("")
     let nombrepadre = $state("")
     let cadenamadre = $state("")
     let cadenapadre = $state("")
     let fecha = $state("")
+    let animales = $state([])
+    let animalescab = $state([])
     let madres = $state([])
     let padres = $state([])
     let listamadres = $state([])
@@ -86,6 +95,9 @@
     let malcaravana = $state(false)
     let malsexo = $state(false)
     let botonhabilitado=$state(false)
+    //Datos para la parte offline
+    let lotes = $state([])
+    let rodeos = $state([])
     function clickFilter(){
         isOpenFilter = !isOpenFilter
     }
@@ -121,7 +133,98 @@
         nacimientos = recordsn
         nacimientosrow = nacimientos
     }
-    //falta el historial
+    async function guardarOffline2() {
+        if(agregaranimal){
+            let verificar = await verificarNivelOffline(caboff.id)
+            if(!verificar){
+                Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
+                return
+            }
+        }
+        let idprov = "nuevo_nac_"+generarIDAleatorio()
+        let idanimal = "nuevo_animal_"+generarIDAleatorio()
+        try{
+            let ms = madres.filter(ma=>ma.id==madre)
+            let m = {
+                id:"",
+                nombremadre:"",
+                rodeo:"",
+                lote:""
+            }
+            if(ms.length > 0){
+                m.id = ms[0].id
+                m.nombremadre = ms[0].caravana
+                m.lote = ms[0].lote
+                m.rodeo = ms[0].rodeo
+            }
+            let tipomadre = m.categoria
+            let esnuevopadre = padre.split("_").length>0
+            let esnuevomadre = m.id.split("_").length>0
+            let dataparicion = {
+                madre:m.id,
+                padre,
+                fecha:fecha + " 03:00:00",
+                nombremadre:m.nombremadre,
+                nombrepadre,
+                observacion,
+                cab:caboff.id,
+                id:idprov
+            }
+            let comando = {
+                tipo:"add",
+                coleccion:"nacimientos",
+                data:{...dataparicion},
+                hora:Date.now(),
+                prioridad:0,
+                idprov,    
+                camposprov:`${(esnuevomadre && esnuevopadre)?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
+            }
+            comandos.push(comando)
+            nacimientos.push(dataparicion)
+            onChangeNacimiento()
+            await setNacimientosSQL(db,nacimientos)
+            if(agregaranimal){
+               
+                let dataanimal = {
+                    caravana,
+                    active:true,
+                    delete:false,
+                    fechanacimiento:fecha +" 03:00:00",
+                    sexo,
+                    cab:caboff.id,
+                    peso,
+                    lote:m.lote,
+                    rodeo:m.rodeo,
+                    nacimiento:idprov,
+                    id:idanimal
+                }
+                let nlote = m.lote.split("_").length>0
+                let nrodeo = m.rodeo.split("_").length>0
+                let comandoani = {
+                    tipo:"add",
+                    coleccion:"animales",
+                    data:{...dataanimal},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,    
+                    camposprov:`nacimiento${(nlote&nrodeo)?",lote,rodeo":nlote?",lote":nrodeo?",rodeo":""}`
+                }
+                comandos.push(comandoani)
+                animales.push(dataanimal)
+                onChangeAnimal()
+                await setAnimalesSQL(db,animales)
+
+            }
+            await setComandosSQL(db,comandos)
+            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
+        }
+        
+    }
+    //NO siempre guardo el animal en el  nacimiento
     async function guardarOffline() {
         let idprov = "nuevo_nac_"+generarIDAleatorio()
         let idanimal = "nuevo_animal_"+generarIDAleatorio()
@@ -167,7 +270,7 @@
                 idprov,    
                 camposprov:`${(esnuevomadre && esnuevopadre)?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
             }
-            //Agregar el expan
+            //Agregar el expan, no hay expand este se simula
             let dataanimal = {
                 caravana,
                 active:true,
@@ -298,12 +401,76 @@
             Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
         }
     }
+    async function guardarOnline2(){
+        if(agregaranimal){
+            let verificar = await verificarNivel(caboff.id)
+            if(!verificar){
+                Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
+                return
+            }
+        }
+        try{
+            let ms = madres.filter(ma=>ma.id==madre)
+            let m = {
+                id:"",
+                nombremadre:"",
+                rodeo:"",
+                lote:""
+            }
+            if(ms.length > 0){
+                m.id = ms[0].id
+                m.nombremadre = ms[0].caravana
+                m.lote = ms[0].lote
+                m.rodeo = ms[0].rodeo
+            }
+            let tipomadre = m.categoria
+            //Hace falta el expand
+            let dataparicion = {
+                madre:m.id,
+                padre,
+                fecha:fecha + " 03:00:00",
+                nombremadre:m.nombremadre,
+                nombrepadre,
+                observacion,
+                cab:caboff.id
+            }
+            const recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            if(agregaranimal){
+                let dataanimal = {
+                    caravana,
+                    active:true,
+                    delete:false,
+                    fechanacimiento:fecha +" 03:00:00",
+                    sexo,
+                    cab:cab.id,
+                    peso,
+                    lote:m.lote,
+                    rodeo:m.rodeo,
+                    nacimiento:recordparicion.id
+                }
+                
+                let recorda = await pb.collection('animales').create(dataanimal);
+                
+                animales.push(recorda)
+                onChangeAnimal()
+                await setAnimalesSQL(db,animales)
+            }
+            nacimientos.push(recordparicion)
+            onChangeNacimiento()
+            await setNacimientosSQL(db,nacimientos)
+            Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","Hubo un error para guardar el nacimiento","error")
+        }
+    }
     async function guardar(){
         if(coninternet.connected){
-            await guardarOnline()
+            await guardarOnline2()
         }
         else{
-            await guardarOffline()
+            await guardarOffline2()
         }
     }
     async function editarOnline() {
@@ -335,7 +502,7 @@
             const recorda = await pb.collection('animales').update(idanimal, datanimal);
             const record = await pb.collection('nacimientos').update(idnacimiento, dataparicion);
             Swal.fire("Éxito editar","Se pudo editar el nacimiento con exito","success")
-            
+            //no haria falta
             await getNacimientos()
             filterUpdate()
             idnacimiento = ""
@@ -471,7 +638,7 @@
         
     }
     function filterUpdate(){
-        nacimientosrow = nacimientos
+        nacimientosrow = nacimientoscab
         totalNacimientosEncontrados = nacimientosrow.length
         if(buscar != ""){
             nacimientosrow = nacimientosrow.filter(n=>n.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
@@ -630,13 +797,19 @@
         filterUpdate()
         await getAnimales()
     }
+
     async function  getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
         let resnacimientos = await getNacimientosSQL(db)
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         animales = resanimales.lista
-        nacimientos =resnacimientos.lista
-        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
-        padres = animales.filter(a=>a.sexo == "M")
+        animalescab =resanimales.lista.filter(a=>a.cab == caboff.id)
+        nacimientos = resnacimientos.lista    
+        nacimientoscab =resnacimientos.lista.filter(a=>a.cab == caboff.id)
+        madres = animalescab.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animalescab.filter(a=>a.sexo == "M")
         cargadoanimales = true
         listamadres = madres.map(item=>{
             return {
@@ -651,10 +824,16 @@
         filterUpdate()
     }
     async function updateLocalSQL(params) {
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        nacimientos = await updateLocalNacimientosSQL(db,pb,caboff.id)
-        madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
-        padres = animales.filter(a=>a.sexo == "M")
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animalescab = animales.filter(a=>a.cab == caboff.id)
+        nacimientos = await updateLocalNacimientosSQLUser(db,pb,usuarioid)
+        nacimientoscab = nacimientos.filter(a=>a.cab == caboff.id)
+        
+        madres = animalescab.filter(a=>a.sexo == "H" || a.sexo == "F")
+        padres = animalescab.filter(a=>a.sexo == "M")
         listamadres = madres.map(item=>{
             return {
                 id:item.id,nombre:item.caravana
@@ -672,6 +851,12 @@
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
+    }
+    function onChangeNacimiento(){
+        nacimientoscab = nacimientos.filter(n=>n.cab == caboff.id) 
+    }
+    function onChangeAnimal(){
+        animalescab = animales.filter(a=>a.cab == caboff.id) 
     }
     async function getDataSQL() {
         db = await openDB()
@@ -748,19 +933,7 @@
             botonhabilitado = false
             
         }
-        //if(isEmpty(nombremadre)){
-        //    botonhabilitado = false
-        //    
-        //}
-        //if(isEmpty(nombrepadre)){
-        //    botonhabilitado = false
-        //    
-        //}
-        //if(idnacimiento == "" && isEmpty(sexo)){
-        //    botonhabilitado = false
-        //    
-        //}
-        if(isEmpty(caravana)){
+        if(isEmpty(madre)){
             botonhabilitado = false
             
         }
@@ -775,38 +948,14 @@
                 malfecha = false
             }
         }
-        if(nombreCampo=="CARAVANA"){
-            if(isEmpty(caravana)){
-                malcaravana = true
+        if(nombreCampo=="MADRE"){
+            if(isEmpty(madre)){
+                malmadre = true
             }
             else{
-                malcaravana = false
+                malmadre = false
             }
         }
-        //if(nombreCampo=="MADRE"){
-        //    if(isEmpty(nombremadre)){
-        //        malmadre = true
-        //    }
-        //    else{
-        //        malmadre = false
-        //    }
-        //}
-        //if(nombreCampo=="PADRE"){
-        //    if(isEmpty(nombrepadre)){
-        //        malpadre=true
-        //    }
-        //    else{
-        //        malpadre = true
-        //    }
-        //}
-        //if(nombreCampo=="SEXO"){
-        //    if(isEmpty(sexo)){
-        //        malsexo = true
-        //    }
-        //    else{
-        //        malsexo = false
-        //    }
-        //}
     }
     function prepararData(item){
         return {
@@ -1051,77 +1200,8 @@
             <h3 class="text-lg font-bold">Ver nacimiento</h3>  
         {/if}
         <div class="form-control">
-            <label for = "nombre" class="label">
-                <span class={estilos.labelForm}>Caravana</span>
-            </label>
-            <label class="input-group">
-                <input id ="nombre" type="text"  
-                    class={`
-                        input input-bordered 
-                        w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2} 
-                        
-                    `}
-                    disabled={idnacimiento!=""}
-                  
-                    bind:value={caravana}
-                    oninput={()=>onchange("CARAVANA")}
-                />
-                {#if malcaravana}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500">Debe escribir la caravana del animal por nacer</span>                    
-                    </div>
-                {/if}
-            </label>
+            <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento = {fecha} confechanac={true}/>
             
-            {#if idnacimiento == ""}
-                <label for = "sexo" class="label">
-                    <span class={estilos.labelForm}>Sexo</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={sexo}
-                        onchange={()=>onchange("SEXO")}
-                    >
-                        {#each sexos as s}
-                            <option value={s.id}>{s.nombre}</option>    
-                        {/each}
-                    </select>
-                    {#if malsexo}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe seleccionar el sexo del animal</span>                    
-                        </div>
-                    {/if}
-                </label>
-
-                <label for = "peso" class="label">
-                    <span class={estilos.labelForm}>Peso (KG)</span>
-                </label>
-                <label class="input-group">
-                    <input id ="peso" type="number"  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `} 
-                        bind:value={peso}
-                    />
-                </label>
-            {/if}
             <label for = "fechanacimiento" class="label">
                 <span class={estilos.labelForm}>Fecha nacimiento</span>
             </label>
@@ -1144,112 +1224,11 @@
                     </div>
                 {/if}
             </label>
-            <div class="hidden">
-                <label for = "nombremadre" class="label">
-                    <span class="label-text text-base">Caravana madre</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombremadre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none 
-                            focus:ring-2 focus:ring-green-500 
-                            focus:border-green-500
-                            w-full 
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombremadre}
-                        oninput={()=>onchange("MADRE")}
-                        
-                    />
-                    {#if malmadre}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe escribir el nombre de la madre</span>                    
-                        </div>
-                    {/if}
-                </label>
-                <label for = "madre" class="label">
-                    <span class="label-text text-base">Madre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={madre}
-                        onchange={getNombreMadre}
-                    >
-                        {#each madres as m}
-                            <option value={m.id}>{m.caravana}</option>    
-                        {/each}
-                    </select>
-                </label>
-                <label for = "nombrepadre" class="label">
-                    <span class="label-text text-base">Caravana padre</span>
-                </label>
-            
-            </div>
             {#if cargadoanimales}
                 <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} onelegir={onelegirMadre} onwrite={onwriteMadre}/>
                 <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} onelegir={onelegirPadre} onwrite={onwritePadre}/>
             {/if}
             
-            
-            
-            
-            <div class="hidden">
-                <label class="input-group">
-                    <input 
-                        id ="nombrepadre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none 
-                            focus:ring-2 focus:ring-green-500 
-                            focus:border-green-500
-                            w-full 
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombrepadre}
-                        oninput={()=>onchange("PADRE")}
-                    />
-                    {#if malmadre}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe escribir el nombre del padre</span>                    
-                        </div>
-                    {/if}
-                </label>
-            <label for = "padre" class="label">
-                <span class="label-text text-base">Padre</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={padre}
-                    onchange={getNombrePadre}
-                >
-                    {#each padres as p}
-                        <option value={p.id}>{p.caravana}</option>    
-                    {/each}
-                  </select>
-            </label>
-            </div>
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>                    

@@ -1,9 +1,10 @@
 <script>
     //En proceso es que necesito un write file diferente para celular
     import estilos from "$lib/stores/estilos";
+    import { Filesystem, Directory } from '@capacitor/filesystem';
     let {data,titulo,filtros,confiltros,prepararData} = $props()
     import * as XLSX from "xlsx"
-    function exportar(){
+    async function exportar(){
         let csvdata = data.map(prepararData)
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet([])
@@ -16,7 +17,20 @@
             const wsFilter = XLSX.utils.aoa_to_sheet(filtros)
             XLSX.utils.book_append_sheet(wb, wsFilter, 'Filtros aplicados');
         }
-        XLSX.writeFile(wb, `${titulo.replace(/\//g, "-")}.xlsx`, { cellStyles: true });
+        //XLSX.writeFile(wb, `${titulo.replace(/\//g, "-")}.xlsx`, { cellStyles: true });
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: `${titulo.replace(/\//g, "-")}.xlsx`,
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: `${titulo.replace(/\//g, "-")}.xlsx`,
+            directory: Directory.Documents
+        });
     }
 </script>
 <button

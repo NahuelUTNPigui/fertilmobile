@@ -10,3 +10,9 @@ export async function setTotalSQL(db,total) {
 export async function setUltimoTotalSQL(db) {
     await db.run(`UPDATE Animalesuser SET ultimo = '${Date.now()}' WHERE id = 1`)
 }
+export async function updateTotalLocalSQL(db,pb,usuarioid){
+    let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
+    await setTotalSQL(db,animals.totalItems)
+    await setUltimoTotalSQL(db)
+    return animals.totalItems
+}

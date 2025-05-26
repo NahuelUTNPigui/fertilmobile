@@ -8,6 +8,7 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {isEmpty} from "$lib/stringutil/lib"
     import estilos from '$lib/stores/estilos';
+    import {shorterWord} from "$lib/stringutil/lib"
     import * as XLSX from "xlsx"
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
@@ -15,20 +16,21 @@
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {getCabData} from "$lib/stores/cabsdata"
     import {
         getPesajesSQL,
         updateLocalPesajesSQL,
+        updateLocalPesajesSQLUser,
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
     
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { npm_package_devDependencies__capacitor_assets } from '$env/static/private';
     //ofline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let caber = createCaber()
@@ -46,6 +48,7 @@
     let fechadesde = $state("")
     let fechahasta = $state("")
     let pesajes = $state([])
+    let pesajescab = $state([])
     let pesajesrows = $state([])
     let filas = $state([])
     let columnas = $state([])
@@ -74,7 +77,7 @@
         filas = []
         columnas = []
         tablapesaje = {}
-        pesajesrows = pesajes
+        pesajesrows = pesajescab
         if(!isEmpty(buscarcaravana)){
             pesajesrows = pesajesrows.filter(p=>p.expand.animal.caravana.toLocaleLowerCase().includes(buscarcaravana.toLocaleLowerCase()))
         }
@@ -86,6 +89,59 @@
         }
         //procesarPesajes()
         procesarUltimosPesajes()
+    }
+    async function editarPesajeOffline() {
+      let data = {
+            fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
+            pesonuevo
+        }
+        try{
+            let idx_pesaje = pesajes.findIndex(p=>pesajes)
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            onchangePesajes()
+            await setPesajesSQL(db,pesajes)
+            let comando = {
+                tipo:"update",
+                coleccion:"pesaje",
+                data,
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idpesaje,
+                camposprov:""
+            }
+            Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+        }  
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+        }
+    }
+    async function editarPesajeOnline() {
+        try{
+            let data = {
+                fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
+                pesonuevo
+            }
+            await pb.collection("pesaje").update(idpesaje,data)
+            await getPesajes()
+            filterUpdate()
+            Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+        }   
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+        }
+        detallePesaje.close()
+    }
+    async function editarPesaje() {
+        if(coninternet.connected){
+            await editarPesajeOnline()
+        }
+        else{
+            await editarPesajeOffline()
+        }
+
     }
     function eliminarOffline(){
         Swal.fire({
@@ -132,9 +188,10 @@
         }).then(async result => {
             if(result.value){
                 try{
-            
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
                     await pb.collection("pesaje").delete(idpesaje)
-                    await getPesajes()
+                    
                     filterUpdate()
                     detallePesaje.close()
                 }
@@ -147,7 +204,12 @@
         })
     }
     async function eliminar(){
-        
+        if(coninternet.connected){
+            await eliminarOnline()
+        }
+        else{
+            await eliminarOffline()
+        }
         
     }
     function openDetalle(id){
@@ -275,13 +337,18 @@
         await getPesajes()
         filterUpdate()
     }
+    function onChangePesajes(){
+        pesajescab  = pesajes.filter(p=>p.expand.animal.cab.id == caboff.id) 
+    }
     async function updateLocalSQL(){
-        pesajes = await updateLocalPesajesSQL(db,pb,caboff.id)
+        pesajes = await updateLocalPesajesSQLUser(db,pb,usuarioid)
+        onChangePesajes()
         filterUpdate()
     }
     async function getLocalSQL() {
         let respesajes = await getPesajesSQL(db)
         pesajes = respesajes.lista
+        onChangePesajes()
         filterUpdate()
     }
     async function initPage() {
@@ -324,20 +391,31 @@
     })
 </script>
 <Navbarr>
-    <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
+    <div class="grid grid-cols-1  lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
-            <h1 class="text-2xl">Historia pesajes - Últimos {ultimos}</h1>  
+            <h1 class="text-2xl col-span-2 lg:col-span-1">Historia pesajes - Últimos {ultimos}</h1>  
         </div>
         <div class="flex col-span-2 gap-1 justify-end">
             
-            <div>
+            <div class="flex flex-row gap-2 ">
+                <div>
+                    <a class={`
+                        btn 
+                        bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
+                        ${estilos.btnsecondary}`} 
+                        href={"/pesajes/historial"}
+    
+                    >
+                        <span  class="text-xl font-semibold ">Historial</span>
+                    </a>
+                </div>
                 <button
                     onclick={exportarPesaje}
                     class={`
                         bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
                         ${estilos.btnsecondary}
                         rounded-full
-                        px-4 pt-2 pb-3
+                        p-2
                     `} 
                     aria-label="Exportar"
                 >
@@ -438,7 +516,7 @@
                 {#each pesajesprocesados as f}
                     <tr>
                         <td class="text-base mx-1 px-1">
-                            {f.animal}
+                            {shorterWord(f.animal)}
                         </td>
                         {#each Array(5) as _,idx}
                             {#if f.pesajes.length < ultimos - idx}
@@ -475,7 +553,7 @@
                 {#each pesajesprocesados as f}
                     <tr>
                         <td class="text-base mx-1 px-1">
-                            {f.animal}
+                            {shorterWord(f.animal)}
                         </td>
                         {#each Array(3) as _,idx}
                             {#if f.pesajes.length < ultimos - (idx+2)}
@@ -525,10 +603,19 @@
                     <label for = "caravana" class="label">
                         <span class="label-text text-base">Fecha</span>
                     </label>
-                    <label for="caravana" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
-                    >
-                        {fecha}
+                    <label class="input-group ">
+                        <input id ="fecha" type="date"   
+                            class={`
+                                input input-bordered 
+                                w-full
+                                border border-gray-300 rounded-md
+                                focus:outline-none focus:ring-2 
+                                focus:ring-green-500 
+                                focus:border-green-500
+                                ${estilos.bgdark2}
+                            `} 
+                            bind:value={fecha}
+                        />
                     </label>
                 </div>
                 <div class="mb-1 lg:mb-0">
@@ -545,16 +632,25 @@
                     <label for = "pesonuevo" class="label">
                         <span class="label-text text-base">Peso nuevo(KG)</span>
                     </label>
-                    <label for="pesonuevo" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
-                    >
-                        {pesonuevo}
-                    </label>
+                    <input 
+                        id ="pesonuevo" 
+                        type="number"  
+                        
+                        class={`
+                            input 
+                            input-bordered 
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                            w-full
+                            ${estilos.bgdark2}
+                        `}
+                        bind:value={pesonuevo}
+                    />
                 </div>
             </div>
         </div>
         <div class="modal-action justify-start ">
-            
+            <button class="btn btn-success text-white"  onclick={editarPesaje} >Editar</button>
                 <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
                 <button class={`
                     btn 

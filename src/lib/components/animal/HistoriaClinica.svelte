@@ -9,17 +9,28 @@
     import estados from "$lib/stores/estados";
     import {capitalize} from "$lib/stringutil/lib"
     import { getEstadoNombre } from "../estadosutils/lib";
+    let{
+        historial=$bindable([]),
+        tratamientos=$bindable([]),
+        tactos=$bindable([]),
+        servicios=$bindable([]),
+        inseminaciones=$bindable([]),
+        pesajes=$bindable([]),
+        observaciones=$bindable([]),
+        pariciones=$bindable([]),
+        caravana=$bindable(""),
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id = $state("")
-    let historial = $state([])
-    let inseminaciones = $state([])
-    let tactos = $state([])
-    let tratamientos = $state([])
-    let observaciones = $state([])
-    let pariciones = $state([])
-    let pesajes = $state([])
-    let servicios = $state([])
+    //let historial = $state([])
+    //let inseminaciones = $state([])
+    //let tactos = $state([])
+    //let tratamientos = $state([])
+    //let observaciones = $state([])
+    //let pariciones = $state([])
+    //let pesajes = $state([])
+    //let servicios = $state([])
     let historialeventos = $state([])
 
     async function getHistorial(){
@@ -160,14 +171,14 @@
     }
     onMount(async ()=>{
         id = $page.params.slug
-        await getHistorial()
-        await getInseminaciones()
-        await getTactos()
-        await getTratamientos()
-        await getObservaciones()
-        await getPesajes()
-        await getPariciones()
-        await getServicios()
+        //await getHistorial()
+        //await getInseminaciones()
+        //await getTactos()
+        //await getTratamientos()
+        //await getObservaciones()
+        //await getPesajes()
+        //await getPariciones()
+        //await getServicios()
         getHistorialEventos(inseminaciones, pariciones, tactos, tratamientos, observaciones, pesajes)
     })
 </script>

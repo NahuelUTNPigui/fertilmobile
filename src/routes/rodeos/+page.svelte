@@ -16,6 +16,7 @@
     import {
         getRodeosSQL,
         updateLocalRodeosSQL,
+        updateLocalRodeosSQLUser,
         addNewRodeoSQL,
         updateRodeoSQL,
         deleteRodeoSQL,
@@ -26,7 +27,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     //offline
     let ruta = import.meta.env.VITE_RUTA
@@ -37,6 +38,7 @@
 
     //Datos para mostrar
     let rodeos = $state([])
+    let rodeoscab = $state([])
     let rodeosrows = $state([])
     let buscar = $state("")
     let mostrarVacios =$state(true)
@@ -89,11 +91,14 @@
                 camposprov:""
             }
             comandos.push(comando)
-            await addNewRodeoSQL(db,data)
+            
             data.total = 0
             await setComandosSQL(db,comandos)
             rodeos.push(data)
-            ordenar(rodeos)
+            await setRodeosSQL(db,rodeos)
+            changeRodeo()
+            ordenar(rodeoscab)
+            
             filterUpdate()
             nombre = ""
             Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
@@ -115,7 +120,9 @@
             let record = await pb.collection('rodeos').create(data);
             record.total = 0
             rodeos.push(record)
-            ordenar(rodeos)
+            await setRodeosSQL(db,rodeos)
+            changeRodeo()
+            ordenar(rodeoscab)
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
             nombre = ""
@@ -124,6 +131,9 @@
             nombre = ""
             Swal.fire("Error guardar","No se pudo guardar el rodeo","error")
         }
+    }
+    function changeRodeo(){
+        rodeoscab = rodeos.filter(r=>r.id==cab.id)
     }
     async function guardar(){
         if(coninternet.connected){
@@ -225,6 +235,7 @@
                     rodeos = rodeos.filter(r=>r.id!=idrodeo)
                     await setRodeosSQL(db,rodeos)
                     ordenar(rodeos)
+                    changeRodeo()
                     filterUpdate()
                     //ver como hago para actualizar la lista
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
@@ -267,7 +278,9 @@
 
                     rodeos = rodeos.filter(r=>r.id!=idrodeo)
                     await setRodeosSQL(db,rodeos)
+                    changeRodeo()
                     ordenar(rodeos)
+
                     filterUpdate()
                     
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
@@ -290,7 +303,7 @@
         }
     }
     function filterUpdate(){
-        rodeosrows = rodeos
+        rodeosrows = rodeoscab
         if(buscar != ""){
             rodeosrows = rodeosrows.filter(r=>r.nombre.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
 
@@ -319,12 +332,13 @@
     }
     async function updateLocalSQL() {
         rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
-        
+        changeRodeo()
         filterUpdate()
     }
     async function getLocalSQL() {
         let resrodeos = await getRodeosSQL(db)
         rodeos = resrodeos.lista
+        changeRodeo()
         filterUpdate()
     }
     async function getDataSQL() {

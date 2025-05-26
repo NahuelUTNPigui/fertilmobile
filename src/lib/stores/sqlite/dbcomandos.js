@@ -124,6 +124,7 @@ function processData(data,campos,coleccion,tablaids) {
             newData.animal = idnuevo
         }
     }
+    delete newData.expand
     return newData
 }
 async function addComando(pb,c,tablaids) {
@@ -157,9 +158,15 @@ async function modComando(pb,c,tablaids) {
     //Campos deberia tener el nombre del atributo
     let campos = c.camposprov.split(",")
     let coleccion = c.coleccion
-    let data = processData(c.data,campos,coleccion,tablaids)
-    delete data.id
-    await pb.collection(coleccion).update(id,data)
+    if (coleccion != "users"){
+        let data = processData(c.data,campos,coleccion,tablaids)
+        delete data.id
+        await pb.collection(coleccion).update(id,data)
+    }
+    else{
+        console.log("editar usuario")
+    }
+    
     //let idnuevo = await pb.collection(coleccion).update(id,data)
 }
 async function delComando(pb,c,tablaids) {
@@ -171,6 +178,7 @@ async function delComando(pb,c,tablaids) {
     let coleccion = c.coleccion
     await pb.collection(coleccion).delete(id)
 }
+//Si pongo aca el historial?
 export async function flushComandosSQL(db,pb) {
     let rescoms = await getComandosSQL(db)
     let listacomandos = []

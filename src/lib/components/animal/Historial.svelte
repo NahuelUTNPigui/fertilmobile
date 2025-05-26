@@ -8,11 +8,14 @@
     import estados from "$lib/stores/estados";
     import {capitalize} from "$lib/stringutil/lib"
     import { getEstadoNombre } from "../estadosutils/lib";
+    let{
+
+        historial=$bindable([]),
+        
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id = $state("")
-    let historial = $state([])
-
     async function getHistorial(){
         historial = await pb.collection("historialanimales").getFullList({
             filter:`animal='${id}'`,
@@ -24,7 +27,7 @@
     
     onMount(async ()=>{
         id = $page.params.slug
-        await getHistorial()
+        //await getHistorial()
     })
 </script>
 

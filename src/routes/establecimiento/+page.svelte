@@ -15,11 +15,37 @@
     import provincias from '$lib/stores/geo/provincias';
     import localidades from '$lib/stores/geo/localidades';
     import estilos from '$lib/stores/estilos';
+    import { randomString } from '$lib/stringutil/lib';
+    //offline
+    import {openDB} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
+    import {getCabDataByID} from "$lib/stores/cabsdata"
+    import {
+        setEstablecimientoSQL,
+        getEsblecimientoSQL,
+        updateLocalEstablecimientoSQL
+
+    } from '$lib/stores/sqlite/dbestablecimiento';
+    import {updateLocalEstablecimientosSQL}  from '$lib/stores/sqlite/dballestablecimientos';
+    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getColabSQL,setColabSQL,updateLocalColabSQL} from '$lib/stores/sqlite/dbcolaboradores';
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import permisos from '$lib/stores/permisos';
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state({})
+    let establecimiento = $state({})
+    let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
-    let pre = import.meta.env.VITE_PRE
+    let pre = ""
     const pb = new PocketBase(ruta);
     const regexRenspa = /^\d{2}\.\d{3}\.\d\.\d{5}\.\d{2}$/;
-    let usuarioid = $state("")
+    
     let cab = $state({
         exist:false,
         nombre:"",
@@ -80,25 +106,31 @@
         
     }
     async function getColabs(){
-        const records = await pb.collection('estxcolabs').getFullList({
+        const records = await pb.collection('estxcolabspermisos').getFullList({
             expand:"colab",
             filter:`cab='${cab.id}'`,
             sort:"colab.apellido"
         });
         colabs = records
     }
-    
-    async function guardarColab(data){
+    async function guardarColabOffline() {
+        Swal.fire("Error guardar","No se puede crear un colaborador sin internet","error")
+    }
+    async function guardarColabOnline(data){
         let codigo = await codigoSinRepetir(pb)
         try{
+            let nombredata = nombre.trim().split(" ").filter(w=>w !== "").join(".")
+            let apellidodata = apellido.trim().split(" ").filter(w=>w !== "").join(".")
+            let randomnumber = randomString(5,"n")
             let userdata = {
-                username:data.email.split("@")[0],
+                "username": nombredata+"."+apellidodata+randomnumber,
                 email:data.email,
-                emailVisibility:true,
                 password:data.contra,
                 passwordConfirm:data.contra,
                 name:data.email,
                 codigo:codigo,
+                nombre:data.nombre.trim(),
+                apellido:data.apellido.trim(),
                 active:true
 
             }
@@ -120,15 +152,42 @@
                 permisos:""
             }
             await pb.collection('permisos').create(permisosdata);
-
-            await getColabs()
+            let colabsql = {
+                id:recordexc.id,
+                colab:recordcolab.id,
+                cab:cab.id,
+                permisos:"",
+                expand:{
+                    colab:{
+                        id:recordcolab.id,
+                        nombre:data.nombre,
+                        apellido:data.apellido,
+                        telefono:data.telefono,
+                        user:recorduser.id
+                    }
+                }
+            }
+            colabs.push(colabsql)
+            await setColabSQL(db,colabs)
+            
 
         }
         catch(err){
             console.error(err)
         }
     }
-    async function guardarCabaña(){
+    async function guardarColab(data){
+        if(coninternet.connected){
+            await guardarColabOnline(data)
+        }
+        else{
+            await guardarColabOffline()
+        }
+    }
+    async function guardarCabañaOffline() {
+        Swal.fire("Error guardar","No se puede crear un establecimiento sin internet","error")
+    }
+    async function guardarCabañaOnline() {
         let codigo = await codigoSinRepetirEstablecimiento(pb)
         const data = {
             nombre,
@@ -145,8 +204,10 @@
         };
 
         try{
+
             const record = await pb.collection('cabs').create(data);
             Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
+            await setEstablecimientoSQL(db,pb,data)
             caber.setCab(nombre,record.id)
             per.setPer("0,1,2,3,4,5",usuarioid)
             goto(pre+"/")
@@ -156,9 +217,40 @@
             Swal.fire("Error guardar","No se pudo guardar la cabaña","error")
         }
         renspaValido = true
+    }
+    async function guardarCabaña(){
+        if(coninternet.connected){
+            await guardarCabañaOnline()
+        }
+        else{
+            await guardarCabañaOffline()
+        }
         
     }
-    async function editarCabaña(){
+    async function editarCabañaOffline(){
+        const data = {
+            nombre,
+            direccion,
+            contacto,
+            contacto,
+            renspa,
+            localidad,
+            provincia,
+            telefono,
+            mail
+        };
+        try{
+            await setEstablecimientoSQL(db,pb,cab.id,data)
+            Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
+            caber.setCab(nombre,cab.id)
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error modificar","No se pudo modificar la cabaña con éxito","error")
+        }
+        renspaValido = true
+    }
+    async function editarCabañaOnline() {
         const data = {
             nombre,
             direccion,
@@ -172,6 +264,8 @@
         };
         try{
             const record = await pb.collection('cabs').update(cab.id, data);
+            await setEstablecimientoSQL(db,data)
+            
             Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
             caber.setCab(nombre,cab.id)
             
@@ -182,10 +276,32 @@
         }
         renspaValido = true
     }
-    async function desasociar() {
-        
-        await pb.collection('estxcolabs').delete(idestxcolab);
+    async function editarCabaña(){
+        if(coninternet.connected){
+            await editarCabañaOnline()
+        }
+        else{
+            await editarCabañaOffline()
+        }
+    }
+    async function desasociarOnline(idestxcolab) {
+
         try{
+            await pb.collection('estxcolabs').delete(idestxcolab);
+            colabs = colabs.filter(colab => colab.id != idestxcolab)
+            await setColabSQL(db,colabs)
+            
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error desasociar","No se pudo desasociar el colaborador","error")
+        }
+
+
+        
+        //Me hace ruido todo esto porque tengo que laburar con la lista de establecimientos
+        try{
+            //Aca va a su cabaña, hay un cambio de cabaña, por eso se fija si existe alguna cabaña
             const record = await pb.collection('cabs').getFirstListItem(`user='${usuarioid}' && active=true`, {});
             caber.setCab(record.nombre,record.id)
             per.setPer("0,1,2,3,4,5",usuarioid)
@@ -207,7 +323,20 @@
             }
             
         }
-        goto(pre+'/')
+        goto('/')
+    }
+    async function desasociarOffline(){
+        Swal.fire("Error desasociar","No se puede desasociar sin internet","error")
+    }
+    //Esta funcion es la autodesaciacion del colaborador
+    async function desasociar(idestxcolab) {
+        if(coninternet.connected){
+            await desasociarOnline()
+        }
+        else{
+            await desasociarOffline()
+        }
+        
     }
     function mostrarcolab(data){
         console.log("padre: "+data)
@@ -240,15 +369,14 @@
         }
         
     }
-    onMount(async ()=>{
-        
+    async function originalMount(){
         cab = caber.cab
-        alert(JSON.stringify(cab))
+        
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         if(cab.exist){
-           //await getCabaña()
-           //await getColabs()
+           await getCabaña()
+           await getColabs()
            const recordcolab = await pb.collection('colaboradores').getList(1,1,{
             filter:`user = '${usuarioid}'`
            })
@@ -269,6 +397,98 @@
            }
            
         }
+    }
+    async function initPage(){
+        coninternet = await Network.getStatus();
+        //Esto no va andar, sera siempre userer y caber
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        cab = caber.cab
+        usuarioid = useroff.id
+    }
+    async function getLocalSQL(){
+        let rescolabs = await getColabSQL(db)
+        colabs = rescolabs.lista.filter(colab => colab.cab == caboff.id)
+        let res = await getEsblecimientoSQL(db)
+        establecimiento = res
+        nombre = res.nombre
+        direccion = res.direccion
+        contacto = res.contacto
+        codigo = res.codigo
+        renspa = res.renspa
+        localidad = res.localidad
+        provincia = res.provincia
+        telefono = res.telefono
+        mail = res.mail    
+        localidadesProv = localidades.filter(lo => lo.idProv == provincia)
+        
+  
+    }
+    async function updateLocalSQL(){
+        await  updateLocalEstablecimientosSQL(db,pb,usuarioid,cab.id)
+        let res = await getEsblecimientoSQL(db)
+        establecimiento = res
+        nombre = res.nombre
+        direccion = res.direccion
+        contacto = res.contacto
+        codigo = res.codigo
+        renspa = res.renspa
+        localidad = res.localidad
+        provincia = res.provincia
+        telefono = res.telefono
+        mail = res.mail    
+        localidadesProv = localidades.filter(lo => lo.idProv == provincia)
+        let allcolabs = await updateLocalColabSQLUser(db,pb,usuarioid)
+        colabs = allcolabs.filter(colab => colab.cab == caboff.id)
+
+    }
+    async function getDataSQL(){
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        if(cab.exist){
+            await getDataSQL()
+        }
+        else{
+            
+            nombre = ""
+            direccion = ""
+            contacto = ""
+            codigo = ""
+            contacto=""
+            renspa=""
+            localidad=""
+            provincia=""
+            telefono=""
+            mail=""
+        }
+        
     })
  
 </script>

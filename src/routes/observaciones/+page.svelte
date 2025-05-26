@@ -17,7 +17,12 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import {
+        setAnimalesSQL,
+        getAnimalesSQL,
+        setUltimoAnimalesSQL,
+        updateLocalAnimalesSQLUser
+    } from "$lib/stores/sqlite/dbanimales";
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -26,14 +31,15 @@
         updateLocalObservaciones,
         setObservacionesSQL,
         addNewObservacionSQL,
-        getObservacionesSQL
+        getObservacionesSQL,
+        updateLocalObservacionesSQLUser
     } from '$lib/stores/sqlite/dbeventos';
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     //online
 
@@ -48,7 +54,9 @@
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     let animales = $state([])
+    let animalescab = $state([])
     let observaciones = $state([])
+    let observacionescab = $state([])
     let observacionesrow = $state([])
     let caravana = $state("")
     let malcaravana = $state(false)
@@ -169,6 +177,7 @@
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
                 observaciones = observaciones.filter(o=>o.id!=idobservacion)
+                changeObservacion()
                 await setObservacionesSQL(db,observaciones)
                 filterUpdate()
                 Swal.fire('Observación eliminada!', 'Se eliminó la observación correctamente.', 'success');
@@ -203,6 +212,7 @@
 
                 const recordedit = await pb.collection('observaciones').update(idobservacion, data);
                 observaciones = observaciones.filter(o=>o.id!=idobservacion)
+                changeObservacion()
                 filterUpdate()
                 Swal.fire('Observación eliminada!', 'Se eliminó la observación correctamente.', 'success');
             }
@@ -242,7 +252,7 @@
         nuevoModal.close()
     }
     function filterUpdate(){
-        observacionesrow = observaciones
+        observacionesrow = observacionescab
         totalObservacionesEncontradas = observacionesrow.length
         if(buscar != ""){
             observacionesrow = observacionesrow.filter(o=>o.expand.animal.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
@@ -262,50 +272,8 @@
         }
     }
 
-    async function originalMount() {
-        let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.record.id
-        await getObservaciones()
-        filterUpdate()
-        await getAnimales()
-    }
-    onMount(async ()=>{
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        if (coninternet.connected){
-            if(lastinter.internet == 0){
-                observaciones = await updateLocalObservaciones(db,pb,caboff.id)
-                filterUpdate()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    observaciones = await updateLocalObservaciones(db,pb,caboff.id)
-                    filterUpdate()
-                }
-                else{
-                    let resobservaciones = await getObservacionesSQL(db)
-                    observaciones = resobservaciones.lista
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            let resobservaciones = await getObservacionesSQL(db)
-            observaciones = resobservaciones.lista
-            await setInternetSQL(db,0,Date.now())
-
-        }
-    })
+    
+    
     async function guardarAnimal2() {
         //Los nombres de la funciones horribles
         let totalanimals = await getTotalSQL(db)
@@ -359,101 +327,86 @@
                 return 
             }
             animales.push(a)
+            changeAnimales()
             await setAnimalesSQL(db,animales)
+            let data = {
+                animal:a.id,
+                categoria:a.categoria,
+                fecha:fechaobs +" 03:00:00",
+                cab:caboff.id,
+                observacion:observacionobs,
+                active:true
+            }
             if(coninternet.connected){
+                let record = await pb.collection('observaciones').create(data);
+                record.expand = {animal:a,cab:{id:caboff.id}}
+                observaciones.push(record)
+                changeObservacion()
+                await setObservacionesSQL(db,observaciones)
+                filterUpdate()
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con éxito","success")
 
             }
             else{
-
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"observaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,
+                    camposprov:"animal"
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                data.expand = {animal:a,cab:{id:caboff.id}}
+                observaciones.push(data)
+                changeObservacion()
+                await setObservacionesSQL(db,observaciones)
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con éxito","success")
             }
         }
+        //Animal seleccionaod
         else{
+            let data = {
+                animal:animalobs,
+                fecha:fechaobs +" 03:00:00",
+                categoria:categoriaobs,
+                cab:caboff.id,
+                observacion:observacionobs,
+                active:true
+            }
             if(coninternet.connected){
-
+                let record = await pb.collection('observaciones').create(data);
+                record.expand = {animal:animales.filter(an=>an.id==animalobs)[0],cab:{id:caboff.id}}
+                observaciones.push(record)
+                changeObservacion()
+                filterUpdate()
+                await setObservacionesSQL(db,observaciones)
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con éxito","success")
             }
             else{
-                
-            }
-        }
-    }
-    async function guardar(){
-        if (agregaranimal){
-            try{
-                let a = await guardarAnimal()
-                let data = {
-                    animal:a.id,
-                    fecha:fecha +" 03:00:00",
-                    categoria:a.categoria,
-                    cab:cab.id,
-                    observacion,
-                    active:true
+                let nuevoanimal = animalobs.split("_")[0]=="nuevo"
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"observaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:3,
+                    idprov,
+                    camposprov:nuevoanimal?"animal":""
                 }
-                const record = await pb.collection('observaciones').create(data);
-                await getObservaciones()
-                
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                observaciones.push(record)
+                changeObservacion()
                 filterUpdate()
-                await getAnimales()
-                Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
-            }
-            catch(err){
-                console.error(err)
-                Swal.fire("Error guardar","No se pudo guardar la observación","error")
-            }
-        }
-        else{
-            try{
-                let data = {
-                    animal,
-                    fecha:fecha +" 03:00:00",
-                    categoria,
-                    cab:cab.id,
-                    observacion,
-                    active:true
-                }
-                const record = await pb.collection('observaciones').create(data);
-                await getObservaciones()
-
+                Swal.fire("Éxito guardar","Se pudo guardar la observación con éxito","success")
                 filterUpdate()
-                Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
-
-            }
-            catch(err){
-                console.error(err)
-                Swal.fire("Error guardar","No se pudo guardar la observación","error")
             }
         }
-        
-        idobservacion = ""
-        fecha = ""
-        observacion = ""
-        categoria = ""
-        animal = ""
-    }
-
-    async function guardarAnimal(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        let verificar = true
-        if(nivel.animales != -1 && animals.totalItems > nivel.animales){
-            verificar =  false
-        }
-        
-        let data = {
-            caravana:caravananuevo,
-            active:true,
-            categoria:categorianuevo,
-            delete:false,
-            fechanacimiento:fechanacimientonuevo +" 03:00:00",
-            sexo:sexonuevo,
-            peso:pesonuevo,
-            cab:cab.id
-        }
-        
-        let recorda = await pb.collection('animales').create(data); 
-        return recorda
     }
     async function editarOffline() {
         try{
@@ -491,7 +444,7 @@
             Swal.fire("Error editar","No se pudo editar la observación","error")
         }
     }
-    async function editarOnline(params) {
+    async function editarOnline() {
         try{
             let data = {
                 animal,
@@ -585,7 +538,74 @@
         }
     }
 
+    async function originalMount() {
+        let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
+        await getObservaciones()
+        filterUpdate()
+        await getAnimales()
+    }
+    async function initPage(){
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id
+    }
+    function changeObservacion(){
+        observacionescab = observaciones.filter(o=>o.cab==caboff.id)
+    }
+    function changeAnimales(){
+        animalescab = animales.filter(a=>a.cab==caboff.id)
+    }
+    async function updateLocalSQL(){
+        observaciones = await updateLocalObservacionesSQLUser(db,pb,usuarioid)
+        changeObservacion()
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)    
+        changeAnimales()
+        filterUpdate()
+    }
+    async function getLocalSQL() {
+        let resobservaciones = await getObservacionesSQL(db)
+        let resanimales = await getAnimalesSQL(db)
+        observaciones = resobservaciones.lista
+        animales = resanimales.lista
+        changeObservacion()
+        changeAnimales()
+        filterUpdate()
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getDataSQL()
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getDataSQL()
+            await setInternetSQL(db,0,Date.now())
 
+        }
+    }
+    onMount(async ()=>{
+        await initPage()    
+        await getDataSQL()  
+    })
 </script>
 <Navbarr>
     <div class="grid grid-cols-2 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
@@ -806,7 +826,7 @@
                         onchange={()=>oninput("ANIMAL")}
                     >
                         
-                        {#each animales as a}
+                        {#each animalescab as a}
                             <option value={a.id}>{a.caravana}</option>    
                         {/each}
                     </select>

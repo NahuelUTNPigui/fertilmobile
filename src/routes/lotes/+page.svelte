@@ -18,6 +18,7 @@
     import {
         getLotesSQL,
         updateLocalLotesSQL,
+        updateLocalLotesSQLUser,
         addnewLoteSQL,
         updateLoteSQL,
         deleteLoteSQL,
@@ -31,7 +32,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -44,6 +45,7 @@
     let userpermisos = getPermisosList(per.per.permisos)
 
     //Datos para mostrar
+    let lotescab = $state([])
     let lotes = $state([])
     let lotesrows = $state([])
     let buscar = $state("")
@@ -94,6 +96,7 @@
             let record = await pb.collection('lotes').create(data);
             record.total = 0
             lotes.push(record)
+            onChangeLote()
             await addnewLoteSQL(db,record)
             ordenar(lotes)
             filterUpdate()
@@ -125,6 +128,8 @@
         data.total = 0 
         await setComandosSQL(db,comandos)
         lotes.push(data)
+        onChangeLote()
+        
         ordenar(lotes)
         filterUpdate()
     }
@@ -146,6 +151,7 @@
             let record = await pb.collection('lotes').create(data);
             record.total = 0
             lotes.push(record)
+            onChangeLote()
             ordenar(lotes)
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
@@ -153,6 +159,9 @@
             console.error(err)
             Swal.fire("Error guardar","No se pudo guardar el lote","error")
         }
+    }
+    function onChangeLote(){
+        lotescab = lotes.filter(lo=>lo.cab==cab.id)
     }
     function openEditModal(id){
         idlote = id
@@ -296,7 +305,7 @@
         }
     }
     function filterUpdate(){
-        lotesrows = lotes
+        lotesrows = lotescab
         if(buscar != ""){
             lotesrows = lotesrows.filter(r=>r.nombre.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
         }
@@ -325,10 +334,12 @@
     async function getLocalSQL() {
         let reslotes = await getLotesSQL(db)
         lotes = reslotes.lista
+        onChangeLote()
         filterUpdate()
     }
     async function updateLocalSQL() {
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
+        lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
+        onChangeLote()
         filterUpdate()
     }
     async function getDataSQL() {

@@ -2,6 +2,8 @@
     import Navbarr from "$lib/components/Navbarr.svelte";
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
+    
+    
     import { onMount } from 'svelte';
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
@@ -9,7 +11,23 @@
     
     import {createPer} from "$lib/stores/permisos.svelte"
     import { usuario } from "$lib/stores/usuario";
+    //offline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getUserOffline } from "$lib/stores/capacitor/offlineuser";
+    import {setCabOffline,getCabOffline} from '$lib/stores/capacitor/offlinecab'
+    import {getCabData} from "$lib/stores/cabsdata"
+    import { updateLocalEventosSQL } from '$lib/stores/sqlite/dbeventos'
+    import {updateLocalAnimalesSQL,updateLocalHistorialAnimalesSQL} from '$lib/stores/sqlite/dbanimales'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    //OFLINE
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let caboff = $state({})
+    let coninternet = $state({})
+    let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
     //pre
     const pb = new PocketBase(ruta);
@@ -17,26 +35,30 @@
     let establecimientoscolab = $state([])
     let totales = $state([])
     let totalescolab = $state([])
-    let usuarioid = $state("")
-    let useroff = getUserOffline()
     let caber = createCaber()
     let cab = $state({})
     //Guardar establecimiento 
-    function irEstablecimientoColab(id){
+    async function irEstablecimientoColab(id){
         let per = createPer()
         let est = establecimientoscolab.filter(e=>e.id == id)[0]
-        console.log(est.expand.cab.nombre)
+        
         caber.setCab(est.expand.cab.nombre,est.expand.cab.id)
+        await setCabOffline(est.expand.cab.id,est.expand.cab.nombre,true,"0,1,2,3,4,5")
+        await updateLocalAnimalesSQL(db,pb,est.expand.cab.id)
+        await updateLocalHistorialAnimalesSQL(db,pb,est.expand.cab.id)
+        await updateLocalEventosSQL(db,pb,est.expand.cab.id)
         per.setPer("0,1,2,3,4,5",usuarioid)
         goto("/")
     }
-    function irEstablecimiento(id){
-        
+    async function irEstablecimiento(id){
         let per = createPer()
-        
         let est = establecimientos.filter(e=>e.id == id)[0]
-        
         caber.setCab(est.nombre,est.id)
+        await setCabOffline(est.id,est.nombre,true,"0,1,2,3,4,5")
+        await setInternetSQL(db,0,Date.now())
+        //await updateLocalAnimalesSQL(db,pb,est.id)
+        //await updateLocalHistorialAnimalesSQL(db,pb,est.id)
+        //await updateLocalEventosSQL(db,pb,est.id)
         per.setPer("0,1,2,3,4,5",usuarioid)
         goto("/")
 
@@ -93,7 +115,7 @@
         })
         
     }
-    onMount(async ()=>{
+    async function onMountOriginal() {
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
         cab = caber.cab
@@ -116,17 +138,58 @@
         for(let i = 0;i <establecimientoscolab.length;i++){
             totalescolab.push(await getTotalAnimales(establecimientoscolab[i].expand.cab.id))
         }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        caboff = await getCabOffline()
+        usuarioid = useroff.id 
+        cab = caber.cab
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        const records = await pb.collection("cabs").getFullList({
+            filter: `active = True && user = '${usuarioid}'` 
+
+        })
+        const restxcolab = await pb.collection("estxcolabs").getFullList({
+            filter : `colab.user = '${usuarioid}' && cab.active = true`,
+            expand : "colab,cab"
+
+        })
+        establecimientoscolab = restxcolab
+        
+        establecimientos = records
+        
+        for(let i = 0;i<establecimientos.length;i++){
+            totales.push(await getTotalAnimales(establecimientos[i].id))
+        }
+        for(let i = 0;i <establecimientoscolab.length;i++){
+            totalescolab.push(await getTotalAnimales(establecimientoscolab[i].expand.cab.id))
+        }
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>
-    <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-2">
-        <div>
-            <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Tus establecimientos</h1>
-        </div>
-        <div class="flex col-span-2 justify-end mt-2 lg:mt-0">
-            <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={crearEstablecimiento}>
-                <span  class="text-xl">Nuevo</span>
-            </button>
+    <div class="flex justify-center mt-1">
+        <div class="w-full max-w-7xl px-4">
+            <div class="grid grid-cols-3 mx-1  lg:mx-10 mt-2">
+                <div>
+                    <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Tus establecimientos</h1>
+                </div>
+                <div class="flex col-span-2 justify-end mt-2 lg:mt-0">
+                    <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={crearEstablecimiento}>
+                        <span  class="text-xl">Nuevo</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="grid grid-cols-1 gap-2">
@@ -154,7 +217,7 @@
                         <span class="text-xl font-medium text-end">{totales[i]}</span>
                     </div>
                     <div class="p-2">
-                        <button onclick={()=>irEstablecimiento(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
+                        <button onclick={async ()=>await irEstablecimiento(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
                             <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
                                 stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
                                 <path d="M5 12h14M12 5l7 7-7 7"></path>
@@ -185,11 +248,14 @@
         
     </div>
     {#if establecimientoscolab.length != 0}
-    <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-2">
-        <div>
-            <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Establecimientos asociados</h1>
+    <div class="flex justify-center mt-1">
+        <div class="w-full max-w-7xl px-4">
+            <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-2">
+                <div>
+                    <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Establecimientos asociados</h1>
+                </div>
+            </div>
         </div>
-        
     </div>
     {/if}
     <div class="grid grid-cols-1 gap-2">
@@ -216,7 +282,7 @@
                     <span class="text-xl font-medium text-end">{totalescolab[i]}</span>
                 </div>
                 <div class="p-2">
-                    <button onclick={()=>irEstablecimientoColab(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
+                    <button onclick={async ()=> await irEstablecimientoColab(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
                         <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
                             stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
                             <path d="M5 12h14M12 5l7 7-7 7"></path>

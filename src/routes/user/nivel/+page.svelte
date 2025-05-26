@@ -3,7 +3,17 @@
     import Navbarr from "$lib/components/Navbarr.svelte";
     import PocketBase from 'pocketbase'
     import Swal from "sweetalert2";
+    //offline
+    import { openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    //offline
+    let db = $state(null)
+    let usuarioid = $state("")
+    let useroff = $state({})
+    let coninternet = $state({})
+    
     let ruta = import.meta.env.VITE_RUTA
+    let pre = ""
 
     const pb = new PocketBase(ruta);
 
@@ -60,12 +70,16 @@
         },    
     ]
     let nivel = $state(0)
-    onMount(()=>{
+    onMount(async ()=>{
+        coninternet = await Network.getStatus();
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         nivel = pb_json.record.nivel
         
     })
     async function cambiarPlan(p_nivel){
+        if(!coninternet.connected){
+Swal.fire("Error cambiar plan","No se pudo cambiar el plan sin internet","error")
+        }
         Swal.fire({
             title: 'Cambiar plan',
             text: `¿Seguro que deseas cambiar de plan?`,
@@ -85,6 +99,7 @@
                         nivel:p_nivel
                     }
                     const record = await pb.collection('users').update(usuarioid, data);
+                    Swal.fire("Éxito cambiar plan","Se pudo cambiar al plan","success")
                 }
                 catch(err){
                     Swal.fire("Error cambiar plan","No se pudo cambiar el plan","error")

@@ -13,6 +13,7 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    import { shorterWord } from "$lib/stringutil/lib";
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -23,16 +24,20 @@
     import {
         getLotesSQL,
         updateLocalLotesSQL,
+        updateLocalLotesSQLUser,
         getRodeosSQL,
         updateLocalRodeosSQL,
+        updateLocalRodeosSQLUser,
         getPesajesSQL,
         setPesajesSQL,
         updateLocalPesajesSQL,
+        updateLocalPesajesSQLUser
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
         updateLocalAnimalesSQL,
-        setAnimalesSQL
+        setAnimalesSQL,
+        updateLocalAnimalesSQLUser
     } from "$lib/stores/sqlite/dbanimales"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
 
@@ -41,7 +46,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -58,10 +63,12 @@
     let textoboton = $state("Mover")
     //Datos animales
     let animales = $state([])
+    let animalescab = $state([]) 
     let animalesrows = $state([])
     //Filtros
     let buscar = $state("")
     let lote = $state("")
+
     let rodeo = $state("")
     let loteseleccion = $state([])
     let rodeoseleccion = $state([])
@@ -246,6 +253,7 @@
     }
     async function crearPesajeOnline() {
         let errores = false
+        let pesajeserror = []
         for(let i = 0;i<selectanimales.length ;i++){
             let ps = selectanimales[i]
             try{
@@ -264,6 +272,7 @@
 
             }
             catch(err){
+                pesajeserror.push(ps.id)
                 console.error(err)
                 errores = true
             }
@@ -274,16 +283,27 @@
         else{
             Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
         }
+         
+        for(let i = 0;i<selectanimales.length;i++){
+            let ps = selectanimales[i]
+            let i_error = pesajeserror.findIndex(pid=>pid==ps.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[ps.id]
+            }
+        }
+        selectanimales =[]
+        
         await updateLocalPesajesSQL(db,pb,caboff.id)
         animales  = updateLocalAnimalesSQL(db,pb,caboff.id)
         filterUpdate()
-        selecthashmap = {}
         selectanimales = []
     }
     async function crearPesajeOffline() {
         let respesajes = await getPesajesSQL(db)
         let pesajes = respesajes.lista
         let errores = false
+        let pesajeserror = []
         for(let i = 0;i<selectanimales.length ;i++){
             let ps = selectanimales[i]
             try{
@@ -326,10 +346,12 @@
                 }
                 comandos.push(comandopesaje)
                 comandos.push(comandoani)
-                await pb.collection("pesaje").create(data)
+                await setComandosSQL(db,comandos)
+                await setPesajesSQL(db,pesajes)
 
             }
             catch(err){
+                pesajeserror.push(ps.id)
                 console.error(err)
                 errores = true
             }
@@ -340,11 +362,22 @@
         else{
             Swal.fire("Éxito pesaje","Se lograron registar todos los pesajes","success")
         }
+
+        for(let i = 0;i<selectanimales.length;i++){
+            let ps = selectanimales[i]
+            let i_error = pesajeserror.findIndex(pid=>pid==ps.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[ps.id]
+            }
+        }
+        selectanimales =[]
+        
         await setPesajesSQL(db,pesajes)
         await setAnimalesSQL(db,animales)
-        await set_cptable
+        
         filterUpdate()
-        selecthashmap = {}
+        
         selectanimales = []
     }
     async function crearPesaje(){
@@ -371,14 +404,18 @@
         let reslotes = await getLotesSQL(db)
         let resrodeos = await getRodeosSQL(db)
         animales = resanimales.lista
-        lotes = reslotes.lista
-        rodeos = resrodeos.lista
+        animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)           
+        lotes = reslotes.lista.filter(a=>a.active && a.cab == caboff.id)
+        rodeos = resrodeos.lista.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
     async function updateLocalSQL() {
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)
+        lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
+        lotes = lotes.filter(a=>a.active && a.cab == caboff.id)
+        rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
+        rodeos = rodeos.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
     async function getDataSQL() {

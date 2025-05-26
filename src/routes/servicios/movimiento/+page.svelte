@@ -18,6 +18,7 @@
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import MultiSelect from '$lib/components/MultiSelect.svelte';
+    import { shorterWord } from "$lib/stringutil/lib";
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -29,19 +30,27 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
         updateLocalServiciosSQL,
+        updateLocalServiciosSQLUser,
+        updateLocalInseminacionesSQLUser,
         setServiciosSQL,
         getServiciosSQL,
         getInseminacionesSQL,
         setInseminacionesSQL,
         getLotesSQL,
         getRodeosSQL,
+        getLotesRodeosSQL,
         updateLocalLotesSQL,
-        updateLocalRodeosSQL
+        updateLocalLotesSQLUser,
+        updateLocalRodeosSQL,
+        updateLocalRodeosSQLUser,
+        getUpdateLocalRodeosLotesSQLUser
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
         setAnimalesSQL,    
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser,
+        updateLocalHistorialAnimalesSQLUser
     } from "$lib/stores/sqlite/dbanimales"
     
     //OFLINE
@@ -49,7 +58,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
 
@@ -65,6 +74,7 @@
     let cargado = $state(false)
     //Datos animales
     let animales = $state([])
+    let animalescab = $state([])
     let animalesrows = $state([])
     let madres = $state([])
     let padres = $state([])
@@ -114,6 +124,11 @@
     let cadenapadre = $state("")
     //validacion
     let malfecha = $state(false)
+
+    //Servicios
+    let servicios = $state([])
+    //Insminaciones
+    let inseminaciones = $state([])
     $effect(()=>{
         if(padre == ""){
             for(let i = 0;i<selectanimales.length;i++){
@@ -543,6 +558,7 @@
     }
     async function guardarServicioOnline() {
         let errores = false
+        let serverrores = []
         for(let i = 0;i<selectanimales.length;i++){
             let servicio = selectanimales[i]
             try{
@@ -559,12 +575,14 @@
                 if(fechahastaserv != ""){
                     dataser.fechahasta = fechahastaserv + " 03:00:00"
                 }
-                await pb.collection("servicios").create(dataser)
-                await guardarHistorial(pb,servicio.id)
-                await pb.collection("animales").update(servicio.id,{prenada:3})
-                animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+                let record = await pb.collection("servicios").create(dataser)
+                //aca debo guardar el servicio
+                //await guardarHistorial(pb,servicio.id)
+                //await pb.collection("animales").update(servicio.id,{prenada:3})
+                //animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
             }   
             catch(err){
+                serverrores.push(servicio.id)
                 console.error(err)
                 errores = true
             }
@@ -575,11 +593,20 @@
         else{
             Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
         }
+        for(let i = 0;i<selectanimales.length;i++){
+            let servicio = selectanimales[i]
+            let i_error = serverrores.findIndex(pid=>pid==servicio.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[servicio.id]
+            }
+        }
     }
     async function guardarServicioOffline() {
         let errores = false
         let resservicios = await getServiciosSQL(db)
         let servicios = resservicios.lista
+        let serverrores = []
         for(let i = 0;i<selectanimales.length;i++){
             let idprov = "nuevo_servicio_"+generarIDAleatorio()
             let servicio = selectanimales[i]
@@ -615,6 +642,7 @@
                 
             }   
             catch(err){
+                serverrores.push(servicio.id)
                 console.error(err)
                 errores = true
             }
@@ -625,11 +653,20 @@
         else{
             Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
         }
+        for(let i = 0;i<selectanimales.length;i++){
+            let servicio = selectanimales[i]
+            let i_error = serverrores.findIndex(pid=>pid==servicio.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[servicio.id]
+            }
+        }
         await setServiciosSQL(db,servicios)
         await setComandosSQL(db,comandos)
     }
     async function guardarInseminacionOnline() {
         let errores = false
+        let erroresins = []
         for(let i = 0;i<selectanimales.length;i++){
             let inseminacion = selectanimales[i]
             let data = {
@@ -650,6 +687,7 @@
                 animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
                 
             }catch(err){
+                erroresins.push(inseminacion.id)
                 console.error(err)
             }
         }
@@ -659,11 +697,20 @@
         else{
             Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
         }
+        for(let i = 0;i<selectanimales.length;i++){
+            let inseminacion = selectanimales[i]
+            let i_error = erroresins.findIndex(pid=>pid==inseminacion.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[inseminacion.id]
+            }
+        }
     }
     async function guardarInseminacionOffline() {
         let resinseminaciones = await getInseminacionesSQL(db)
         let inseminaciones = resinseminaciones.lista
         let errores = false
+        let erroresins = []
         for(let i = 0;i<selectanimales.length;i++){
             let idprov = "nuevo_ins_"+generarIDAleatorio()
             let inseminacion = selectanimales[i]
@@ -697,6 +744,7 @@
                 
                 
             }catch(err){
+                erroresins.push(inseminacion.id)
                 console.error(err)
             }
         }
@@ -706,6 +754,14 @@
         else{
             Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
         }
+        for(let i = 0;i<selectanimales.length;i++){
+                let inseminacion = selectanimales[i]
+                let i_error = erroresins.findIndex(pid=>pid==inseminacion.id)
+                if(i_error == -1){
+                    
+                    delete selecthashmap[inseminacion.id]
+                }
+            }
         await setInseminacionesSQL(db,inseminaciones)
         await setComandosSQL(db,comandos)
     }
@@ -716,7 +772,7 @@
             }
             await guardarServicioOnline()
             selectanimales = []
-            selecthashmap = {}
+
             fechadesdeserv = ""
             fechahastaserv = ""
             padreslist = []
@@ -738,7 +794,6 @@
             botonhabilitado = false
             malfecha = false
             malpadre = false
-            selecthashmap = {}
             selectanimales = []
             esinseminacion = false
         }
@@ -750,7 +805,6 @@
             }
             await guardarServicioOffline()
             selectanimales = []
-            selecthashmap = {}
             fechadesdeserv = ""
             fechahastaserv = ""
             padreslist = []
@@ -772,7 +826,6 @@
             botonhabilitado = false
             malfecha = false
             malpadre = false
-            selecthashmap = {}
             selectanimales = []
             esinseminacion = false
         }
@@ -821,9 +874,16 @@
         cargado = true
     }
     async function updateLocalSQL() {
-        lotes = updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = updateLocalRodeosSQL(db,pb,caboff.id)
-        animales = updateLocalAnimalesSQL(db,pb,caboff.id)
+        //Esto tranquilamente va en una funcion
+        //lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
+        //lotes = lotes.filter(l=>l.cab ==  caboff.id)
+        //rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
+        //rodeos = rodeos.filter(r=>r.cab == caboff.id)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = animales.filter(a=>a.active && a.cab == caboff.id)
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         madres = animales.filter(a=>a.sexo == "H")
         padres = animales.filter(a=>a.sexo == "M")
@@ -836,12 +896,13 @@
         })
     }
     async function getLocalSQL() {
-        let reslotes = await getLotesSQL(db)
-        let resrodeos = await getRodeosSQL(db)
+        //let reslotes = await getLotesSQL(db)
+        //let resrodeos = await getRodeosSQL(db)
+        let lotesrodeos = await getLotesRodeosSQL(db)
         let resanimales = await getAnimalesSQL(db)
-        lotes = reslotes.lista
-        rodeos = resrodeos.lista
-        animales = resanimales.lista
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
+        animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         madres = animales.filter(a=>a.sexo == "H")
         padres = animales.filter(a=>a.sexo == "M")

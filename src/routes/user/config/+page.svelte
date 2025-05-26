@@ -8,9 +8,26 @@
     import { createDarker } from "$lib/stores/dark.svelte";
     import CardBase from '$lib/components/CardBase.svelte';
     import estilos from "$lib/stores/estilos";
-    let ruta = import.meta.env.VITE_RUTA
-    const pb = new PocketBase(ruta);
+    ///ofline
+    import {openDB,resetTables} from '$lib/stores/sqlite/main'
+    import { Network } from '@capacitor/network';
+    import {getUserOffline,setDefaultUserOffline,updateLocalSQLUser,editUserCommonData} from "$lib/stores/capacitor/offlineuser"
+    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos'; 
+    import {updateLocalAnimalesSQLUser,getAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import {getEstablecimientosSQL,getUpdateLocalEstablecimientosSQL} from "$lib/stores/sqlite/dballestablecimientos"
+    //offline
+    let db = $state(null)
     let usuarioid = $state("")
+    let useroff = $state({})
+    
+    let coninternet = $state({})
+    let comandos = $state([])
+    
+    let ruta = import.meta.env.VITE_RUTA
+    let pre = ""
+    const pb = new PocketBase(ruta);
+    
     let tokencolab = $state("")
     let username = $state("")
     let usermail = $state("")
@@ -35,15 +52,42 @@
         nombre:"",
         id:""
     })
-
-    async function editarUsuario(){
+    async function editarUsuarioOffline() {
+        const data = {
+            username,
+            nombre,
+            apellido
+        };
+        let comando = {
+            tipo:"update",
+            coleccion:"users",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:0,
+            idprov:usuarioid,
+            camposprov:""
+        }
+        comandos.push(comando)
+        try{
+            await editUserCommonData(data)
+            await setComandosSQL(db,comandos)
+            Swal.fire("Exito modificar","Se pudo modificar el usuario con éxito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error modificar","No se pudo modificar el usuario con éxito","error")
+        }
+        
+        
+    }
+    async function editarUsuarioOnline() {
         const data = {
             username,
             nombre,
             apellido
         };
         try{
-            
+            await editUserCommonData(data)
             const record = await pb.collection("users").update(usuarioid, data);
             const colabs = await pb.collection("colaboradores").getList(1,1,{
                 filter:`user = '${usuarioid}'`,
@@ -58,6 +102,14 @@
         catch(err){
             console.error(err)
             Swal.fire("Error modificar","No se pudo modificar el usuario con éxito","error")
+        }
+    }
+    async function editarUsuario(){
+        if(coninternet.connected){
+            await editarUsuarioOnline()
+        }   
+        else{
+            await editarUsuarioOffline()
         }
     }
     function cerrarModal(){
@@ -112,7 +164,15 @@
             }
         }
     }
-    async function cambiarContra(){
+    async function cambiarContraOffline() {
+        const data = {
+            password: contra,
+            passwordConfirm: confcontra,
+            oldPassword: viejacontra
+        };
+        Swal.fire("Error cambio de contraseña","No se pudo cambiar la contraseña sin internet","error")
+    }
+    async function cambiarContraOnline() {
         const data = {
             password: contra,
             passwordConfirm: confcontra,
@@ -128,7 +188,25 @@
             Swal.fire("Error cambio de contraseña","No se pudo cambiar la contraseña","error")
 
         }
+    }
+    async function cambiarContra(){
+        if(coninternet.connected){
+            await cambiarContraOnline()
+        }   
+        else{
+            await cambiarContraOffline()
+        }     
         
+    }
+    async function eliminarCuentaOffline() {
+        Swal.fire("Error eliminar","No se puede eliminar la cuenta sin internet","error")
+    }
+    async function eliminarCuentaOnline() {
+        Swal.fire("Cuenta Eliminada!", "", "success");
+        let data = {active:false}
+        const record = await pb.collection('users').update(usuarioid, data);
+        pb.authStore.clear();
+        goto(pre+"/")
     }
     async function eliminarCuenta() {
         let html= `
@@ -148,19 +226,81 @@
             }).then(async (result) => {
             /* Read more about isConfirmed, isDenied below */
             if (result.isConfirmed) {
-                Swal.fire("Eliminada!", "", "success");
-                let data = {active:false}
-                const record = await pb.collection('users').update(usuarioid, data);
-                pb.authStore.clear();
-                goto(pre+"/")
-            } else if (result.isDenied) {
-                
-            }
+                if(coninternet.connected){
+                    await eliminarCuentaOnline()
+                }
+                else{
+                    await eliminarCuentaOffline()
+                }
+            } 
         });
         
         
     }
-    onMount(async ()=>{
+    async function getLocalSQL() {
+        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
+        usermail = pb_json.record.email
+        username = pb_json.record.username
+        nombre = pb_json.record.nombre
+        apellido = pb_json.record.apellido
+        nivel = pb_json.record.nivel
+        tokencolab = pb_json.record.codigo
+        let resanimales = await getAnimalesSQL(db)
+        let resestablecimientos = await getEstablecimientosSQL(db)
+        totalanimales = resanimales.lista.filter(a=>a.active).length
+        totalesta = resestablecimientos.lista.length
+    }
+    async function updateLocalSQL() {
+        await updateLocalSQLUser(pb)
+        
+        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        usuarioid = pb_json.record.id
+        usermail = pb_json.record.email
+        username = pb_json.record.username
+        nombre = pb_json.record.nombre
+        apellido = pb_json.record.apellido
+        nivel = pb_json.record.nivel
+        tokencolab = pb_json.record.codigo
+        let resanimales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        let resestablecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
+        totalanimales = resanimales.filter(a=>a.active).length
+        totalesta = resestablecimientos.length
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = lastinter.ultimo
+                const cincoMinEnMs = 300000;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()
+                }
+                else{
+                    await getLocalSQL()            
+                }
+            }
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            await getLocalSQL()
+            await setInternetSQL(db,0,Date.now())
+        }
+    }
+    async function initPage() {
+        coninternet = await Network.getStatus();
+        useroff = await getUserOffline()
+        usuarioid = useroff.id
+    }
+    async function onMountOriginal() {
         let caber = createCaber()
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
@@ -178,6 +318,10 @@
         });
         totalanimales = resans.totalItems
         totalesta = rescab.totalItems
+    }
+    onMount(async ()=>{
+        await initPage()
+        await getDataSQL()
     })
 </script>
 <Navbarr>

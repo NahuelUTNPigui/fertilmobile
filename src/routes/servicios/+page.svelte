@@ -16,39 +16,44 @@
     import { isEmpty,getWholeWordButLastLetter,addDays } from '$lib/stringutil/lib';
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
+    import { shorterWord } from '$lib/stringutil/lib';
     //Offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {getCabData} from "$lib/stores/cabsdata"
+
     import {
         getServiciosSQL,
         getInseminacionesSQL,
         updateLocalInseminacionesSQL,
+        updateLocalInseminacionesSQLUser,
         updateLocalServiciosSQL,
+        updateLocalServiciosSQLUser,
         setServiciosSQL,
         setInseminacionesSQL
         
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser,
+        updateLocalHistorialAnimalesSQLUser
     } from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     
     
     
     let ruta = import.meta.env.VITE_RUTA
-    //let pre
+    let pre=""
 
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -63,9 +68,10 @@
     let esservicio = $state(false)
     let esinseminacion = $state(false)
     let filtroservicio = $state(0)
-    let opcionservicio = [{id:0,nombre:"Todos"},{id:1,nombre:"Solo servicios"},{id:2,nombre:"Solo inseminaciones"}]
+    let opcionservicio  = [{id:0,nombre:"Todos"},{id:1,nombre:"Solo servicios"},{id:2,nombre:"Solo inseminaciones"}]
     // Datos para mostrar
     let inseminaciones = $state([])
+    let inseminacionescab = $state([])
     let totalInseminacionesEncontradas = $state(0)
     //Datos inseminaciones
     let idins = $state("")
@@ -79,6 +85,7 @@
     let fechainseminacion = $state("")
     // Datos para mostrar
     let servicios = $state([])
+    let servicioscab = $state([])
     let serviciosrow = $state([])
     let buscar = $state("")
     let isOpenFilter = $state(false)
@@ -441,15 +448,15 @@
     function filterUpdate(){
         serviciosrow = []
         if(filtroservicio == 0){
-            serviciosrow = servicios
+            serviciosrow = servicioscab
             serviciosrow = serviciosrow.concat(inseminaciones)
         }
         else if(filtroservicio == 1){
-            serviciosrow = servicios
+            serviciosrow = servicioscab
             
         }
         else{
-            serviciosrow = inseminaciones
+            serviciosrow = inseminacionescab
         }
         if(fechaservdesdefiltro != ""){
             serviciosrow = serviciosrow.filter(s=>{
@@ -524,8 +531,8 @@
     }
     async function updateLocalSQL() {
         
-        let animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        
+        let animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = animales.filter(a=>a.active && a.cab ==  caboff.id)
         madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
         padres = animales.filter(a=>a.sexo == "M")
         listapadres = padres.map(item=>{
@@ -535,13 +542,10 @@
             }
         })
         cargado = true
-        
-        
-        servicios = await updateLocalServiciosSQL(db,pb,caboff.id)
-        
-        
-        inseminaciones = await updateLocalInseminacionesSQL(db,pb,caboff.id)
-        
+        servicios = await updateLocalServiciosSQLUser(db,pb,usuarioid)
+        servicioscab = servicios.filter(s=>s.cab == caboff.id)
+        inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+        inseminacionescab = inseminaciones.filter(i=>i.cab == caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
@@ -549,6 +553,7 @@
         let resanimales = await getAnimalesSQL(db)
         
         let animales = resanimales.lista
+        animales = animales.filter(a=>a.active  && a.cab == caboff.id)
         madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
         padres = animales.filter(a=>a.sexo == "M")
         listapadres = padres.map(item=>{
@@ -561,10 +566,11 @@
         let resservicios = await getServiciosSQL(db)
         
         servicios = resservicios.lista
+        servicioscab = servicios.filter(s=>s.cab == s.caboff.id)
         let resinseminaciones = await getInseminacionesSQL(db)
         
         inseminaciones = resinseminaciones.lista
-
+        inseminacionescab = inseminaciones.filter(i=>i.cab == i.caboff.id)
         filterUpdate()
     }
     async function getDataSQL() {
@@ -845,8 +851,8 @@
                     <td class="text-base mx-1 px-1 border-b dark:border-gray-600">{s.fechaparto?new Date(s.fechaparto).toLocaleDateString():""}</td>
                     <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
                         {   s.fechadesde?
-                            s.expand.madre.caravana:
-                            s.expand.animal.caravana
+                            shorterWord(s.expand.madre.caravana):
+                            shorterWord(s.expand.animal.caravana)
                         }
                     </td>
                     <td class="text-base mx-1 px-1 border-b dark:border-gray-600">
@@ -918,8 +924,8 @@
                             <span >Madre:</span> 
                             <span class="mx-1 font-semibold">
                                 {   s.fechadesde?
-                                    s.expand.madre.caravana:
-                                    s.expand.animal.caravana
+                                    shorterWord(s.expand.madre.caravana):
+                                    shorterWord(s.expand.animal.caravana)
                                 }
                             </span>
                             

@@ -14,6 +14,7 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    import { shorterWord } from "$lib/stringutil/lib";
     //OFfline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -23,23 +24,32 @@
     import {
         getLotesSQL,
         getRodeosSQL,
+        getLotesRodeosSQL,
         updateLocalLotesSQL,
         updateLocalRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser,
         getTiposTratSQL,
         updateLocalTratsSQL,
+        updateLocalTratsSQLUser,
         getTratsSQL,
         addSomeNewTrataSQL
 
     } from '$lib/stores/sqlite/dbeventos';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
-    import {setAnimalesSQL,getAnimalesSQL,setUltimoAnimalesSQL,updateLocalAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
+    import {
+        setAnimalesSQL,
+        getAnimalesSQL,
+        setUltimoAnimalesSQL,
+        updateLocalAnimalesSQL,
+        getUpdateLocalAnimalesSQLUser
+    } from "$lib/stores/sqlite/dbanimales";
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     
     let ruta = import.meta.env.VITE_RUTA
@@ -253,13 +263,14 @@
         }
         tratamientoMasivo.showModal()
     }
-    async function guardarTratamientoOnline() {
+    async function guardarTratamientoBulkOnline() {
         if(fecha == "" || tipotratamientoselect == ""){
             Swal.fire("Error tratamientos","Debe seleccionar una fecha","error")
             return 
         }
         let errores = false
         let bulkdata = []
+        let errorestrata = []
         for(let i = 0;i<selectanimales.length;i++){
             let tratamientoanimal = selectanimales[i]
             let datatratamiento = {
@@ -285,7 +296,7 @@
             const result = await batch.send();
 
             //Como es por batch nunca voy a tener el id
-            await updateLocalTratsSQL(db,pb,caboff.id)
+            await updateLocalTratsSQLUser(db,pb,usuarioid)
 
             Swal.fire("Éxito tratamientos","Se lograron registrar todos los tratamientos","success")
         }
@@ -300,6 +311,51 @@
         botonhabilitado = false
         selecthashmap = {}
         selectanimales = []
+    }
+    async function guardarTratamientoOnline() {
+        if(fecha == "" || tipotratamientoselect == ""){
+            Swal.fire("Error tratamientos","Debe seleccionar una fecha","error")
+            return 
+        }
+        let errores = false
+        let bulkdata = []
+        let errorestrata = []
+        for(let i = 0;i<selectanimales.length;i++){
+            let tratamientoanimal = selectanimales[i]
+            let datatratamiento = {
+                fecha : fecha+ " 03:00:00",
+                observacion:tratamientoanimal.observacionnuevo,
+                categoria:tratamientoanimal.categoria,
+                animal:tratamientoanimal.id,
+                tipo:tipotratamientoselect,
+                active : true,
+                cab:caboff.id
+            }
+            try{
+                await pb.collection("tratamientos").create(datatratamiento)
+            }
+            catch(err){
+                errorestrata.push(tratamientoanimal.id)
+                console.error(err)
+                errores = true
+            }
+            
+        }
+        
+        fecha = ""
+        malfecha = false
+        maltipo = false
+        tipotratamientoselect = ""
+        botonhabilitado = false
+        for(let i = 0;i<selectanimales.length;i++){
+            let ts = selectanimales[i]
+            let i_error = errorestrata.findIndex(pid=>pid==ts.id)
+            if(i_error == -1){
+                
+                delete selecthashmap[ts.id]
+            }
+        }
+        selectanimales =[]
     }
     function getDatoAnimal(idanimal){
         let a = animales.filter(an=>an.id==idanimal)[0]
@@ -411,22 +467,25 @@
     }
     async function updateLocalSQL() {
         
-        animales = await updateLocalAnimalesSQL(db,pb)
-        lotes = await updateLocalLotesSQL(db,pb)
-        rodeos = await updateLocalRodeosSQL(db,pb)
+        animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         let restipos = await getTiposTratSQL(db)
-        tipotratamientos = restipos.lista
+        tipotratamientos = restipos.lista.filter(tt=>tt.generico ||  tt.cab == caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
         let reslotes = await getLotesSQL(db)
         let resrodeos = await getRodeosSQL(db)
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         let restipos = await getTiposTratSQL(db)
-        tipotratamientos = restipos.lista
-        animales = resanimales.lista
-        lotes = reslotes.lista
-        rodeos = resrodeos.lista
+        tipotratamientos = restipos.lista.filter(tt=>tt.generico || tt.cab == caboff.id)
+        animales = resanimales.lista.filter(a=>a.active  && a.cab == caboff.id)
+
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         
         filterUpdate()
     }
@@ -470,7 +529,7 @@
 
 </script>
 <Navbarr>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
     <div class="grid grid-cols-2 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <button

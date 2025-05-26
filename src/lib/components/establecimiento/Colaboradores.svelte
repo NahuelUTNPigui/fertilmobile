@@ -8,9 +8,16 @@
     import tiponoti from '$lib/stores/tiponoti';
     import {verificarNivelColab} from "$lib/permisosutil/lib"
     import PocketBase from 'pocketbase'
+    //offline
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
-    let {colabs = $bindable(),mostrarcolab,guardarColab,desasociar,asociado} = $props()
+    let {
+        colabs = $bindable(),
+        mostrarcolab,
+        guardarColab,
+        desasociar,
+        asociado
+    } = $props();
     let titulo = $state("Colaboradores")
     
     //Nuevo colaborador

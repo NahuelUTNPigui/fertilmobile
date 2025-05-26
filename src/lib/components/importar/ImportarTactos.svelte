@@ -1,6 +1,7 @@
 <script>
     import estilos from "$lib/stores/estilos";
     import * as XLSX from 'xlsx';
+    import { Filesystem, Directory } from '@capacitor/filesystem';
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase';
     import Swal from 'sweetalert2';
@@ -23,7 +24,7 @@
     let wkbk = $state(null)
     let loading = $state(false)
     
-    function exportarTemplate(){
+    async function exportarTemplate(){
         let csvData = [{
             fecha:"MM/DD/AAAA",
             caravana:"AAA",
@@ -43,7 +44,19 @@
         const ws = XLSX.utils.json_to_sheet(csvData);
         XLSX.utils.book_append_sheet(wb, ws, 'Tactos');
         
-        XLSX.writeFile(wb, 'Modelo tactos.xlsx');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo Tactos.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo Tactos.xlsx",
+            directory: Directory.Documents
+        });
     }
     function importarArchivo(event){
         let file = event.target.files[0];

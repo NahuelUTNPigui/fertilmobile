@@ -1,7 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
 import { defineCustomElements as jeepSqlite } from "jeep-sqlite/loader";
 import { Capacitor } from "@capacitor/core";
-
+import { lastVersion } from "./dbversion";
 const DBNAME = "fertil.db"
 
 export async function resetTables(db) {
@@ -10,6 +10,8 @@ export async function resetTables(db) {
     await db.execute(`DROP TABLE IF EXISTS Animalesuser`)
     await db.execute(`DROP TABLE IF EXISTS Internet`)
     await db.execute(`DROP TABLE IF EXISTS Comandos`)
+    await db.execute(`DROP TABLE IF EXISTS Establecimiento`)
+    await db.execute(`DROP TABLE IF EXISTS Version`)
     // Creo la tabla de colecciones
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Colecciones (
@@ -35,10 +37,27 @@ export async function resetTables(db) {
             ultimo INT NOT NULL
         )
     `);
+    // Creo la tabla de comandos
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Comandos (
             id INTEGER PRIMARY KEY,
             lista TEXT NOT NULL
+        )
+    `);
+    //Creo la tabla de estableciento
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS Establecimiento (
+            id INTEGER PRIMARY KEY,
+            valores TEXT NOT NULL,
+            ultimo INT NOT NULL
+        )
+    `);
+    //Creo la tabla de version
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS Version (
+            id INTEGER PRIMARY KEY,
+            version INTEGER NOT NULL,
+            description TEXT NOT NULL
         )
     `);
     //Consultar si existe algun valor para esas tablas
@@ -55,14 +74,25 @@ export async function resetTables(db) {
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','[]',0)")
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','[]',0)")
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (12,'pesajes','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (13,'historiales','[]',0)")
+    //Aca solo van los datos de los establecimientos
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (14,'cabs','[]',0)")
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (15,'colaboradores','[]',0)")
+    //Aca iria el listado establecimientos asociados en los que quiero mantener los datos
+    await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (16,'asociados','[]',0)")
     
+
     //tabla numeroanimales
     await db.run("INSERT INTO Animalesuser (id,numero,ultimo) VALUES (1,0,0)")
-    
     //tabla internet
     await db.run("INSERT INTO Internet (id,internet,ultimo) VALUES (1,0,0)")
     //tabla comandos
     await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'[]')")
+    //Tabla de establecimiento
+    await db.run("INSERT INTO Establecimiento (id,valores,ultimo) VALUES (1,'{}',0)")
+    //Tabla de version
+    let v = lastVersion()
+    await db.run(`INSERT INTO Version (id,version,description) VALUES (1,${v.version},'${v.description}')`)
 
     return db;
 }
@@ -111,10 +141,26 @@ export async function initTables(){
             ultimo INT NOT NULL
         )
     `);
+    // Creo la tabla de comandos
     await db.execute(`
         CREATE TABLE IF NOT EXISTS Comandos (
             id INTEGER PRIMARY KEY,
             lista TEXT NOT NULL
+        )
+    `);
+    //Creo la tabla de estableciento
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS Establecimiento (
+            id INTEGER PRIMARY KEY,
+            valores TEXT NOT NULL,
+            ultimo INT NOT NULL
+        )
+    `);//Creo la tabla de version
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS Version (
+            id INTEGER PRIMARY KEY,
+            version INTEGER NOT NULL,
+            description TEXT NOT NULL
         )
     `);
     //Consultar si existe algun valor para esas tablas
@@ -133,6 +179,10 @@ export async function initTables(){
         await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (10,'servicios','[]',0)")
         await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','[]',0)")
         await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (12,'pesajes','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (13,'historiales','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (14,'cabs','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (15,'colaboradores','[]',0)")
+        await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (16,'asociados','[]',0)")
     }
     //tabla numeroanimales
     let ans = await db.query("select * from Animalesuser")
@@ -150,7 +200,20 @@ export async function initTables(){
         //tabla comandos
         await db.run("INSERT INTO Comandos (id,lista) VALUES (1,'[]')")
     }
-
+    let establer = await db.query("select * from Establecimiento")
+    //tabla de establecimento
+    if(!establer.values || establer.values.length == 0){
+        //tabla establecimiento
+        await db.run("INSERT INTO Establecimiento (id,valores,ultimo) VALUES (1,'{}',0)")
+    }
+    let versioner = await db.query("select * from Version")
+    //tabla de Version
+    if(!versioner.values || versioner.values.length == 0){
+        //aca debo buscar la ultima version
+        //tabla establecimiento
+        let v = lastVersion()
+        await db.run(`INSERT INTO Version (id,version,description) VALUES (1,${v.version},'${v.description}')`)
+    }
     // Save store only for web platform
     if (platform === "web") {
         await sqlite.saveToStore(DBNAME);

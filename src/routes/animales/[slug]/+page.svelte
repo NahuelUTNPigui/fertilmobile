@@ -23,6 +23,7 @@
     import HistoriaClinica from "$lib/components/animal/HistoriaClinica.svelte";
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
+    import SelectTab from "$lib/components/animal/SelectTab.svelte";
     //offline
     import { openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -32,31 +33,46 @@
     import {
         getAnimalSQLByID,
         deleteAnimalSQL,
-        updateAnimalSQL
-        
+        editarAnimalSQL,
+        getHistorialAnimalesSQL,
+        updateLocalHistorialAnimalesSQL
+
     } from "$lib/stores/sqlite/dbanimales"
     import {
-        updateLocalTactosSQL,
         updateLocalNacimientosSQL,
-
-        getNacimientosSQL
-
+        getTactosSQL,
+        updateLocalTactosSQL,
+        getNacimientosSQL,
+        getTiposTratSQL,
+        updateLocalTipoTratsSQL,
+        getTratsSQL,
+        updateLocalTratsSQL,
+        getObservacionesSQL,
+        updateLocalObservaciones,
+        getPesajesSQL,
+        updateLocalPesajesSQL,
+        getServiciosSQL,
+        updateLocalServiciosSQL,
+        getInseminacionesSQL,
+        updateLocalInseminacionesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-
+    //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
-    //let pre 
+    let pre = ""
     const pb = new PocketBase(ruta);
     let caber = createCaber()
     let cab = caber.cab
     let cargado = $state(false)
+    let pestañas = $state([])
+    let tab=$state("")
     // Datos
     let slug = $state("")
     let caravana = $state("")
@@ -67,16 +83,26 @@
     let rodeo = $state("")
     let lote = $state("")
     let peso = $state(0)
+    let rp = $state("")
     let categoria = $state("")
-    let pariciones = $state([])
+    
     let fechafall = $state("")
     let motivobaja = $state("")
     let nacimientoobj = $state({})
-    let tactos = $state([])
+
     let prenada = $state(0)
-    
     let modohistoria = $state(false)
-   
+    //EVENTOS
+    let tactos = $state([])
+    let observaciones = $state([])
+    let tratamientos = $state([])
+    let pesajes = $state([])
+    let servicios = $state([])
+    let inseminaciones = $state([])
+    let pariciones = $state([])
+    let tipostrat = $state([])
+    let historial = $state([])
+
     
     async function  getPariciones(id){
         const recordpariciones =  await pb.collection('nacimientos').getFullList({
@@ -118,7 +144,7 @@
             comandos.push(c)
         }
         await setComandosSQL(db,comandos)
-        await updateAnimalSQL(db,slug,data)
+        await editarAnimalSQL(db,slug,data)
         Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
         
 
@@ -172,7 +198,7 @@
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
-        await updateAnimalSQL(db,slug,data)
+        await editarAnimalSQL(db,slug,data)
         Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
         goto("/animales") 
     }
@@ -299,16 +325,43 @@
         
         let tactostodos = await getTactosSQL(db)
         let nacimientostodos = await getNacimientosSQL(db)
+        let pesajestodos = await getPesajesSQL(db)
+        let tratstodos = await getTratsSQL(db)
+        let servistodos = await getServiciosSQL(db)
+        let inseminacionestodos = await getInseminacionesSQL(db)
+        let observacionestodos = await getObservacionesSQL(db)
+        let tipostratodos = await getTiposTratSQL(db)
+        let historialtodos = await getHistorialAnimalesSQL(db)
+        pesajes = pesajestodos.lista.filter(p=>p.animal == slug)
+        tratamientos = tratstodos.lista.filter(t=>t.animal == slug)
+        observaciones = observacionestodos.lista.filter(o=>o.animal == slug)
+        servicios = servistodos.lista.filter(s=>s.madre  == slug)
+        inseminaciones = inseminacionestodos.lista.filter(i=>i.animal == slug)
+        tipostrat = tipostratodos.lista
         pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
         tactos = tactostodos.lista.filter(t=>t.animal == slug)
+        historial = historialtodos.lista.filter(h=>h.animal == slug)
 
     }
     async function updateLocalSQL() {
         let tactostodos = await updateLocalTactosSQL(db,pb,caboff.id)
         let nacimientostodos = await updateLocalNacimientosSQL(db,pb,caboff.id)
+        let pesajestodos = await updateLocalPesajesSQL(db,pb,caboff.id)
+        let tratstodos = await updateLocalTratsSQL(db,pb,caboff.id)
+        let servistodos = await updateLocalServiciosSQL(db,pb,caboff.id)
+        let inseminacionestodos = await updateLocalInseminacionesSQL(db,pb,caboff.id)
+        let observacionestodos = await updateLocalObservacionesSQL(db,pb,caboff.id)
+        let tipostratodos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
+        let historialtodos = await updateLocalHistorialAnimalesSQL(db,pb,caboff.id) 
+        pesajes = pesajestodos.filter(p=>p.animal == slug)
+        tratamientos = tratstodos.filter(t=>t.animal == slug)
+        observaciones = observacionestodos.filter(o=>o.animal == slug)
+        servicios = servistodos.filter(s=>s.madre  == slug)
+        inseminaciones = inseminacionestodos.filter(i=>i.animal == slug)
+        tipostrat = tipostratodos
         pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
-
         tactos = tactostodos.filter(t=>t.animal == slug)
+        historial = historialtodos.filter(h=>h.animal == slug)
 
     }
     async function getDataSQL() {
@@ -322,13 +375,14 @@
         nacimiento = ""
         nacimientoobj = {}
         if(data.nacimiento != ""){
-            nacimiento =data.nacimiento
+            nacimiento = data.nacimiento
             nacimientoobj = data.expand.nacimiento
         }
         peso = data.peso
         sexo = data.sexo
         rodeo = data.rodeo
         lote = data.lote
+        rp  = data.rp
         categoria = data.categoria
         prenada = data.prenada==1?0:data.prenada
         if(data.fechafallecimiento != ""){
@@ -359,71 +413,120 @@
         }
         cargado = true
     }
+    //Necesito una funcion que traiga toda la informacion del animal
     onMount(async ()=>{
         slug = $page.params.slug
         await initPage()
         if(slug!=""){
-            
             await getDataSQL()
-            
+            tab = "datos"
+                if(sexo.toLowerCase()=="h"){
+                    pestañas = [
+                    {id:"datos",nombre:"Datos básicos"},
+                    {id:"pesajes",nombre:"Pesajes"},
+                    {id:"tratamientos",nombre:"Tratamientos"},
+                    {id:"observaciones",nombre:"Observaciones"},
+                    {id:"pariciones",nombre:"Pariciones"},
+                    {id:"tactos",nombre:"Tactos"},
+                    {id:"servicios",nombre:"Servicios"},
+                    {id:"clinica",nombre:"Historia clínica"},
+                    {id:"historial",nombre:"Historial"}
+                ]
+            }
+            else{
+                pestañas = [
+                    {id:"datos",nombre:"Datos básicos"},
+                    {id:"pesajes",nombre:"Pesajes"},
+                    {id:"tratamientos",nombre:"Tratamientos"},
+                    {id:"observaciones",nombre:"Observaciones"},
+                    {id:"clinica",nombre:"Historia clínica"},
+                    {id:"historial",nombre:"Historial"}
+                ]
+            }
         }
         
     })
 </script>
 <Navbarr>
-    <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
-        <DatosBasicos {peso} {prenada} {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} connacimiento={nacimiento != ""} nacimiento={nacimientoobj} fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}/>
-    </CardAnimal>
-    {#if !modohistoria}
-        <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
-            <Pesajes pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
-        </CardAnimal>
-        {#if cargado}
-            <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-                <Tratamientos cabid={cab.id} {categoria} ></Tratamientos>
+    <div class="flex justify-center mt-1">
+        <div class="w-full max-w-7xl px-4">
+          <!-- Combo alineado al borde izquierdo de la card -->
+          <SelectTab bind:pestañas bind:tab />
+        </div>
+    </div>
+    {#if cargado}
+        {#if tab == "datos"}
+            <!--Datos animal-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
+                <DatosBasicos {rp} {peso} {prenada} 
+                    {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} 
+                    connacimiento={nacimiento != ""} nacimiento={nacimientoobj} 
+                    fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}
+                />
             </CardAnimal>
+            <Acciones 
+                    caravana = {caravana}
+                    bind:fechafallecimiento  = {fechafall}
+                    bind:motivo = {motivobaja}
+                    bajar={async (fechafallecimiento,motivo)=>await darBaja(fechafallecimiento,motivo)}
+                    eliminar={eliminar}
+                    transferir={async (codigo)=>await transferir(codigo)}
+                />
+        {:else if tab =="pesajes"}
+            <!--Pesajes-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
+                <Pesajes {db} bind:comandos bind:pesajes  {coninternet} pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
+            </CardAnimal>
+        {:else if tab =="tratamientos"}
+            <!--Tipos y tratamientos-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
+                <Tratamientos {db} {coninternet}  bind:caravana bind:comandos bind:tratamientos {tipostrat}  cabid={cab.id} {categoria} ></Tratamientos>
+            </CardAnimal>
+        {:else if tab =="observaciones"}
+            <!--Observaciones-->
             <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-                <Observaciones cabid={cab.id} {categoria}/>
+                <Observaciones {db} {coninternet} bind:caravana bind:comandos bind:observaciones cabid={cab.id} {categoria}/>
+            </CardAnimal>
+        {:else if tab =="pariciones"}
+            <!--Animales nacimientos-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
+                <Pariciones {db} {useroff} {coninternet} bind:caravanamadre = {caravana} bind:comandos bind:pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
+            </CardAnimal>
+        {:else if tab =="tactos"}
+            <!--Tactos-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
+                <Tactos {db} {coninternet} bind:caravana bind:comandos bind:tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
+            </CardAnimal>
+        {:else if tab =="servicios"}
+            <!--Animales servicios-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Servicios">
+                <Servicios {db} {coninternet} bind:caravana bind:comandos bind:servicios bind:inseminaciones cabid={cab.id} {categoria}/>
+                <!--<Servicios {db} {coninternet} bind:caravana bind:comandos  cabid={cab.id} {categoria}/>-->
+            </CardAnimal>
+        {:else if tab =="clinica"}
+            <!--Pesajes, tactos, servicios, tratamientos, observaciones,pariciones-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Historia clínica">
+                <!--<HistoriaClinica {db}{coninternet}  bind:comandos bind:pesajes bind:tratamientos bind:observaciones bind:servicios bind:inseminaciones  />-->
+                <HistoriaClinica   
+                    bind:pesajes
+                    bind:tratamientos
+                    bind:observaciones
+                    bind:pariciones
+                    bind:tactos
+                    bind:servicios
+                    bind:inseminaciones
+                    bind:historial
+                />
+            </CardAnimal>
+        {:else if tab=="historial"}
+            <!--Historial del animal-->
+            <CardAnimal cardsize="max-w-7xl" titulo="Historial">
+                <!--<Historial {db} {coninternet} bind:historial />-->
+                <Historial  bind:historial/>
             </CardAnimal>
         {/if}
         
-        {#if sexo=="H"}
-            {#if cargado}
-                <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
-                    <Pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
-                </CardAnimal>
-                
-                <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
-                    
-                    <Tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
-                    
-                </CardAnimal>
-                <CardAnimal cardsize="max-w-7xl" titulo="Inseminaciones">
-                    <Inseminaciones cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
-                </CardAnimal>
-
-                <!--<CardAnimal cardsize="max-w-7xl" titulo="Servicios">
-                    <Servicios cabid={cab.id} {categoria} bind:prenadaori={prenada}/>
-                </CardAnimal>
-                -->
-            {/if}
-        {/if}
-        <CardAnimal cardsize="max-w-7xl" titulo="Historial">
-            <Historial  />
-        </CardAnimal>
-    {:else}
-        <CardAnimal cardsize="max-w-7xl" titulo="Historia clínica">
-            <HistoriaClinica  />
-        </CardAnimal>
     {/if}
-    <CardAnimal cardsize="max-w-7xl" titulo="Acciones">
-        <Acciones 
-            caravana = {caravana}
-            fechafallecimiento  = {fechafall}
-            motivo = {motivobaja}
-            bajar={async (fechafallecimiento,motivo)=>await darBaja(fechafallecimiento,motivo)}
-            eliminar={eliminar}
-            transferir={(codigo)=>transferir(codigo)}
-        />
-    </CardAnimal>
+    
+    
 </Navbarr>

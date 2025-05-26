@@ -3,7 +3,6 @@
     import {enabled} from '$lib/stores/enabled'
     import {setUserOffline} from '$lib/stores/capacitor/offlineuser'
     import {setCabOffline,setDefaultCabOffline} from '$lib/stores/capacitor/offlinecab'
-    import {getCabData} from "$lib/stores/cabsdata"
     import {usuario} from '$lib/stores/usuario'
     import { createCaber } from '$lib/stores/cab.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
@@ -13,6 +12,7 @@
     import PocketBase from 'pocketbase'
     import { fade, fly } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
+    
     import { Network } from '@capacitor/network';
     import { onMount } from 'svelte';
     let ruta = import.meta.env.VITE_RUTA
@@ -65,7 +65,8 @@
                     enabled.set("si")
                     // Cuando me logeo si o si debo poner si soy de otra cabaña
                     // Cuando te logeas, deberia revisar si tenes una cabaña
-                    await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel)
+                    
+                    await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel,pa.record.codigo)
                     try{
                         const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
                         caber.setCab(record.nombre,record.id)
@@ -82,7 +83,7 @@
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
                             //Debo establecer el nivel que tiene el dueño de la cabaña y cuantos animales puede tener
                             await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos)
-                            //let cab = getCabData(pb,recordcab.id)
+                            
                             per.setPer(recordper.permisos,authData.record.id)
                             caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
                             

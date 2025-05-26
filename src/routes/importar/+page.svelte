@@ -34,14 +34,14 @@
         setAnimalesSQL,    
         updateLocalAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
-    import { PNPM_SCRIPT_SRC_DIR } from '$env/static/private';
+    
 
     //OFLINE
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA

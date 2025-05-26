@@ -26,7 +26,6 @@
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {getCabData} from "$lib/stores/cabsdata"
     import {
         getAnimalesSQL,
         setAnimalesSQL,
@@ -52,7 +51,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -69,6 +68,7 @@
 
     //Datos para mostrar
     let animales = $state([])
+    let animalescab = $state([])
     let animalesrows = $state([])
     let rodeos = $state([])
     let lotes = $state([])
@@ -158,7 +158,13 @@
         
     }
     
-    
+    function onChangeAnimales() { 
+        animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
+        
+        madres = animalescab.filter(a=>a.sexo == "H" && a.active)
+        padres = animalescab.filter(a=>a.sexo == "F" && a.active)
+        
+    }
     function openNewModal(){
         if(userpermisos[5]){
             idanimal=""
@@ -377,9 +383,11 @@
         
         if(coninternet.connected){
             await guardarOnline()
+            onChangeAnimales()
         }
         else{
             await guardarOffline()
+            onChangeAnimales()
         }
     
     }
@@ -461,7 +469,7 @@
     }
     
     function filterUpdate(){
-        animalesrows = animales
+        animalesrows = animalescab
         totalAnimalesEncontrados = animalesrows.length
         if(buscar != ""){
             animalesrows = animalesrows.filter(a=>a.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
@@ -561,6 +569,7 @@
     }
     async function updateLocalSQL() {
         animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+        
         lotes = await updateLocalLotesSQL(db,pb,caboff.id)
         rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
         filterUpdate()
@@ -1092,6 +1101,7 @@
     <div class="block  md:hidden justify-items-center mx-1">
         {#each animalesrows as a}
         <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
+            <!--<button  onclick={()=>goto(`/animales/${a.id}`)}>-->
             <button  onclick={()=>goto(`/animales/${a.id}`)}>
                 <div class="block p-4">
                     <div class="flex justify-between items-start mb-2">
@@ -1150,7 +1160,7 @@
     
     
 </Navbarr>
-k<dialog id="nuevoModal" 
+<dialog id="nuevoModal" 
         class="
             modal modal-top mt-10 ml-5 
             lg:items-start 

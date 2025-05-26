@@ -12,28 +12,38 @@
     import categorias from '$lib/stores/categorias';
     import estilos from '$lib/stores/estilos';
     import { goto } from "$app/navigation";
+    import { shorterWord } from "$lib/stringutil/lib";  
     //Offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-    import {getCabData} from "$lib/stores/cabsdata"
+
     import {
         getTratsSQL,
         setTratsSQL,
         setUltimoTratsSQL,
         addNewTrataSQL,
         updateLocalTratsSQL,
+        updateLocalTratsSQLUser,
 
         getTiposTratSQL,
         setTiposTratSQL,
         addNewTipoTratSQL,
         setUltimoTiposTratSQL,
-        updateLocalTipoTratsSQL
+        updateLocalTipoTratsSQL,
+        updateLocalTiposTratSQLUser
 
     } from '$lib/stores/sqlite/dbeventos';
-    import {addNewAnimalSQL, getAnimalesSQL,updateLocalAnimalesSQL } from '$lib/stores/sqlite/dbanimales';
+    import {
+        addNewAnimalSQL, 
+        getAnimalesSQL,
+        updateLocalAnimalesSQL ,
+        getUpdateLocalAnimalesSQLUser,
+        getAnimalesCabSQL
+
+    } from '$lib/stores/sqlite/dbanimales';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
 
@@ -42,7 +52,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state(false)
+    let coninternet = $state({})
     let comandos = $state([])
 
     let caber = createCaber()
@@ -56,7 +66,9 @@
     //Datos filtrar
     let animales = $state([])
     let tipotratamientos = $state([])
+    let tipotratamientoscab = $state([])
     let tratamientos = $state([])
+    let tratamientoscab = $state([])
     let tratamientosrow = $state([])
     let caravana = $state("")
     let malcaravana = $state(false)
@@ -645,6 +657,9 @@
         await getAnimales()
         filterUpdate()
     }
+    //Esto se podria poner en otro archivo
+    //PUede ser hasta un store
+    //ENcima pocket base taambien guardar la info del usuario
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
         coninternet = await Network.getStatus();
@@ -655,18 +670,20 @@
     //Este metodo deberia tomar los datos de la nube y pisar lo que tengo sqlite
     // Se supone que los comandos ya fueron flush
     async function updateLocalSQL() {
-        tratamientos = await updateLocalTratsSQL(db,pb,caboff.id)
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        tipotratamientos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
+        tratamientos = await updateLocalTratsSQLUser(db,pb,usuarioid)
+        tratamientos = tratamientos.filter(t=>t.cab == caboff.id)
+        animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
+        tipotratamientos = await updateLocalTiposTratSQLUser(db,pb,usuarioid)
+        tipotratamientos = tipotratamientos.filter(tt=>tt.generico || tt.cab==caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
         let restratamientos = await getTratsSQL(db)
-        tratamientos = restratamientos.lista
-        let resanimales = await getAnimalesSQL(db)
-        animales = resanimales.lista
+        tratamientos = restratamientos.lista,filterUpdate(t=>t.cab == caboff.id)
+        animales = await getAnimalesCabSQL(db,caboff.id)
+        
         let restipos = await getTiposTratSQL(db)
-        tipotratamientos = restipos.lista
+        tipotratamientos = restipos.lista.filter(tt=>tt.generico || tt.cab == caboff.id)
         filterUpdate()
     }
     async function getDataSQL() {
@@ -718,8 +735,8 @@
     }
 </script>
 <Navbarr>
-    <button onclick={updateLocalSQL} class="btn">Forzar update</button>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    <button onclick={updateLocalSQL} class="btn hidden">Forzar update</button>
+    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
     <div class="grid grid-cols-3 lg:grid-cols-4 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Tratamientos</h1>
@@ -746,21 +763,6 @@
             </div>
         </div>
         
-        <div class="hidden">
-            <button
-                onclick={()=>goto("/tratamientos/movimiento")}
-                class={`
-                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                    ${estilos.btnsecondary}
-                    rounded-full
-                    px-4 pt-2 pb-3
-                `} 
-                aria-label="Exportar"
-            >
-                <span  class="text-xl font-semibold ">Múltiples</span>
-                
-            </button>
-        </div>
     </div>
     <div class="grid grid-cols-1 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12" >
         <div class="w-full lg:w-1/2">
@@ -924,7 +926,7 @@
                         <div class="flex items-start">
                             <span >Caravana:</span> 
                             <span class="mx-1 font-semibold">
-                                {`${t.expand.animal.caravana}`}
+                                {`${shorterWord(t.expand.animal.caravana)}`}
                             </span>
                             
                         </div>

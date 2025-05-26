@@ -6,6 +6,7 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import {guardarHistorial} from "$lib/historial/lib"
+    import { Filesystem, Directory } from '@capacitor/filesystem';
     let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
 
     let ruta = import.meta.env.VITE_RUTA
@@ -17,7 +18,7 @@
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
-    function exportarTemplate(){
+    async function exportarTemplate(){
         let csvData = [{
             caravana:"AAA",
             peso:"0",
@@ -31,7 +32,19 @@
         const ws = XLSX.utils.json_to_sheet(csvData);
         XLSX.utils.book_append_sheet(wb, ws, 'Pesajes');
         
-        XLSX.writeFile(wb, 'Modelo pesajes.xlsx');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo Pesajes.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo Pesajes.xlsx",
+            directory: Directory.Documents
+        });
     }
     function importarArchivo(event){
         let file = event.target.files[0];
