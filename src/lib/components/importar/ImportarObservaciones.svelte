@@ -7,12 +7,13 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import categorias from "$lib/stores/categorias";
+    import {getObservacionesSQL} from "$lib/stores/sqlite/dbeventos";
     let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
     let loading = $state(false)
-
+    let observaciones = $state([])
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
@@ -71,7 +72,7 @@
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
         
-        let observaciones = []
+        let observacionesimport = []
         let observacioneshashmap = {}
         loading = true
         for (const [key, value ] of Object.entries(sheetobservaciones)) {
@@ -119,10 +120,10 @@
             }
         }
         for (const [key, value ] of Object.entries(observacioneshashmap)) {
-            observaciones.push(value)
+            observacionesimport.push(value)
         }
-        for(let i = 0;i<observaciones.length;i++){
-            let ob = observaciones[i]
+        for(let i = 0;i<observacionesimport.length;i++){
+            let ob = observacionesimport[i]
             let an = animales.filter(a=>a.caravana==ob.caravana)[0]
 
             let dataadd = {
@@ -132,7 +133,7 @@
                 observacion: ob.observacion,
                 cab: cab.id,
                 active: true,
-                }
+            }
 
             let datamod = {
                 observacion: ob.observacion,
@@ -154,13 +155,11 @@
         wkbk = null
         Swal.fire("Éxito importar","Se lograron importar los datos","success")
     }
+    async function getDataSQL() {
+        
+    }
     onMount(async ()=>{
-        const observaciones = await pb.collection('observaciones').getFullList({
-            filter:`active = true && cab ='${cab.id}'`
-        })
-        //animales = await pb.collection('animales').getFullList({
-        //    filter:`delete = false && cab ='${cab.id}'`,
-        //}) 
+        
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

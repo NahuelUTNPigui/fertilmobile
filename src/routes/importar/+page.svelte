@@ -27,12 +27,17 @@
         getRodeosSQL,
         getLotesSQL,
         updateLocalLotesSQL,
-        updateLocalRodeosSQL
+        updateLocalRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser,
+        getLotesRodeosSQL
+        
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
         setAnimalesSQL,    
-        updateLocalAnimalesSQL
+        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser,
+        getAnimalesCabSQL
     } from "$lib/stores/sqlite/dbanimales"
     
 
@@ -67,26 +72,22 @@
         cargado = true
     }
     async function getLocalSQL() {
+        //Get animales te trae todos los aniamles del usuario
         let resanimales = await getAnimalesSQL(db,pb,caboff.id)
         let reslotes = await getLotesSQL(db,pb,caboff.id)
         let resrodeos = await getRodeosSQL(db,pb,caboff.id)
         animales = resanimales.lista
+        animalesusuario = animales.total
         lotes = reslotes.lista
         rodeos = resrodeos.lista
-        if(coninternet.connected){
-            let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-            animalesusuario = animals.totalItems
-        }
-        else{
-            animalesusuario = 0
-        }
+        
     }
     async function updateLocalSQL() {
         animales = await  updateLocalAnimalesSQL(db,pb,caboff.id)
         lotes = await  updateLocalLotesSQL(db,pb,caboff.id)
         rodeos = await  updateLocalRodeosSQL(db,pb,caboff.id)
-        let animals = await pb.collection('Animalesxuser').getList(1,1,{filter:`user='${usuarioid}'`})
-        animalesusuario = animals.totalItems
+        
+        animalesusuario = animales.totalItems
         cargado = true
 
     }
@@ -132,36 +133,74 @@
 </script>
 <Navbarr>
     {#if cargado}
-        <!--LOTE  Y RODEOS-->
+        <!--Animales-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar animales">
-            <ImportarAnimal {db} {coninternet} {useroff} {caboff} {usuarioid} {animales} {animalesusuario} {lotes} {rodeos}/>
+            <ImportarAnimal 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales} 
+                {animalesusuario} {lotes} {rodeos}
+            />
         </CardImportar>
+        <!--Tactos-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar tactos">
-            <ImportarTactos {db} {coninternet} {useroff} {caboff} {usuarioid} {animales}/>
+            <ImportarTactos 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales}
+            />
         </CardImportar>
-        <!--LOTE  Y RODEOS-->
-        <CardImportar cardsize="max-w-2xl" titulo="Importar nacimientos">
-            <ImportarNacimiento {db} {coninternet} {useroff} {caboff} {usuarioid} {animales} {animalesusuario} {lotes} {rodeos}/>
-        </CardImportar>
-        <!--LOTE  Y RODEOS-->
+        <!--Nacimientos-->
+        <div class="hidden">
+            <CardImportar  cardsize="max-w-2xl" titulo="Importar nacimientos">
+                <ImportarNacimiento 
+                    {db} {coninternet} {useroff} 
+                    {caboff} {usuarioid} 
+                    {animales} {animalesusuario} 
+                    {lotes} {rodeos}
+                />
+            </CardImportar>
+        </div>
+        
+        <!-- RODEOS-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar rodeos">
-            <ImportarRodeos {db} {coninternet} {useroff} {caboff} {usuarioid} {rodeos}/>
+            <ImportarRodeos
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {rodeos}
+            />
         </CardImportar>
-        <!--LOTE  Y RODEOS-->
+        <!--LOTE -->
         <CardImportar cardsize="max-w-2xl" titulo="Importar lotes">
-            <ImportarLotes {db} {coninternet} {useroff} {caboff} {usuarioid} {lotes} />
+            <ImportarLotes 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {lotes} 
+            />
         </CardImportar>
+        <!--Observaciones-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar observaciones">
-            <ImportarObservaciones {db} {coninternet} {useroff} {caboff} {usuarioid} {animales}/>
+            <ImportarObservaciones 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales}
+            />
         </CardImportar>
+        <!--Servicios-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar servicios">
-            <ImportarServicios {db} {coninternet} {useroff} {caboff} {usuarioid} {animales}/>
+            <ImportarServicios 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales}
+            />
         </CardImportar>
+        <!--Inseminaciones-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar inseminaciones">
-            <ImportarInseminaciones {db} {coninternet} {useroff} {caboff} {usuarioid} {animales}/>
+            <ImportarInseminaciones 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales}
+            />
         </CardImportar>
+        <!--Pesajes-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar pesajes">
-            <ImportarPesajes {db} {coninternet} {useroff} {caboff} {usuarioid} {animales}/>
+            <ImportarPesajes 
+                {db} {coninternet} {useroff} 
+                {caboff} {usuarioid} {animales}
+            />
         </CardImportar>
     {:else}
         <CardImportar cardsize="max-w-2xl" titulo="Cargando">

@@ -76,10 +76,15 @@
             }
             let lidx = lotes.findIndex(l=>l.nombre == lo.nombre)
             if(lidx == -1){
-                await pb.collection('lotes').create(dataadd);
+                let l = await pb.collection('lotes').create(dataadd);
+                lotes.push(l);
             }
             else{
                 await pb.collection('lotes').update(lotes[lidx].id, datamod);
+                lotes[lidx] = {
+                    ...lotes[lidx],
+                    ...datamod
+                }
             }
 
         }
@@ -192,7 +197,7 @@
         }
         if(coninternet.connected){
             await procesarOnline()
-            await updateLocalLotesSQL(db,pb,caboff.id)
+            await setLotesSQL(db,lotes)
         }
         else{
             let comandos = await procesarOffline()
@@ -205,12 +210,7 @@
         wkbk = null
         Swal.fire("Éxito importar","Se lograron importar los datos","success")
     }
-    onMount(async ()=>{
-        lotes = await pb.collection('lotes').getFullList({
-            filter:`active = true && cab ='${cab.id}'`,
-            sort: '-nombre',
-        })
-    })
+    
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     <button

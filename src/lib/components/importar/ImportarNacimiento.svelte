@@ -1,5 +1,6 @@
 <script>
     //LAburar nacimientos
+    //Necesita dividirse en varios archivos
     import estilos from "$lib/stores/estilos";
     import * as XLSX from 'xlsx';
     import { createCaber } from '$lib/stores/cab.svelte';
@@ -8,7 +9,7 @@
     import { onMount } from "svelte";
     import cuentas from '$lib/stores/cuentas';
     import categorias from "$lib/stores/categorias";
-    import{verificarNivelCantidad, verificarNivelCantidadOffline} from "$lib/permisosutil/lib"
+    import{verificarNivelCantidad, verificarNivelOffline} from "$lib/permisosutil/lib"
     //offline
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
@@ -19,7 +20,12 @@
         setNacimientosSQL
 
     } from "$lib/stores/sqlite/dbeventos"
-    let {db,coninternet,useroff,caboff,usuarioid,animales,animalesusuario,rodeos,lotes} = $props()
+    import { validateHeaderName } from "http";
+    let {db,
+        coninternet,
+        useroff,caboff,usuarioid,
+        animales,animalesusuario,rodeos,lotes
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -87,11 +93,139 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesarOnline() {
-        
+    function buscarNacimiento(nac){
+        let idx_nacimiento = nacimientos.findIndex(n=>{
+            if(n.cab != caboff.id){
+                return false
+            }
+            if(!sonFechasIguales(n.fecha,nac.fecha)){
+                return false
+            }
+            if(n.madre != nac.madre){
+                return false
+            }
+            return true
+        })
+        return idx_nacimiento
     }
-    async function procesarOffline() {
-        
+    async function procesarOnline(nuevoanimales) {
+        let verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
+            loading = false
+            return
+        }
+        for(let i = 0;i<nacimientosprocesar.length;i++){
+            let an = nacimientosprocesar[i]
+            let conlote = false
+            let reslote = lotes.filter(l=>l.nombre==an.lote)
+            let resrodeo = rodeos.filter(r=>r.nombre==an.rodeo)
+            lote = reslote.length>0?reslote[0]:null
+            rodeo = resrodeo.length>0?resrodeo[0]:null
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+            let padre = animales.filter(p=>p.caravana==an.nombrepadre)
+            let madre = animales.filter(m=>m.caravana==an.nombremadre)
+            if(madre.length<1){
+                continue
+            }
+            let datanacimiento = {
+                fecha:an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+                nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+                nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
+                madre:madre[0].id,
+                observacion:an.observaciones,
+                cab:caboff.id
+            }
+            if(padre.length>0){
+                datanacimiento.padre=padre[0].id
+            }
+            let idx_nacimiento = buscarNacimiento(datanacimiento)
+            let id_nacimiento = ""
+            if(idx_nacimiento == -1){
+                let record = await pb.collection("nacimientos")
+                record={
+                    caravana
+                
+                }
+                id_nacimiento = record.id
+                nacimientos.push(record)
+            }
+            else{
+                id_nacimiento = nacimientos[id_nacimiento].id
+                await pb.collection("nacimientos").update(id_nacimiento,datanacimiento)
+                nacimientos[idx_nacimiento]={
+                    ...nacimientos[idx_nacimiento],
+                    ...datanacimiento
+                }
+
+            }
+            if(caravana != ""){
+                let idx_animal = animales.findIndex(a=>a.caravana ==caravana)
+                //Agregar animal
+                if(idx_animal == -1){
+                    let dataadd = {
+                        caravana:an.caravana,
+                        active:true,
+                        delete:false,
+                        sexo:an.sexo,
+                        peso:an.peso,
+                        fechanacimiento: an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+                        nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+                        nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
+                        cab:caboff.id
+                    }
+                    let recordanimal = await pb.collection("animales").create(dataadd)
+                    animales.push(recordanimal)
+                }
+                //setear nacimiento al animal
+                else{
+
+                }
+            }
+
+        }
+    }
+    async function procesarOffline(nuevoanimales) {
+        let verificar = await verificarNivelOffline(animalesusuario,nuevoanimales)
+        if(!verificar){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
+            loading = false
+            return
+        }
+        for(let i = 0;i<nacimientosprocesar.length;i++){
+            let an = nacimientosprocesar[i]
+            let conlote = false
+            let reslote = lotes.filter(l=>l.nombre==an.lote)
+            let resrodeo = rodeos.filter(r=>r.nombre==an.rodeo)
+            lote = reslote.length>0?reslote[0]:null
+            rodeo = resrodeo.length>0?resrodeo[0]:null
+            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+            let padre = animales.filter(p=>p.caravana==an.nombrepadre)
+            let madre = animales.filter(m=>m.caravana==an.nombremadre)
+            let datanacimiento = {
+                fecha:an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+                nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+                nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
+                observacion:an.observaciones,
+                cab:caboff.id
+            }
+            if(padre){
+                datanacimiento.padre=padre.id
+            }
+            if(madre){
+                datanacimiento.madre = madre.id
+            }
+        }
+    }
+    function sonFechasIguales(fecha1, fecha2) {
+        const f1 = new Date(fecha1);
+        const f2 = new Date(fecha2);
+
+        return (
+            f1.getFullYear() === f2.getFullYear() &&
+            f1.getMonth() === f2.getMonth() &&
+            f1.getDate() === f2.getDate()
+        );
     }
     async function procesarArchivo(){
         if(filename == ""){
@@ -184,67 +318,49 @@
         let errornuevoanimales = false
         for (const [key, value ] of Object.entries(animaleshashmap)) {
             nacimientosprocesar.push(value)
-            let conocido = animales.filter(a=>a.caravana == value.caravana).length == 0
-            if(!conocido ){
-                nuevoanimales += 1
+            if(value.caravana != ""){
+                let conocido = animales.filter(a=>a.caravana == value.caravana).length == 0
+                if(!conocido ){
+                    nuevoanimales += 1
+                }
             }
         }
-        let verificar = true
         if(coninternet.connected){
-            verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
+            await procesarOnline(nuevoanimales)
         }
         else{
-            verificar = await verificarNivelCantidadOffline(caboff.id,nuevoanimales)
+            await procesarOffline(nuevoanimales)
         }
-        
-        if(!verificar){
-            errornuevoanimales = true
-            filename = ""
-            loading = false
-            wkbk = null
-            Swal.fire("Error importar","No tienes el plan para agregar mas animales","error")
-            return 
-            
-        }
-        //if(coninternet.connected){
-        //    await procesarOnline()
-        //    await updateLocalAnimalesSQL(db,pb,caboff.id)
-        //    await updateLocalNacimientosSQL(db,pb,caboff.id)
-        //}
-        //else{
-        //    let comandos = await procesarOffline()
-        //    await concatComandosSQL(db,comandos)
-        //    await setNacimientosSQL(db,nacimientos)
-        //    await setAnimalesSQL(db,animales)
-        //}
         for(let i = 0;i<nacimientosprocesar.length;i++){
             let an = nacimientosprocesar[i]
             let conlote = false
-            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
-            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
+            let reslote = lotes.filter(l=>l.nombre==an.lote)
+            let resrodeo = rodeos.filter(r=>r.nombre==an.rodeo)
+            lote = reslote.length>0?reslote[0]:null
+            rodeo = resrodeo.length>0?resrodeo[0]:null
             let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
             let padre = animales.filter(p=>p.caravana==an.nombrepadre)
             let madre = animales.filter(m=>m.caravana==an.nombremadre)
             
             // Agregar animal si no existe y nacimiento
-            let dataadd = {
-                caravana:an.caravana,
-                active:true,
-                delete:false,
-                sexo:an.sexo,
-                peso:an.peso,
-                fechanacimiento: an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
-                nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
-                nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
-                cab:cab.id
-            }
+            //let dataadd = {
+            //    caravana:an.caravana,
+            //    active:true,
+            //    delete:false,
+            //    sexo:an.sexo,
+            //    peso:an.peso,
+            //    fechanacimiento: an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
+            //    nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
+            //    nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
+            //    cab:caboff.id
+            //}
             //Modificar nacimiento cuando existe
             let datanacimiento = {
                 fecha:an.fechanacimiento?an.fechanacimiento.toISOString().split("T")[0]+ " 03:00:00":"",
                 nombremadre:madre.length>0?madre[0].caravana:an.nombremadre,
                 nombrepadre: padre.length>0?padre[0].caravana:an.nombrepadre,
                 observacion:an.observaciones,
-                cab:cab.id
+                cab:caboff.id
             }
             
             if(lote){
@@ -308,22 +424,7 @@
         
     }
     onMount(async ()=>{
-        let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.record.id
-        rodeos = await pb.collection('rodeos').getFullList({
-            filter:`active = true && cab ='${cab.id}'`,
-            sort: '-nombre',
-        });
-        
-        lotes = await pb.collection('lotes').getFullList({
-            filter:`active = true && cab ='${cab.id}'`,
-            sort: '-nombre',
-        });
-        animales = await pb.collection('animales').getFullList({
-            filter:`delete = false && cab ='${cab.id}'`,
-        })
-
-        
+        nacimientos = await getNacimientosSQL(db,caboff.id)
     })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

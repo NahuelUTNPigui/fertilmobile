@@ -135,7 +135,7 @@
     }
     async function guardarOffline2() {
         if(agregaranimal){
-            let verificar = await verificarNivelOffline(caboff.id)
+            let verificar = await verificarNivelOffline(animales.length,1)
             if(!verificar){
                 Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
                 return
@@ -225,6 +225,7 @@
         
     }
     //NO siempre guardo el animal en el  nacimiento
+    //ELiminar la funcion
     async function guardarOffline() {
         let idprov = "nuevo_nac_"+generarIDAleatorio()
         let idanimal = "nuevo_animal_"+generarIDAleatorio()
@@ -1228,7 +1229,7 @@
                 <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} onelegir={onelegirMadre} onwrite={onwriteMadre}/>
                 <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} onelegir={onelegirPadre} onwrite={onwritePadre}/>
             {/if}
-            
+
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>                    

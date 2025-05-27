@@ -146,7 +146,7 @@
                         observacion:ins.observacion
                     }
                     const record = await pb.collection("inseminacion").create(datains)
-                    
+                    inseminaciones.push(record)
 
                 }
                 catch(err){
@@ -210,7 +210,8 @@
         }
         if(coninternet.connected){
             await procesarOnline()
-            await updateLocalInseminacionesSQL(db,pb,caboff.id)
+            await setInseminacionesSQL(db,inseminaciones)
+            //await updateLocalInseminacionesSQL(db,pb,caboff.id)
         }
         else{
             let comandos = await procesarOffline()
@@ -231,31 +232,10 @@
         inseminaciones = resinseminaciones.lista
     }
     async function getDataSQL() {
-        if (coninternet.connected){
-            //await flushComandosSQL(db)
-            //comandos = []
-            if(lastinter.internet == 0){
-                await updateLocalSQL()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
-            }
-            
-        }
-        else{
-            await getLocalSQL()
-            
-        }
+        await getLocalSQL()
     }
     onMount(async()=>{
+        
         await getDataSQL()
     })
 </script>

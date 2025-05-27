@@ -1,4 +1,5 @@
 import cuentas from '$lib/stores/cuentas';
+import {getUserOffline} from '$lib/stores/capacitor/offlineuser';
 let ruta = import.meta.env.VITE_RUTA
 export function getPermisosList(per){
     let userpermisos = [false,false,false,false,false,false]
@@ -51,12 +52,15 @@ export async function verificarNivelColab(cabid) {
         return true
     }
 }
-export async function verificarNivelOffline(cabid) {
+export async function verificarNivelOffline(animalestotal,nuevos) {
+    let user = await getUserOffline()
+    let nivel = cuentas.filter(c=>c.nivel == user.nivel)[0]
+    if(nivel.animales != -1 && (animalestotal+nuevos) > nivel.animales){
+        return false
+    }
     return true
 }
-export async function verificarNivelCantidadOffline(cabid,nuevos) {
-    return true
-}
+
 export async function verificarNivelColabOffline(cabid) {
     return true
 }

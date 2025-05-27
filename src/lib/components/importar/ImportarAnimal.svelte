@@ -5,17 +5,27 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
-    import { onMount } from "svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
-    import cuentas from '$lib/stores/cuentas';
+    
     import categorias from "$lib/stores/categorias";
-    import{verificarNivelCantidad,verificarNivelCantidadOffline} from "$lib/permisosutil/lib"
+    import{verificarNivelCantidad,verificarNivelOffline} from "$lib/permisosutil/lib"
     //offline
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
-    import { setAnimalesSQL, editarAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
-    let {db,coninternet,useroff,caboff,usuarioid,animales,animalesusuario,lotes,rodeos} = $props()
+    import { setAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+    let {
+        db,
+        coninternet,
+        useroff,
+        caboff,
+        usuarioid,
+        //Tendria que ser bindeble
+        animales,
+        animalesusuario,
+        lotes,
+        rodeos
+    } = $props();
     
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -75,8 +85,8 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesoOffline() {
-        let verificar = await verificarNivelCantidadOffline(caboff.id,nuevoanimales)
+    async function procesoOffline(nuevosanimales) {
+        let verificar = await verificarNivelOffline(animalesusuario,nuevosanimales)
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
             loading = false
@@ -166,7 +176,8 @@
         }
         return comandos
     }
-    async function procesoOnline() {
+    async function procesoOnline(nuevoanimales) {
+        //El verificar es saber si puede agregar los animales
         let verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
@@ -187,7 +198,7 @@
                 delete:false,
                 sexo:an.sexo,
                 peso:an.peso,
-                cab:cab.id
+                cab:caboff.id
             }
 
             let datamod = {
@@ -210,12 +221,18 @@
             }
             let aidx = animales.findIndex(a=>a.caravana == an.caravana)
             if(aidx == -1){
-                await pb.collection('animales').create(dataadd);
+                let a = await pb.collection('animales').create(dataadd);
+                animales.push(a)
             }
             else{
                 await pb.collection('animales').update(animales[aidx].id, datamod);
+                animales[aidx] = {
+                    ...animales[aidx],
+                    ...datamod
+                }
             }
         }
+        
     }
     async function procesarArchivo(){
         if(!userpermisos[2]){
@@ -299,13 +316,14 @@
                 nuevoanimales += 1
             }
         }
-        //let verificar = true
+        
         if(coninternet.connected){
-            await procesoOnline()
-            await updateLocalAnimalesSQL(db,pb,caboff.id)
+            await procesoOnline(nuevoanimales)
+            await setAnimalesSQL(db,animales)
+            //await updateLocalAnimalesSQL(db,pb,caboff.id)
         }
         else{
-            let comandos = await procesoOffline()
+            let comandos = await procesoOffline(nuevoanimales)
             await concatComandosSQL(db,comandos)
             await setAnimalesSQL(db,animales)
 
@@ -332,18 +350,6 @@
             sort: '-nombre',
         });
     }
-    async function getDataSQL() {
-        
-    }
-    async function initPage() {
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
-        usuarioid = useroff.id
-    }
-    onMount(async ()=>{
-        
-    })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     <button

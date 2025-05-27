@@ -9,7 +9,7 @@ export async function getEstablecimientoSQLByID(db,pb,id){
     if(ests.length > 0){
        return ests[0]
     }
-    else{
+    else{ 
         return null
     }
 }

@@ -24,7 +24,7 @@
     } from "$lib/stores/sqlite/dbeventos"
     
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import { npm_package_devDependencies__capacitor_assets } from '$env/static/private';
+    
     //ofline
     let db = $state(null)
     let usuarioid = $state("")
