@@ -402,6 +402,7 @@
 
         filterUpdate()
     }
+    
     async function moverOnline() {
         if(ninguno){
             Swal.fire("Error movimiento","No hay animales seleccionados","error")
@@ -773,6 +774,7 @@
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -780,13 +782,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()

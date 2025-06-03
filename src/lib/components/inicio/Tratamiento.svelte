@@ -7,6 +7,7 @@
     import tiposanimal from '$lib/stores/tiposanimal';
     import {isEmpty} from "$lib/stringutil/lib"
     import categorias from '$lib/stores/categorias';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]
     let {
         caravana=$bindable(""),
@@ -81,6 +82,11 @@
     
 </script>
 <div class="form-control ">
+    {#if modedebug}
+        <div class="label">
+            tipos-{tipotratamientos.length}
+        </div>
+    {/if}
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
     {#if !agregaranimal}
         <label for = "madre" class="label">

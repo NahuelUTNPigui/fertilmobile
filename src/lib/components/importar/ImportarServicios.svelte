@@ -9,7 +9,16 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import {addDays} from "$lib/stringutil/lib"
     import categorias from "$lib/stores/categorias";
-    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
+    import { getServiciosSQL,setServiciosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { esMismoDia } from "$lib/stringutil/lib";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import Servicios from "../animal/Servicios.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let {
+        db,coninternet,useroff,
+        caboff,usuarioid,animales
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -18,8 +27,8 @@
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
-
-    async function exportarTemplate(){
+    let servicios = $state([])
+    async function exportarTemplateOffline(){
         let csvData = [{
             madre:"AAA",
             fechadesde:"MM/DD/AAAA",
@@ -54,6 +63,51 @@
             directory: Directory.Documents
         });
     }
+    async function exportarTemplateOnline() {
+        let csvData = [{
+            madre:"AAA",
+            fechadesde:"MM/DD/AAAA",
+            fechahasta:"MM/DD/AAAA",
+            padres:"AAA,BBB,CCC",
+            observacion:"",
+            categoria:""
+
+        }].map(item=>({
+            MADRE:item.madre,
+            FECHA_DESDE:item.fechadesde,
+            FECHA_HASTA:item.fechahasta,
+            PADRES:item.padres,
+            OBSERVACION:item.observacion,
+            CATEGORIA:item.categoria
+        }))
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(csvData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Servicios');
+        
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo Servicios.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo Servicios.xlsx",
+            directory: Directory.Documents
+        });
+    }
+    async function exportarTemplate(){
+        if(coninternet.connected){
+            await exportarTemplateOnline()
+            
+        }
+        else{
+            await exportarTemplateOffline()
+            
+        }
+    }
     function importarArchivo(event){
         let file = event.target.files[0];
         
@@ -67,95 +121,20 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesarArchivo(){
-        if(filename == ""){
-            Swal.fire("Error","Seleccione un archivo","error")
-        }
-
-        //Que pasa si le cambia el nombre a la pestaña
-        let sheetiser = wkbk.Sheets.Servicios
-        if(!sheetiser){
-            Swal.fire("Error","Debe subir un archivo válido","error")
-        }
-        let servicios = []
-        let serhash = {}
-        loading = true
+    async function procesarArchivoOffline(serviciosprocesar){
+        let comandos = []
         let errores = false
-        for (const [key, value ] of Object.entries(sheetiser)) {
-            const firstLetter = key.charAt(0);  // Get the first character
-            const tail = key.slice(1);
-            if(key == "!ref" || key == "!margins" || tail == "1"){
-                continue
-            }
-            if(serhash[tail]){
-                //madre
-                if(firstLetter=="A"){
-                    serhash[tail].madre = value.v
-                }
-                //fecha desde
-                if(firstLetter=="B"){
-                    serhash[tail].fechadesde = value.w?new Date(value.w):""
-                }
-                //fecha hasta
-                if(firstLetter=="C"){
-                    serhash[tail].fechahasta = value.w?new Date(value.w):""
-                }
-                //padres
-                if(firstLetter=="D"){
-                    serhash[tail].padres = value.v
-                }
-                //observacion
-                if(firstLetter=="E"){
-                    serhash[tail].observacion = value.v
-                }
-                //categoria
-                if(firstLetter=="F"){
-                    serhash[tail].categoria = value.v
-                }
-            }
-            else{
-                serhash[tail] = {
-                    madre:"",fechadesde:"",fechahasta:"",padres:"",observacion:"",categoria:""
-                }
-                //madre
-                if(firstLetter=="A"){
-                    serhash[tail].madre = value.v
-                }
-                //fecha desde
-                if(firstLetter=="B"){   
-                    serhash[tail].fechadesde = value.w?new Date(value.w):""
-                }
-                //fecha hasta
-                if(firstLetter=="C"){
-                    serhash[tail].fechahasta = value.w?new Date(value.w):""
-                }
-                //padres
-                if(firstLetter=="D"){
-                    serhash[tail].padres = value.v
-                }
-                //observacion
-                if(firstLetter=="E"){
-                    serhash[tail].observacion = value.v
-                }
-                //categoria
-                if(firstLetter=="F"){
-                    serhash[tail].categoria = value.v
-                }
-            }
-        }
-        for (const [key, value ] of Object.entries(serhash)) {
-            servicios.push(value)
-        }
-        for(let i = 0;i<servicios.length;i++){
-            let ser = servicios[i]
+        
+        for(let i = 0;i<serviciosprocesar.length;i++){
+            let ser = serviciosprocesar[i]
             
             if(ser.madre != "" && ser.fechadesde != "" && ser.padres !=""){
-                let madres = animales.filter(a=>a.caravana==ser.madre)
+                let madres = animales.filter(a=>a.caravana==ser.madre && a.cab == caboff.id)
                 let padreslista = ser.padres.split(",")
                 let padres = padreslista.map(p=>{
                     let padre = ""
                     for(let i=0;i<animales.length;i++){
-                        if(animales[i].sexo == "M" && animales[i].caravana==p){
+                        if(animales[i].cab == caboff.id && animales[i].sexo == "M" && animales[i].caravana==p){
                             return animales[i].id
                         }
                     }
@@ -165,11 +144,11 @@
                 if(madres.length > 0 && padres.length > 0){
                     let madre = madres[0].id
                     let padre = padres.join()
-                    let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
+                    let categoria = categorias.filter(c=>c.id==an.categoria.toLowerCase())[0]
                     try{
                         let dataser = {
-                            fechadesde : ser.fechadesde.toISOString().split("T")[0] + " 03:00:00",
-                            fechaparto: addDays(ser.fechadesde.toISOString().split("T")[0],280).toISOString().split("T")[0]+" 03:00:00",
+                            fechadesde : new Date(ser.fechadesde).toISOString().split("T")[0] + " 03:00:00",
+                            fechaparto: addDays(new Date(ser.fechadesde).toISOString().split("T")[0],280).toISOString().split("T")[0]+" 03:00:00",
                             observacion: ser.observacion,
                             madre:madre,
                             padres:padre,
@@ -194,6 +173,189 @@
 
                 
         }
+        let dataprocesar = {
+            comandos,
+            errores
+        }
+        return dataprocesar
+    }
+    async function procesarArchivoOnline(serviciosprocesar){
+        let errores = false
+        
+        for(let i = 0;i<serviciosprocesar.length;i++){
+            let ser = serviciosprocesar[i]
+            
+            if(ser.madre != "" && ser.fechadesde != "" && ser.padres !=""){
+                let madres = animales.filter(a=>a.caravana==ser.madre && a.cab == caboff.id)
+                let padreslista = ser.padres.split(",")
+                let padres = padreslista.map(p=>{
+                    let padre = ""
+                    for(let i=0;i<animales.length;i++){
+                        if(animales[i].cab == caboff.id && animales[i].sexo == "M" && animales[i].caravana==p){
+                            return animales[i].id
+                        }
+                    }
+                    return padre
+                })
+                let esFechaValida  = new Date(ser.fechadesde).getTime() > 0
+                if(esFechaValida && madres.length > 0 && padres.length > 0 ){
+                    let madre = madres[0].id
+                    let padre = padres.join()
+                    let categoria = categorias.filter(c=>c.id==an.categoria.toLowerCase())[0]
+                    
+                    try{
+                        let dataser = {
+                            fechadesde : new Date(ser.fechadesde).toISOString().split("T")[0] + " 03:00:00",
+                            fechaparto: addDays(ser.fechadesde.toISOString().split("T")[0],280).toISOString().split("T")[0]+" 03:00:00",
+                            observacion: ser.observacion,
+                            madre:madre,
+                            padres:padre,
+                            active:true,
+                            cab:caboff.id
+                        }
+                        let datamod={
+                            observacion: ser.observacion,
+                            padres:padre,
+                        }
+                        if(ser.fechahasta != ""){
+                            let fechahastaValida = new Date(ser.fechahasta).getTime() > 0   
+                            if(!fechahastaValida){
+                                dataser.fechahasta = new Date(ser.fechahasta).toISOString().split("T")[0] + " 03:00:00"
+                                datamod.fechahasta = new Date(ser.fechahasta).toISOString().split("T")[0] + " 03:00:00"
+                            }
+                            
+                        }   
+                        if(categoria){
+                            dataser.categoria = categoria.id
+                            datamod.categoria = categoria.id
+                        }
+                        
+                        let s_idx = servicios.findIndex(s=>s.madre==madre  && esMismoDia(s.fechadesde,dataser.fechadesde) && s.active)
+                        //Crear servicio
+                        if(s_idx == -1){
+                            let recordser = await pb.collection("servicios").create(dataser)    
+                            recordser = {
+                                ...recordser,
+                                expand:{
+                                    madre:{id:recordser.madre,caravana:madres[0].caravana},
+                                    cab:{id:recordser.cab, nombre:caboff.nombre},
+                                }
+                            }
+                            servicios.push(recordser)
+                        }
+
+                        else{
+                            await pb.collection("servicios").update(servicios[s_idx].id,datamod)
+                            servicios[s_idx] = {
+                                ...servicios[s_idx],
+                                ...datamod,
+                                
+                            }
+                        }
+                        
+                    }
+                    catch(err){
+                        console.error(err)
+                        errores = true
+                    }
+                }
+            }
+
+                
+        }
+        return errores
+    } 
+    async function procesarArchivo(){
+        if(filename == ""){
+            Swal.fire("Error","Seleccione un archivo","error")
+        }
+
+        //Que pasa si le cambia el nombre a la pestaña
+        let sheetiser = wkbk.Sheets.Servicios
+        if(!sheetiser){
+            Swal.fire("Error","Debe subir un archivo válido","error")
+        }
+        await getDataSQL()
+        let serviciosprocesar = []
+        let serhash = {}
+        loading = true
+        let errores = false
+        for (const [key, value ] of Object.entries(sheetiser)) {
+            const firstLetter = key.charAt(0);  // Get the first character
+            const tail = key.slice(1);
+            if(key == "!ref" || key == "!margins" || tail == "1"){
+                continue
+            }
+            if(serhash[tail]){
+                //madre
+                if(firstLetter=="A"){
+                    serhash[tail].madre = value.v
+                }
+                //fecha desde
+                if(firstLetter=="B"){
+                    serhash[tail].fechadesde = value.w?value.w:""
+                }
+                //fecha hasta
+                if(firstLetter=="C"){
+                    serhash[tail].fechahasta = value.w?value.w:""
+                }
+                //padres
+                if(firstLetter=="D"){
+                    serhash[tail].padres = value.v
+                }
+                //observacion
+                if(firstLetter=="E"){
+                    serhash[tail].observacion = value.v
+                }
+                //categoria
+                if(firstLetter=="F"){
+                    serhash[tail].categoria = value.v
+                }
+            }
+            else{
+                serhash[tail] = {
+                    madre:"",fechadesde:"",fechahasta:"",padres:"",observacion:"",categoria:""
+                }
+                //madre
+                if(firstLetter=="A"){
+                    serhash[tail].madre = value.v
+                }
+                //fecha desde
+                if(firstLetter=="B"){   
+                    serhash[tail].fechadesde = value.w?value.w:""
+                }
+                //fecha hasta
+                if(firstLetter=="C"){
+                    serhash[tail].fechahasta = value.w?value.w:""
+                }
+                //padres
+                if(firstLetter=="D"){
+                    serhash[tail].padres = value.v
+                }
+                //observacion
+                if(firstLetter=="E"){
+                    serhash[tail].observacion = value.v
+                }
+                //categoria
+                if(firstLetter=="F"){
+                    serhash[tail].categoria = value.v
+                }
+            }
+        }
+        for (const [key, value ] of Object.entries(serhash)) {
+            serviciosprocesar.push(value)
+        }
+        
+        if(coninternet.connected){
+            errores = await procesarArchivoOnline(serviciosprocesar)
+            await setServiciosSQL(db,Servicios)
+        }
+        else{
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let dataprocesar = await procesarArchivoOffline(serviciosprocesar)
+            //errores = dataprocesar.errores
+        }
+        
         filename = ""
         wkbk = null
         loading = false
@@ -203,6 +365,13 @@
         else{
             Swal.fire("Éxito servicios","Se lograron registrar todos los servicios","success")
         }
+    }
+    async function getLocalSQL() {
+        let resservicios = await getServiciosSQL(db)
+        servicios = resservicios.lista
+    }
+    async function getDataSQL(){
+        await getLocalSQL()
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">

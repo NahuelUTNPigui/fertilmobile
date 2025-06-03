@@ -6,6 +6,8 @@
     import estados from "$lib/stores/estados";
     import tiposanimal from '$lib/stores/tiposanimal';
     import {isEmpty} from "$lib/stringutil/lib"
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         caravana=$bindable(""),
         peso=$bindable(""),
@@ -63,8 +65,28 @@
             }
         }
     }
+    function clickLog(){
+        
+        loger.addLog({
+            time:Date.now(),
+            text:"click desde tacto incio"
+        })
+        
+    }
 </script>
 <div class="form-control">
+    {#if modedebug}
+        <div class="label">
+            madres - {madres.length}
+        </div>
+        <div class="label">
+            prenadatacto - {prenadatacto}
+        </div>
+        <button
+            class="btn btn-primary"
+            onclick={clickLog}
+        >test log</button>
+    {/if}
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
     {#if !agregaranimal}
         
@@ -117,7 +139,7 @@
         <label for = "prenada" class="label ">
             <span class={estilos.labelForm}>Estado</span>
         </label>
-        
+        <!--No funciona el prenada tacto, si lo pongo como un atributo de objecto-->
         <RadioButton bind:option={prenadatacto} deshabilitado={false}/>
 
     </div>

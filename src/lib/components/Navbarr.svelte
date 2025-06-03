@@ -9,6 +9,8 @@
   import { createDarker } from "$lib/stores/dark.svelte";
   import { page } from '$app/stores';  
   import { createCaber } from "$lib/stores/cab.svelte";
+
+  import BotonLoges from "$lib/components/herramientas/BotonLoges.svelte"
   //SVG
   import Animal from "$lib/svgs/animal.svelte";
   import Estable from "$lib/svgs/estable.svelte";
@@ -207,6 +209,7 @@
             </div>
         </div>
         {@render children()}
+        <BotonLoges></BotonLoges>
     </div>
     <div class="drawer-side">
       <label for="my-drawer" aria-label="close sidebar" class="drawer-overlay"></label>

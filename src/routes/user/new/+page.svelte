@@ -24,7 +24,7 @@
     let malconfirmcontra = false
     let botonhabilitado = false
     let condiciones = false
-
+    let showpass = false
 
 
 
@@ -134,7 +134,7 @@
             };
             const record = await pb.collection('users').create(data);
             Swal.fire('Éxito guardar', 'Se logró guardar el nuevo usuario. Ingrese a la aplicación', 'success');
-            goto(pre+"/")
+            goto("/login")
         }catch(e){
             console.error(e)
             Swal.fire('Error guardar', 'No se puede crear el nuevo usuario', 'error');
@@ -142,8 +142,8 @@
         
     }
     function volver(){
-        goto(pre+"/")
-    }
+        goto("/login")
+    }   
     function keyEvent(e){
         if(e.code=="Enter"){
             if(usuarioemail !="" && contra !="" && confirmcontra !=""){
@@ -246,11 +246,11 @@
                         Contraseña
                     </label>
                     <input 
-                        type="password" 
+                        type={showpass?"text":"password"} 
                         id="password" 
                         bind:value={contra} 
                         oninput={()=>onInput("CONTRA")}
-                        
+                        onfocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                     />
                     {#if malcontra}
@@ -266,10 +266,11 @@
                         Confirmar Contraseña
                     </label>
                     <input 
-                        type="password" 
+                        type={showpass?"text":"password"} 
                         id="passwordconf" 
                         bind:value={confirmcontra} 
                         oninput={()=>onInput("CONF")}
+                        onfocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
                     />
                     {#if malconfirmcontra}
@@ -277,6 +278,12 @@
                             <span class="label-text-alt text-red-500">Deben coincidir las contraseñas</span>                    
                         </div>
                     {/if}
+                </div>
+                <div class="form-control ">
+                    <label class="label cursor-pointer">
+                      <span class="label-text">Mostrar constraseña</span>
+                      <input type="checkbox" bind:checked={showpass} class="checkbox" />
+                    </label>
                 </div>
                 <div class="">
                     <div class="form-control">
@@ -310,7 +317,7 @@
             <div class="mt-6 text-center">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
                     Ya tienes cuenta?
-                    <a href={pre+"/" }
+                    <a href={"/login" }
                     class="font-medium text-green-600 dark:text-green-400  hover:text-green-800 dark:hover:text-green-300 transition"
                     >
                         Volver

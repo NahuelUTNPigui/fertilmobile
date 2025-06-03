@@ -78,14 +78,50 @@
         }
         
     }
-    async function editarPesaje() {
+    function onChangePesajes(){
+        
+        pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
+    }
+    async function editarPesajeOffline() {
+        let data = {
+            fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
+            pesonuevo
+        }
+        try{
+            let idx_pesaje = pesajes.findIndex(p=>pesajes)
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            onchangePesajes()
+            await setPesajesSQL(db,pesajes)
+            let comando = {
+                tipo:"update",
+                coleccion:"pesaje",
+                data,
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idpesaje,
+                camposprov:""
+            }
+            Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+        }  
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+        }
+    }
+    async function editarPesajeOnline() {
         try{
             let data = {
                 fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
                 pesonuevo
             }
+            let idx_pesaje = pesajes.findIndex(p=>p.id==idpesaje)
+
             await pb.collection("pesaje").update(idpesaje,data)
-            await getPesajes()
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            onchangePesajes()
+            await setPesajesSQL(db,pesajes)
             filterUpdate()
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
         }   
@@ -94,21 +130,86 @@
             Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
         }
         detallePesaje.close()
+    }
+    async function editarPesaje() {
+        if(coninternet.connected){
+            await editarPesajeOnline()
+        }
+        else{
+            await editarPesajeOffline()
+        }
+
 
     }
-    async function eliminar(){
-        
-        try{
+    async function eliminarOffline() {
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
+                    let comando = {
+                        tipo:"delete",
+                        coleccion:"pesaje",
+                        data:{},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:idpesaje,
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    onChangePesajes()
+                    filterUpdate()
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
+        })
+    }
+    async function eliminarOnline() {
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
+                    await pb.collection("pesaje").delete(idpesaje)
+                    onChangePesajes()
+                    filterUpdate()
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
             
-            await pb.collection("pesaje").delete(idpesaje)
-            await getPesajes()
-            filterUpdate()
-            detallePesaje.close()
+        })
+    }
+    async function eliminar(){
+        if(coninternet.connected){
+            await eliminarOnline()
         }
-        catch(err){
-            console.error(err)
-            detallePesaje.close()
+        else{
+            await eliminarOffline()
         }
+        
     }
     function openDetalle(id){
         idpesaje = id
@@ -127,7 +228,7 @@
     async function getLocalSQL() {
         let respesajes = await getPesajesSQL(db)
         pesajes = respesajes.lista
-        pesajescab  = pesajes.filter(p=>p.expand.animal.cab.id == caboff.id) 
+        pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
         filterUpdate()
     }
     async function initPage(){

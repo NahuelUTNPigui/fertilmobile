@@ -23,7 +23,7 @@
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
-    async function exportarTemplate(){
+    async function exportarTemplateOffline() {
         let csvData = [{
             nombre:"",
         }].map(item=>({
@@ -47,6 +47,38 @@
             directory: Directory.Documents
         });
     }
+    async function exportarTemplateOnline(){
+        let csvData = [{
+            nombre:"",
+        }].map(item=>({
+            NOMBRE_LOTE:item.nombre,
+        }))
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(csvData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Lotes');
+        
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo lotes.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo lotes.xlsx",
+            directory: Directory.Documents
+        });
+    }
+    async function exportarTemplate(){
+        if(coninternet.connected){
+            await exportarTemplateOnline()
+        }
+        else{
+            await exportarTemplateOffline()
+        }
+    }
     function importarArchivo(event){
         let file = event.target.files[0];
         
@@ -61,6 +93,7 @@
         reader.readAsBinaryString(file);
     }
     async function procesarOnline() {
+
         for(let i = 0;i<lotesprocesar.length;i++){
             let lo = lotesprocesar[i]
 
@@ -200,9 +233,10 @@
             await setLotesSQL(db,lotes)
         }
         else{
-            let comandos = await procesarOffline()
-            await concatComandosSQL(db,comandos)
-            await setLotesSQL(db,lotes)
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let comandos = await procesarOffline()
+            //await concatComandosSQL(db,comandos)
+            //await setLotesSQL(db,lotes)
         }
         
         filename = ""

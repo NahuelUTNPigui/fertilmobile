@@ -135,7 +135,8 @@
     }
     async function guardarOffline2() {
         if(agregaranimal){
-            let verificar = await verificarNivelOffline(animales.length,1)
+            let verificar = true
+            //let verificar = await verificarNivelOffline(animales.length,1)
             if(!verificar){
                 Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
                 return
@@ -181,7 +182,7 @@
             }
             comandos.push(comando)
             nacimientos.push(dataparicion)
-            onChangeNacimiento()
+            //onChangeNacimiento()
             await setNacimientosSQL(db,nacimientos)
             if(agregaranimal){
                
@@ -212,6 +213,7 @@
                 comandos.push(comandoani)
                 animales.push(dataanimal)
                 onChangeAnimal()
+                
                 await setAnimalesSQL(db,animales)
 
             }
@@ -404,7 +406,9 @@
     }
     async function guardarOnline2(){
         if(agregaranimal){
-            let verificar = await verificarNivel(caboff.id)
+
+            //let verificar = await verificarNivel(caboff.id)
+            let verificar = true
             if(!verificar){
                 Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
                 return
@@ -453,11 +457,12 @@
                 let recorda = await pb.collection('animales').create(dataanimal);
                 
                 animales.push(recorda)
-                onChangeAnimal()
+                
                 await setAnimalesSQL(db,animales)
             }
             nacimientos.push(recordparicion)
             onChangeNacimiento()
+            filterUpdate()
             await setNacimientosSQL(db,nacimientos)
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
         }
@@ -473,6 +478,8 @@
         else{
             await guardarOffline2()
         }
+        onChangeNacimiento()
+        filterUpdate()
     }
     async function editarOnline() {
         let ms = madres.filter(ma=>ma.id==madre)
@@ -869,6 +876,7 @@
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -876,13 +884,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()

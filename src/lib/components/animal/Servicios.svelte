@@ -23,6 +23,7 @@
         comandos = $bindable([]),
         servicios=$bindable([]),
         inseminaciones=$bindable([]),
+        animales = $bindable([]),
         coninternet,
         db,
         caravana = $bindable(""),
@@ -43,7 +44,7 @@
     //let inseminaciones = $state([])
     let filas = $state([])
     let padres = $state([])
-    let borrados = $state([])
+    
     //Datos compartidos
     let esServicio = $state(true)
     let cargado = $state(false)
@@ -64,7 +65,8 @@
     let fechainseminacion = $state("")
     let padre = $state("")
     let pajuela = $state("")
-
+    //Para ver todo
+    let serviciosrows = $state([])
     function openNewModal(id,p_esServicio){
         esServicio = p_esServicio
         if(id==""){
@@ -200,9 +202,9 @@
         
     }
     async function guardarInseminacion() {
-        alert("inseminacions")
+        
         if(coninternet.connected){
-            alert("GUARDAR")
+            
             await guardarInseminacionOnline()
         }
         else{
@@ -315,7 +317,7 @@
         let ids = p_padres.split(",")
         
         let nombres = ids.reduce(
-            (acc,valor)=>shorterWord(borrados.filter(p=>p.id==valor)[0].caravana) + " , " +acc,
+            (acc,valor)=>shorterWord(animales.filter(p=>p.id==valor)[0].caravana) + " , " +acc,
             ""
         )
 
@@ -328,18 +330,27 @@
     function oninputIns(campo){
         fechaparto = addDays(fechainseminacion, 280).toISOString().split("T")[0]
     }
-    onMount(async ()=>{
-        id = $page.params.slug
-        await getAnimales()
-        await getServicios()
-        await getInseminaciones()
-        filas.sort((a1,a2)=>{
+    onMount(()=>{
+        serviciosrows = servicios
+        serviciosrows = serviciosrows.concat(inseminaciones)   
+        serviciosrows.sort((a1,a2)=>{
             let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
             let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
             return f1.localeCompare(f2)
         })
-        
     })
+    //onMount(async ()=>{
+    //    id = $page.params.slug
+    //    await getAnimales()
+    //    await getServicios()
+    //    await getInseminaciones()
+    //    filas.sort((a1,a2)=>{
+    //        let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
+    //        let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
+    //        return f1.localeCompare(f2)
+    //    })
+    //    
+    //})
 </script>
 <div class="w-full flex justify-items-start gap-2">
     
@@ -356,7 +367,7 @@
     </div>
 </div>
 <div class="w-full flex justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if servicios.length == 0}
+    {#if serviciosrows.length == 0}
         <p class="mt-5 text-lg">No tiene servicios</p>
     {:else}
         <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
@@ -372,7 +383,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each servicios as s}
+                    {#each serviciosrows as s}
                     <tr class="hover:bg-gray-200 dark:hover:bg-gray-900" onclick={()=>s.fechadesde?openNewModal(s.id,true):openNewModal(s.id,false)}>
                         <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10 border-b dark:border-gray-600">{new Date(s.fechadesde).toLocaleDateString()}</td>
                         <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10 border-b dark:border-gray-600">{s.fechahasta?new Date(s.fechadesde).toLocaleDateString():""}</td>
@@ -397,7 +408,7 @@
             </table>
         </div>
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each servicios as s}
+            {#each serviciosrows as s}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>s.fechadesde?openNewModal(s.id,true):openNewModal(s.id,false)}>
                     <div class="block p-4">

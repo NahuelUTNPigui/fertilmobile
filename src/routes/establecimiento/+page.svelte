@@ -28,11 +28,15 @@
 
     } from '$lib/stores/sqlite/dbestablecimiento';
     import {updateLocalEstablecimientosSQL}  from '$lib/stores/sqlite/dballestablecimientos';
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
-    import {getColabSQL,setColabSQL,updateLocalColabSQL} from '$lib/stores/sqlite/dbcolaboradores';
+    import {getCabOffline,setCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getColabSQL,setColabSQL, updateLocalColabSQLUser} from '$lib/stores/sqlite/dbcolaboradores';
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import permisos from '$lib/stores/permisos';
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+
+
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -206,14 +210,29 @@
         try{
 
             const record = await pb.collection('cabs').create(data);
-            Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
-            await setEstablecimientoSQL(db,pb,data)
+            if(modedebug){
+                loger.addLog({
+                    time:Date.now(),
+                    text:JSON.stringify(data,null,2),
+                    
+                })
+            }
+            await setEstablecimientoSQL(db,data)
+            await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5")
             caber.setCab(nombre,record.id)
             per.setPer("0,1,2,3,4,5",usuarioid)
             goto(pre+"/")
+            Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
         }
         catch(err){
             console.error(err)
+            if(modedebug){
+                loger.addError({
+                    time:Date.now(),
+                    text:JSON.stringify(err,null,2),
+                    
+                })
+            }
             Swal.fire("Error guardar","No se pudo guardar la cabaña","error")
         }
         renspaValido = true
@@ -403,6 +422,8 @@
         //Esto no va andar, sera siempre userer y caber
         useroff = await getUserOffline()
         caboff = await getCabOffline()
+
+        db = await openDB()
         cab = caber.cab
         usuarioid = useroff.id
     }
@@ -425,25 +446,25 @@
   
     }
     async function updateLocalSQL(){
-        await  updateLocalEstablecimientosSQL(db,pb,usuarioid,cab.id)
-        let res = await getEsblecimientoSQL(db)
-        establecimiento = res
-        nombre = res.nombre
-        direccion = res.direccion
-        contacto = res.contacto
-        codigo = res.codigo
-        renspa = res.renspa
-        localidad = res.localidad
-        provincia = res.provincia
-        telefono = res.telefono
-        mail = res.mail    
+        let resestablecimientos = await  updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
+        //let res = await getEsblecimientoSQL(db)
+        establecimiento = resestablecimientos.filter(est=>est.id ==caboff.id)[0]
+        nombre = establecimiento.nombre
+        direccion = establecimiento.direccion
+        contacto = establecimiento.contacto
+        codigo = establecimiento.codigo
+        renspa = establecimiento.renspa
+        localidad = establecimiento.localidad
+        provincia = establecimiento.provincia
+        telefono = establecimiento.telefono
+        mail = establecimiento.mail    
         localidadesProv = localidades.filter(lo => lo.idProv == provincia)
         let allcolabs = await updateLocalColabSQLUser(db,pb,usuarioid)
         colabs = allcolabs.filter(colab => colab.cab == caboff.id)
 
     }
     async function getDataSQL(){
-        db = await openDB()
+        
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
@@ -451,6 +472,7 @@
         if (coninternet.connected){
             if(lastinter.internet == 0){
                 await updateLocalSQL()
+                await setInternetSQL(db,1,Date.now())
             }
             else{
                 let ahora = Date.now()
@@ -458,12 +480,13 @@
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()
+                    await setInternetSQL(db,1,Date.now())
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -476,7 +499,6 @@
             await getDataSQL()
         }
         else{
-            
             nombre = ""
             direccion = ""
             contacto = ""

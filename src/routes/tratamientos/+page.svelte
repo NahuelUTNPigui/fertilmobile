@@ -25,14 +25,12 @@
         setTratsSQL,
         setUltimoTratsSQL,
         addNewTrataSQL,
-        updateLocalTratsSQL,
         updateLocalTratsSQLUser,
 
         getTiposTratSQL,
         setTiposTratSQL,
         addNewTipoTratSQL,
         setUltimoTiposTratSQL,
-        updateLocalTipoTratsSQL,
         updateLocalTiposTratSQLUser
 
     } from '$lib/stores/sqlite/dbeventos';
@@ -46,7 +44,8 @@
     } from '$lib/stores/sqlite/dbanimales';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //Offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -224,49 +223,8 @@
         tipotratamientos = records
         tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
-    async function guardar(){
-        try{
-            let data = {
-                animal,
-                categoria,
-                tipo,
-                fecha:fecha +" 03:00:00",
-                observacion,
-                active : true,
-                cab:cab.id
-            }
-            
-            const  record = await pb.collection("tratamientos").create(data)
-            
-            await getTratamientos()
-            Swal.fire("Éxito guardar","Se pudo guardar el tratamiento con exito","success")
-        }
-        catch(err){
-            console.error(err)
-            Swal.fire("Error guardar","Hubo un error para guardar el tratamiento","error")
-        }
-    }
-
-    async function guardarAnimal(){
-        try{
-            let data = {
-                caravana,
-                active:true,
-                delete:false,
-                sexo,
-                peso,
-                cab:cab.id
-            }
-            let recorda = await pb.collection('animales').create(data)
-            Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
-            caravana = ""
-            sexo = "H"
-        }
-        catch(e){
-            console.error(e)
-            Swal.fire("Error guardar","Hubo un error para guardar el animal","error")
-        }
-        await getAnimales()
+    function onChangeTratamientos(){
+        tratamientoscab = tratamientos.filter(t=>t.cab == cab.id && t.active == true)   
     }
     async function editarOffline() {
         try{
@@ -303,10 +261,7 @@
                 comando.push(comando)
                 await setComandosSQL(db,comandos)
             }
-
-
-            
-            await getTratamientos()
+            onChangeTratamientos()
             Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
         }
         catch(err){
@@ -323,8 +278,14 @@
                 observacion,
                 fecha:fecha +" 03:00:00"
             }
-            const  record = await pb.collection("tratamientos").update(idtratamiento,data)
-            await getTratamientos()
+            let t_idx = tratamientos.findIndex(t=>t.id==idtratamiento)  
+            await pb.collection("tratamientos").update(idtratamiento,data)
+            tratamientos[t_idx]={
+                ...tratamientos[t_idx],
+                ...data,
+            }
+            await setTratsSQL(db,tratamientos)
+            onChangeTratamientos()
             Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
         }
         catch(err){
@@ -356,6 +317,7 @@
                     
                     tratamientos = tratamientos.filter(t=>t.id != id)
                     await setTratsSQL(db,tratamientos)
+                    onChangeTratamientos()
                     let comando = {
                         tipo:"add",
                         coleccion:"tratamientos",
@@ -392,9 +354,10 @@
                 
                 let data = {active:false}
                 try{
-                    const  record = await pb.collection("tratamientos").update(id,data)
+                    await pb.collection("tratamientos").update(id,data)
                     tratamientos = tratamientos.filter(t=>t.id != id)
-                    tratamientosrow = tratamientos
+                    await setTratsSQL(db,tratamientos)
+                    onChangeTratamientos()
                     Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
                 }
                 catch(err){
@@ -447,6 +410,7 @@
                 
                 tipotratamientos.push(record)
                 tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
+                tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
                 await setTiposTratSQL(db,tipotratamientos)
                 
                 cerrarTipoModal()
@@ -507,6 +471,7 @@
             tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
             tipotratamientos.push(item)
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
+            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
             await setTiposTratSQL(db,tipotratamientos)
         }
     }
@@ -523,14 +488,17 @@
             let data = {
                 nombre:nombretipotratamiento,
             }
-            const  record = await pb.collection("tipotratamientos").update(idtipotratamiento,data)
+            await pb.collection("tipotratamientos").update(idtipotratamiento,data)
             let item = {...data,id:idtipotratamiento}
-            tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
-            tipotratamientos.push(item)
+            let tt_idx = tipotratamientos.findIndex(tp=>tp.id==idtipotratamiento)   
+            tipotratamientos[tt_idx] = {
+                ...tipotratamientos[tt_idx],
+                ...data
+            }
+            
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
-            await setTiposTratSQL(db,tipotratamientos)
-            
-            
+            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+            await setTiposTratSQL(db,tipotratamientos)            
             cerrarTipoModal()
         }
         catch(err){
@@ -545,9 +513,10 @@
             let data = {
                 active:false
             }
-            const  record = await pb.collection("tipotratamientos").update(idtipotratamiento,data)
+            await pb.collection("tipotratamientos").update(idtipotratamiento,data)
             tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
             await setTiposTratSQL(db,tipotratamientos)
         }
         catch(err){
@@ -558,6 +527,7 @@
         idtipotratamiento = id
         
         tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
+        tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
         tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
         let comando = {
             tipo:"delete",
@@ -696,6 +666,7 @@
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -703,13 +674,14 @@
                     let antes = lastinter.ultimo
                     const cincoMinEnMs = 300000;
                     if((ahora - antes) >= cincoMinEnMs){
+                        await setInternetSQL(db,1,Date.now())
                         await updateLocalSQL()
                     }
                     else{
                         await getLocalSQL()            
                     }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -735,8 +707,11 @@
     }
 </script>
 <Navbarr>
-    <button onclick={updateLocalSQL} class="btn hidden">Forzar update</button>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    {#if modedebug}
+        <button onclick={updateLocalSQL} class="btn">Forzar update</button>
+        <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    {/if}
+    
     <div class="grid grid-cols-3 lg:grid-cols-4 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Tratamientos</h1>
@@ -959,11 +934,7 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        {#if idtratamiento == ""}
-            <h3 class="text-lg font-bold">Nuevo tratamiento</h3>  
-        {:else}
-            <h3 class="text-lg font-bold">Ver tratamiento</h3>  
-        {/if}
+        <h3 class="text-lg font-bold">Ver tratamiento</h3>  
         <div class="form-control">
             
             <label for = "madre" class="label">
@@ -1057,11 +1028,6 @@
                         bind:value={peso}
                     />
                 </label>
-                <div class="modal-action justify-start ">
-                    <form method="dialog" >
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitadoAnimal}' onclick={guardarAnimal} >Guardar Animal</button>
-                    </form>
-                </div>
             {/if}
             <label for = "fecha" class="label">
                 <span class="label-text text-base">Fecha</span>
@@ -1155,12 +1121,12 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
               <!-- if there is a button, it will close the modal -->
-              {#if idtratamiento == ""}
-                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
-                {:else}
+            
+            
+            
                 <button class="btn btn-success text-white" onclick={editar} >Editar</button>
                 <button class="btn btn-error text-white" onclick={()=>eliminar(idtratamiento)}>Eliminar</button>
-              {/if}
+            
               <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
               
             </form>

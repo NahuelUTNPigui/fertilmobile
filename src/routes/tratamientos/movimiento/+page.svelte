@@ -332,8 +332,21 @@
                 cab:caboff.id
             }
             try{
-                await pb.collection("tratamientos").create(datatratamiento)
+                let record = await pb.collection("tratamientos").create(datatratamiento)
+                record = {
+                    ...record,
+                    expand:{
+                        animal:getDatoAnimal(tratamientoanimal.id),
+                        tipo:{
+                            id:tipotratamientoselect,
+                            nombre:getTipoNombre(tipotratamientoselect)
+                        }
+                    }
+                }
+                await addSomeNewTrataSQL(db,[record])
+                
             }
+            
             catch(err){
                 errorestrata.push(tratamientoanimal.id)
                 console.error(err)
@@ -356,10 +369,12 @@
             }
         }
         selectanimales =[]
+        Swal.fire("Éxito tratamientos","Se logró registrar los tratamientos ","success")
     }
     function getDatoAnimal(idanimal){
         let a = animales.filter(an=>an.id==idanimal)[0]
         return {
+            id:a.id,
             caravana:a.caravana,
             categoria:a.categoria
         }

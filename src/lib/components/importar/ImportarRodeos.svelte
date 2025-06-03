@@ -6,7 +6,11 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import { Filesystem, Directory } from '@capacitor/filesystem';
-    let {db,coninternet,useroff,caboff,usuarioid,rodeos} = $props()
+    import { setRodeosSQL } from "$lib/stores/sqlite/dbeventos";
+    let {
+        db,coninternet,useroff,
+        caboff,usuarioid,rodeos
+      } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -17,7 +21,7 @@
     let wkbk = $state(null)
     
     let loading = $state(false)
-    async function exportarTemplate(){
+    async function exportarTemplateOffline() {
         let csvData = [{
             nombre:"",
         }].map(item=>({
@@ -41,6 +45,40 @@
             directory: Directory.Documents
         });
     }
+    async function exportarTemplateOnline(){
+        let csvData = [{
+            nombre:"",
+        }].map(item=>({
+            NOMBRE_RODEO:item.nombre,
+        }))
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(csvData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Rodeos');
+        
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo Rodeos.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo Rodeos.xlsx",
+            directory: Directory.Documents
+        });
+    }
+    async function exportarTemplate(){
+        if(coninternet.connected){
+            await exportarTemplateOnline()
+            
+        }
+        else{
+            await exportarTemplateOffline()
+            
+        }
+    }
     function importarArchivo(event){
         let file = event.target.files[0];
         
@@ -54,20 +92,100 @@
         };
         reader.readAsBinaryString(file);
     }
+    async function procesarArchivoOnline(rodeosprocesar) {
+        let errores = false
+        
+        for(let i = 0;i<rodeos.length;i++){
+            let ro = rodeos[i]
+            if(ro.nombre == ""){
+                
+                continue
+            }
+            let dataadd = {
+                nombre:ro.nombre,
+                active:true,
+                delete:false,
+                cab:caboff.id
+            }
+
+            let datamod = {
+                nombre:ro.nombre 
+            }
+            let r_idx = rodeos.findIndex(r=>r.nombre == ro.nombre && caboff.id == r.cab && r.active)  
+            if(r_idx == -1){
+                let record = await pb.collection('rodeos').create(dataadd);
+                record = {
+                    ...record,
+                    expand:{
+                        cab: {
+                            id: caboff.id,
+                            nombre: caboff.nombre,
+                            user:usuarioid
+                        }
+                    }
+                }
+                rodeos.push(record);
+            }
+            else{
+                await pb.collection('rodeos').update(record.id, datamod);
+                rodeos[r_idx] = {
+                    ...rodeos[r_idx],
+                    ...datamod
+                }
+            }
+        }
+        return errores
+    }
+    async function procesarArchivoOffline(rodeosprocesar) {
+        let errores = false
+        let comandos = []
+        for(let i = 0;i<rodeos.length;i++){
+            let ro = rodeos[i]
+
+            let dataadd = {
+                nombre:ro.nombre,
+                active:true,
+                delete:false,
+                cab:caboff.id
+            }
+
+            let datamod = {
+                nombre:ro.nombre 
+            }
+
+            try{
+                const record = await pb.collection('rodeos').getFirstListItem(`nombre="${ro.nombre}"`,{});
+                console.log("mod")
+                await pb.collection('rodeos').update(record.id, datamod);               
+            }
+            catch(err){
+                console.log("Add")
+                await pb.collection('rodeos').create(dataadd);
+
+            }
+        }
+        let dataprocesar = {
+            errores,
+            comandos
+        }
+        return dataprocesar
+
+    }
     async function procesarArchivo(){
         if(filename == ""){
             Swal.fire("Error","Seleccione un archivo","error")
         }
 
         let sheetrodeos = wkbk.Sheets.Rodeos
-        console.log(wkbk.Sheets.Rodeos)
+        
         if(!sheetrodeos){
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
         
-        let rodeos = []
+        let rodeosprocesar = []
         let rodeoshashmap = {}
         loading = true
+        let errores = false
         for (const [key, value ] of Object.entries(sheetrodeos)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
@@ -91,44 +209,29 @@
             }
         }
         for (const [key, value ] of Object.entries(rodeoshashmap)) {
-            rodeos.push(value)
+            rodeosprocesar.push(value)
         }
-        for(let i = 0;i<rodeos.length;i++){
-            let ro = rodeos[i]
-
-            let dataadd = {
-                nombre:ro.nombre,
-                active:true,
-                delete:false,
-                cab:cab.id
-            }
-
-            let datamod = {
-                nombre:ro.nombre 
-            }
-
-            try{
-                const record = await pb.collection('rodeos').getFirstListItem(`nombre="${ro.nombre}"`,{});
-                console.log("mod")
-                await pb.collection('rodeos').update(record.id, datamod);               
-            }
-            catch(err){
-                console.log("Add")
-                await pb.collection('rodeos').create(dataadd);
-
-            }
+        if(coninternet.connected){
+            errores = await procesarArchivoOnline(rodeosprocesar)
+            await setRodeosSQL(db,rodeos)
+        }
+        else{
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let dataprocesar = await procesarArchivoOffline(rodeosprocesar)
+            //errores = dataprocesar.errores
         }
         filename = ""
         wkbk = null
         loading = false
-        Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        if(errores){
+            Swal.fire("Error","Ocurrió un error en algun rodeo","error")
+         
+        }
+        else{
+            Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        }
+        
     }
-    onMount(async ()=>{
-        rodeos = await pb.collection('rodeos').getFullList({
-            filter:`active = true && cab ='${cab.id}'`,
-            sort: '-nombre',
-        })
-    })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     <button

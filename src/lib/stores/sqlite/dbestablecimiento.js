@@ -5,8 +5,10 @@ export async function getEsblecimientoSQL(db) {
     let establecimiento = JSON.parse(fila.valores)
     return establecimiento
 }
+//Esta aca el problema
 export async function setEstablecimientoSQL(db,establecimiento) {
     let result = await db.query("select id,valores from Establecimiento where id=1")
+    
     let fila = result.values[0]
     let localestablecimiento = JSON.parse(fila.valores)
     localestablecimiento = {...localestablecimiento,...establecimiento}

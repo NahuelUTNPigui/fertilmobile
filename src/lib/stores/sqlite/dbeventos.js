@@ -374,7 +374,7 @@ export async function updateLocalLotesSQLUser(db,pb,userid) {
 }
 export async function getUpdateLocalLotesSQLUserCab(db,pb,userid,cabid) {
     let lotes = await updateLocalLotesSQLUser(db,pb,userid)
-    lotes = filter(l=>l.cab ==cabid)
+    lotes = lotes.filter(l=>l.cab ==cabid)
     return lotes
 }
 export async function updateLocalLotesSQL(db,pb,cabid) {
@@ -431,7 +431,7 @@ export async function updateLocalRodeosSQLUser(db,pb,userid) {
 }
 export async function getUpdateLocalRodeosSQLUserCab(db,pb,userid,cabid) {
     let rodeos = await updateLocalRodeosSQLUser(db,pb,userid)
-    rodeos = filter(r=>r.cab ==cabid)
+    rodeos = rodeos.filter(r=>r.cab ==cabid)
     return rodeos
 }
 export async function updateRodeoSQL(db,id,rodeo) {

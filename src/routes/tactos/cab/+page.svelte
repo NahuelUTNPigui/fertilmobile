@@ -186,8 +186,10 @@
                     active:false
                 }
                 try{
-                    let recordaedit = await pb.collection('tactos').update(idtacto,data);
+                    await pb.collection('tactos').update(idtacto,data);
                     tactos = tactos.filter(t=>t.id!=idtacto)
+                    await setTactosSQL(db,tactos)
+                    onChangeTactos()
                     //deberia modificar la base de datos
                     filterUpdate()
                     Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
@@ -215,8 +217,22 @@
                     active:false
                 }
                 try{
-                    let recordaedit = await pb.collection('tactos').update(idtacto,data);
+
+                    let nanimal = animal.split("_").length>0
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"tactos",
+                        data:{...data},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:idtacto,
+                        camposprov:nanimal?"animal":""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
                     tactos = tactos.filter(t=>t.id!=idtacto)
+                    await setTactosSQL(db,tactos)
+                    onChangeTactos()
                     filterUpdate()
                     Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
                 }
@@ -250,7 +266,7 @@
     }
     function filterUpdate(){
         
-        tactosrow = tactos
+        tactosrow = tactoscab
         totalTactosEncontrados = tactosrow.length
         if(buscar!=""){
             tactosrow = tactosrow.filter(t=>t.expand.animal.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
@@ -295,7 +311,8 @@
     }
     async function updateLocalSQL() {
         tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
-        tactos = tactos.filter(t=>t.cab == caboff.id)
+        
+        onChangeTactos()
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
         animales = animales.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
@@ -306,6 +323,7 @@
         animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)
 
         tactos = restactos.lista.filter(t=>t.cab ==  caboff.id)
+        onChangeTactos()
         filterUpdate()
     }
     async function getDataSQL() {
@@ -316,6 +334,7 @@
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -323,13 +342,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -351,60 +371,11 @@
     function selectOption(opcion){
         prenada = opcion
     }
-
-    async function guardarAnimal(){
-        try{
-            let data = {
-                caravana,
-                active:true,
-                delete:false,
-                sexo,
-                peso,
-                cab:cab.id
-            }
-            let recorda = await pb.collection('animales').create(data)
-            Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
-            caravana = ""
-            sexo = "H"
-        }
-        catch(e){
-            console.error(e)
-            Swal.fire("Error guardar","Hubo un error para guardar el animal","error")
-        }
-        await getAnimales()
+    function onChangeTactos(){
+        tactoscab = tactos.filter(t=>t.cab == cab.id && t.active)
     }
-
-    async function guardar(){
+    async function editarOffline() {   
         try{
-            let data = {
-               fecha:fecha +" 03:00:00" ,
-               observacion,
-               animal,
-               categoria,
-               prenada,
-               tipo,
-               nombreveterinario,
-               cab:cab.id,
-               active:true
-            }
-            const record = await pb.collection('tactos').create(data);
-            await pb.collection('animales').update(animal,{
-                prenada
-            })
-            await guardarHistorial(pb,animal)
-            await getTactos()
-            filterUpdate()
-            Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
-        }
-        catch(err){
-            console.error(err)
-            Swal.fire("Error guardar","No se pudo guardar el tacto","error")
-        }
-    }
-    async function editarOffline() {
-        
-        try{
-            
             let data = {
                fecha:fecha +" 03:00:00" ,
                observacion,
@@ -429,9 +400,13 @@
             await setComandosSQL(db,comandos)
             let idx = tactos.findIndex(t=>t.id==idtacto)
             let a = animales.filter(an=>an.id == animal)[0]
-            tactos[idx] = data
+            tactos[idx] ={
+                ...tactos[idx],
+                ...data
+            } 
             tactos[idx].expand = {animal:a}
             tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
+            onChangeTactos()
             await setTactosSQL(db,tactos)
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
@@ -452,16 +427,21 @@
                tipo,
                nombreveterinario
             }
-            const record = await pb.collection('tactos').update(idtacto,data);
+             await pb.collection('tactos').update(idtacto,data);
             
-            await pb.collection('animales').update(animal,{
-                prenada
-            })
+            //await pb.collection('animales').update(animal,{
+            //    prenada
+            //})
             let idx = tactos.findIndex(t=>t.id==idtacto)
             let a = animales.filter(an=>an.id == animal)[0]
-            tactos[idx] = record
+            tactos[idx] = {
+                ...tactos[idx],
+                ...data
+            }
             tactos[idx].expand = {animal:a}
             tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
+            onChangeTactos()
+            await setTactosSQL(db,tactos)
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
         }
@@ -811,11 +791,7 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        {#if idtacto == ""}
-            <h3 class="text-lg font-bold">Nuevo tacto</h3>  
-        {:else}
-            <h3 class="text-lg font-bold">Editar tacto</h3>  
-        {/if}
+        <h3 class="text-lg font-bold">Editar tacto</h3>  
         <div class="form-control">
             <label for = "animal" class="label">
                 <span class="label-text text-base">Animal</span>
@@ -898,11 +874,6 @@
                         bind:value={peso}
                     />
                 </label>
-                <div class="modal-action justify-start ">
-                    <form method="dialog" >
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitadoAnimal}' onclick={guardarAnimal} >Guardar Animal</button>
-                    </form>
-                </div>
             {/if}
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
@@ -1018,12 +989,9 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
               <!-- if there is a button, it will close the modal -->
-              {#if idtacto==""}
-                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
-              {:else}
-                <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editarTacto} >Editar</button>
+              
+              <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editarTacto} >Editar</button>
                 <button class="btn btn-error text-white" onclick={()=>eliminar(idtacto)}>Eliminar</button>
-              {/if}
               <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
               
             </form>

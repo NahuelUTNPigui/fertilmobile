@@ -29,7 +29,6 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
         updateLocalTactosSQLUser,
-        updateLocalTactosSQL,
         setTactosSQL,
         getTactosSQL,
         getRodeosSQL,
@@ -66,6 +65,7 @@
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     let caber = createCaber()
     let cab = caber.cab
+    let tactos = $state([])
     //Datos animales
     let animales = $state([])
     let animalesrows = $state([])
@@ -410,6 +410,15 @@
                     camposprov:``
                 }
                 comandos.push(comandoani)
+                datatacto = {
+                    ...datatacto,
+                    expand:{
+                        animal:{
+                            id:tactoanimal.id,
+                            caravana:tactoanimal.caravana,
+                        }
+                    }
+                }
                 tactos.push(datatacto)
 
             }
@@ -467,14 +476,25 @@
                     prenada:tactoanimal.estadonuevo,
                     tipo:tactoanimal.tipotacto,
                     nombreveterinario:"",
-                    cab:cab.id,
+                    cab:caboff.id,
                     active:true
                 }
                 
                 //await guardarHistorial(pb,selectanimales[i].id)
-                //let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
+                let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
                 //debo guardar el record en el sqlite    
                 let record = await pb.collection('tactos').create(datatacto);
+                record = {
+                    ...record,
+                    expand:{
+                        animal:{
+                            id:tactoanimal.id,
+                            caravana:tactoanimal.caravana,
+                        }
+                    }
+                }
+                tactos.push(record)
+
                 
             }
             catch(err){
@@ -483,6 +503,7 @@
                 errores = true
             }
         }
+        await setTactosSQL(db,tactos)
         if(errores){
             Swal.fire("Error tactos","Hubo algun error en algun tacto","error")
         }
@@ -526,6 +547,8 @@
         await getLotes()
     }
     async function getLocalSQL() {
+        let restactos = await getTactosSQL(db)
+        tactos = restactos.lista
         animales = await getAnimalesCabSQL(db,caboff.id)
         let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         lotes = lotesrodeos.lotes
@@ -535,6 +558,7 @@
 
     }
     async function updateLocalSQL() {
+        tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
         animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         lotes =  lotesrodeos.lotes

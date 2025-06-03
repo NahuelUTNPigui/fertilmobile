@@ -25,7 +25,10 @@
         setLotesSQL
 
     } from "$lib/stores/sqlite/dbeventos"
-
+    import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     //offline
     let db = $state(null)
@@ -34,6 +37,7 @@
     let caboff = $state({})
     let coninternet = $state({})
     let comandos = $state([])
+    let animales = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
     //pre
@@ -94,11 +98,15 @@
                 cab:caboff.id
             }
             let record = await pb.collection('lotes').create(data);
+            
             record.total = 0
             lotes.push(record)
             onChangeLote()
-            await addnewLoteSQL(db,record)
+            
+            await setLotesSQL(db,lotes)
+            
             ordenar(lotes)
+            
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
         }catch(err){
@@ -124,16 +132,17 @@
             camposprov:""
         }
         comandos.push(comando)
-        await addnewLoteSQL(db,data)
+        
         data.total = 0 
         await setComandosSQL(db,comandos)
         lotes.push(data)
+        await setLotesSQL(db,lotes)
         onChangeLote()
         
         ordenar(lotes)
         filterUpdate()
     }
-    async function guardar2() {
+    async function guardar() {
         if(coninternet.connected){
             await guardarOnline()
         }
@@ -141,27 +150,23 @@
             await guardarOffline()
         }
     }
-    async function guardar(){
-        try{
-            let data = {
-                nombre,
-                active:true,
-                cab:cab.id
-            }
-            let record = await pb.collection('lotes').create(data);
-            record.total = 0
-            lotes.push(record)
-            onChangeLote()
-            ordenar(lotes)
-            filterUpdate()
-            Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
-        }catch(err){
-            console.error(err)
-            Swal.fire("Error guardar","No se pudo guardar el lote","error")
+    function contarAnimales(){
+        for(let i = 0;i<lotes.length;i++){
+            let total = animales.filter(an=>an.lote==lotes[i].id).length
+            lotes[i].total = total
         }
     }
     function onChangeLote(){
-        lotescab = lotes.filter(lo=>lo.cab==cab.id)
+        lotescab = lotes.filter(lo=>lo.cab==caboff.id).map(lo=>{
+            return {
+                id:lo.id,
+                nombre:lo.nombre,
+                total:0
+            }
+        })
+        contarAnimales()
+
+        
     }
     function openEditModal(id){
         idlote = id
@@ -173,15 +178,23 @@
     async function editarOnline(idlote) {
         try{
             let data = {
-                
                 nombre
             }
-            const record = await pb.collection('lotes').update(idlote, data);
+            await pb.collection('lotes').update(idlote, data);
+            
             let idx = lotes.findIndex(r=>r.id==idlote)
+            
             let total = lotes[idx].total
-            lotes[idx]=record
-            lotes[idx].total = total
+            lotes[idx]= {
+                ...lotes[idx],
+                ...data
+            }
+            
+            
+            await setLotesSQL(db,lotes)
+            onChangeLote()
             ordenar(lotes)
+            
             filterUpdate()
             Swal.fire("Éxito editar","Se pudo editar el lote","success")
         }
@@ -194,7 +207,6 @@
     }
     async function editarOffline(id) {
         let data = {
-            id,
             nombre
         }
         let comando = {
@@ -208,12 +220,13 @@
         }
         comandos.push(comando)
         //Creo que esto es lo correcot
-        let idx = lotes.findIndex(r=>r.id==idlote)
-        let total = lotes[idx].total
-        lotes[idx] = data
-        lotes[idx].total = total
+        let idx = lotes.findIndex(r=>r.id==id)
+        lotes[idx].nombre = data.nombre
         comandos.push(comando)
-        await updateLoteSQL(db,id,data)
+        await setLotesSQL(db,lotes)
+        onChangeLote()
+        ordenar(lotes)
+        filterUpdate()
         await setComandosSQL(db,comandos)
     }
     async function editar(idlote){
@@ -250,12 +263,13 @@
                         idprov:id,    
                         camposprov:""
                     }
-                    await deleteLoteSQL(db,id)
+                    
                     lotes = lotes.filter(r=>r.id!=idlote)
+                    onChangeLote()
                     ordenar(lotes)
                     filterUpdate()
                     
-                    Swal.fire('Lote eliminada!', 'Se eliminó el lote correctamente.', 'success');
+                    Swal.fire('Lote eliminado!', 'Se eliminó el lote correctamente.', 'success');
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el lote', 'error');
@@ -283,10 +297,11 @@
                     const record = await pb.collection('lotes').update(idlote, data);
                     lotes = lotes.filter(r=>r.id!=idlote)
                     await setLotesSQL(db,lotes)
+                    onChangeLote()
                     ordenar(lotes)
                     filterUpdate()
                     //ver como hago para actualizar la lista
-                    Swal.fire('Lote eliminada!', 'Se eliminó el lote correctamente.', 'success');
+                    Swal.fire('Lote eliminado!', 'Se eliminó el lote correctamente.', 'success');
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el lote', 'error');
@@ -331,13 +346,18 @@
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
+    async function getAnimales() {
+        animales = await getAnimalesCabSQL(db,caboff.id)
+    }
     async function getLocalSQL() {
+        await getAnimales()
         let reslotes = await getLotesSQL(db)
         lotes = reslotes.lista
         onChangeLote()
         filterUpdate()
     }
     async function updateLocalSQL() {
+        await getAnimales()
         lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
         onChangeLote()
         filterUpdate()
@@ -352,6 +372,7 @@
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -359,13 +380,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -488,10 +510,10 @@
                 <form method="dialog" >
                     <!-- if there is a button, it will close the modal -->
                     {#if idlote==""}
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar2} >Guardar</button>  
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>  
                     {:else}
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>  
-                        <button class="btn btn-error text-white" onclick={()=>eliminar(idlote)}>Cancelar</button>
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={()=>editar(idlote)} >Editar</button>  
+                        <button class="btn btn-error text-white" onclick={()=>eliminar(idlote)}>Eliminar</button>
                     {/if}
                     <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
                 </form>

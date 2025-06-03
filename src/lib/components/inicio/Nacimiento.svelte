@@ -4,6 +4,8 @@
     import PredictSelect from '$lib/components/PredictSelect.svelte';
     import sexos from '$lib/stores/sexos';
     import AgregarAnimal from "../eventos/AgregarAnimal.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]
     //ESTE REPRESENTA EL MODAL DE NACIMIENTO EN INICIO
     //El final de guardar lo hace el inicio
@@ -41,11 +43,7 @@
         if(isEmpty(nacimiento.madrenac)){
             nacimiento.botonhabilitadonac = false
         }
-        if(isEmpty(nacimiento.nombrepadrenac)){
-            nacimiento.botonhabilitadonac = false
-        }
         
-
     }
     function oninputNacimiento(inputName){
         validarBotonNacimiento()
@@ -72,20 +70,6 @@
                 nacimiento.malmadrenac = false
             }
         }
-        if(inputName == "PADRE"){
-            if(nacimiento.nombrepadrenac == ""){
-                nacimiento.malpadrenac = true
-            }
-            else{
-                nacimiento.malpadrenac = false
-            }
-        }
-        if(inputName == "COMBOPADRE"){
-            if(nacimiento.padrenac != ""){
-                onSelectAnimalNacimiento(false)
-                nacimiento.malpadrenac = false
-            }
-        }
 
     }
     //Nacimiento    
@@ -110,6 +94,31 @@
     let malsexonac = $state(false)
     let botonhabilitadonac = $state(false)
 </script>
+{#if modedebug}
+    <div class="">
+        <h1>madres - {listamadres.length}</h1>
+        <h1>padres - {listapadres.length}</h1>
+        
+    </div>
+    {#if isEmpty(nacimiento.fechanac)}
+        
+            <span class="label-text">
+                fecha vacua
+            </span>
+    {/if}
+    {#if isEmpty(nacimiento.madrenac)}
+        
+            <span class="label-text">
+                madre vacua
+            </span>
+    {/if}
+    {#if !nacimiento.botonhabilitadonac}
+        
+            <span class="label-text">
+                madre vacua
+            </span>
+    {/if}
+{/if}
 <div class="form-control">
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento confechanac={true}/>
     
@@ -136,12 +145,21 @@
         {/if}
     </label>
     {#if cargadoanimales}
-        <PredictSelect bind:valor={nacimiento.madrenac} etiqueta = {"Madre"} bind:cadena={nacimiento.nombremadrenac} lista = {listamadres} validarAnimal={()=>oninputNacimiento("COMBOMADRE")}>
+        <PredictSelect 
+            bind:valor={nacimiento.madrenac} 
+            etiqueta = {"Madre"} bind:cadena={nacimiento.nombremadrenac} 
+            lista = {listamadres} 
+            validarAnimal={()=>oninputNacimiento("COMBOMADRE")}>
             
         </PredictSelect>
     {/if}
     {#if cargadoanimales}
-        <PredictSelect bind:valor={nacimiento.padrenac} etiqueta = {"Padre"} bind:cadena={nacimiento.nombrepadrenac} lista = {listapadres} validarAnimal={()=>oninputNacimiento("PADRE")}>
+        <PredictSelect 
+            bind:valor={nacimiento.padrenac} 
+            etiqueta = {"Padre"} 
+            bind:cadena={nacimiento.nombrepadrenac} 
+            lista = {listapadres} 
+            validarAnimal={()=>oninputNacimiento("PADRE")}>
             
         </PredictSelect>
     {/if}
@@ -168,6 +186,8 @@
 <div class="modal-action justify-start ">
     <form method="dialog" >
       <!-- if there is a button, it will close the modal -->
-      <button class="btn btn-success text-white" disabled={!nacimiento.botonhabilitadonac}  onclick={guardarNacimiento} >Guardar</button>
+      <!--<button class="btn btn-success text-white" disabled={!nacimiento.botonhabilitadonac}  onclick={guardarNacimiento} >Guardar</button>-->
+      <button class="btn btn-success text-white" onclick={guardarNacimiento} >Guardar</button>
+      
     </form>
 </div>

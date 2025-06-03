@@ -29,7 +29,7 @@
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
-        updateLocalServiciosSQL,
+        
         updateLocalServiciosSQLUser,
         updateLocalInseminacionesSQLUser,
         setServiciosSQL,
@@ -39,13 +39,12 @@
         getLotesSQL,
         getRodeosSQL,
         getLotesRodeosSQL,
-        updateLocalLotesSQL,
         updateLocalLotesSQLUser,
-        updateLocalRodeosSQL,
         updateLocalRodeosSQLUser,
         getUpdateLocalRodeosLotesSQLUser
     } from "$lib/stores/sqlite/dbeventos"
     import {
+    addNewAnimalSQL,
         getAnimalesSQL,
         setAnimalesSQL,    
         updateLocalAnimalesSQL,
@@ -576,6 +575,17 @@
                     dataser.fechahasta = fechahastaserv + " 03:00:00"
                 }
                 let record = await pb.collection("servicios").create(dataser)
+                record={
+                    ...record,
+                    expand:{
+                        madre:{
+                            id: servicio.id,
+                            caravana: servicio.caravana,
+                        },
+                    }
+                }
+                servicios.push(record)
+
                 //aca debo guardar el servicio
                 //await guardarHistorial(pb,servicio.id)
                 //await pb.collection("animales").update(servicio.id,{prenada:3})
@@ -587,6 +597,7 @@
                 errores = true
             }
         }
+        await setServiciosSQL(db,servicios)
         if(errores){
             Swal.fire("Error servicios","Hubo algun error en algun servico","error")
         }
@@ -604,8 +615,8 @@
     }
     async function guardarServicioOffline() {
         let errores = false
-        let resservicios = await getServiciosSQL(db)
-        let servicios = resservicios.lista
+        //let resservicios = await getServiciosSQL(db)
+        //let servicios = resservicios.lista
         let serverrores = []
         for(let i = 0;i<selectanimales.length;i++){
             let idprov = "nuevo_servicio_"+generarIDAleatorio()
@@ -681,10 +692,20 @@
                 observacion:inseminacion.observacion
             }
             try{
-                const record = await pb.collection('inseminacion').create(data);
-                await guardarHistorial(pb,inseminacion.id)
-                await pb.collection('animales').update(inseminacion.id, {prenada:3});
-                animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+                let record = await pb.collection('inseminacion').create(data);
+                record = {
+                    ...record,
+                    expand:{
+                        animal:{
+                            id: inseminacion.id,
+                            caravana: inseminacion.caravana,
+                        },
+                    }
+                }
+                inseminaciones.push(record)
+                //await guardarHistorial(pb,inseminacion.id)
+                //await pb.collection('animales').update(inseminacion.id, {prenada:3});
+                //animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
                 
             }catch(err){
                 erroresins.push(inseminacion.id)
@@ -697,6 +718,7 @@
         else{
             Swal.fire("Éxito inseminaciones","Se lograron registrar todas las inseminaciones","success")
         }
+        
         for(let i = 0;i<selectanimales.length;i++){
             let inseminacion = selectanimales[i]
             let i_error = erroresins.findIndex(pid=>pid==inseminacion.id)
@@ -705,6 +727,7 @@
                 delete selecthashmap[inseminacion.id]
             }
         }
+        await setInseminacionesSQL(db,inseminaciones)
     }
     async function guardarInseminacionOffline() {
         let resinseminaciones = await getInseminacionesSQL(db)
@@ -874,11 +897,8 @@
         cargado = true
     }
     async function updateLocalSQL() {
-        //Esto tranquilamente va en una funcion
-        //lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
-        //lotes = lotes.filter(l=>l.cab ==  caboff.id)
-        //rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
-        //rodeos = rodeos.filter(r=>r.cab == caboff.id)
+        servicios =  await updateLocalServiciosSQLUser(db,pb,usuarioid)
+        inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
@@ -898,8 +918,12 @@
     async function getLocalSQL() {
         //let reslotes = await getLotesSQL(db)
         //let resrodeos = await getRodeosSQL(db)
+        let resservicios = await getServiciosSQL(db)
+        let resinseminaciones = await getInseminacionesSQL(db)
         let lotesrodeos = await getLotesRodeosSQL(db)
         let resanimales = await getAnimalesSQL(db)
+        servicios = resservicios.lista  
+        inseminaciones = resinseminaciones.lista
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
         animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)

@@ -35,26 +35,37 @@
         deleteAnimalSQL,
         editarAnimalSQL,
         getHistorialAnimalesSQL,
-        updateLocalHistorialAnimalesSQL
+        updateLocalHistorialAnimalesSQLUser,
+        updateLocalAnimalesSQLUser,
+        getAnimalesSQL
 
     } from "$lib/stores/sqlite/dbanimales"
-    import {
-        updateLocalNacimientosSQL,
-        getTactosSQL,
+    import {        
+        updateLocalNacimientosSQLUser,
         updateLocalTactosSQL,
+        updateLocalTactosSQLUser,
+        updateLocalTipoTratsSQL,
+        updateLocalTiposTratSQLUser,
+        updateLocalTratsSQL,
+        updateLocalObservaciones,
+        updateLocalObservacionesSQLUser,
+        updateLocalServiciosSQL,
+        updateLocalServiciosSQLUser,
+        updateLocalPesajesSQL,
+        updateLocalPesajesSQLUser,
+        updateLocalInseminacionesSQL,
+        updateLocalInseminacionesSQLUser,
+        getTactosSQL,
         getNacimientosSQL,
         getTiposTratSQL,
-        updateLocalTipoTratsSQL,
         getTratsSQL,
-        updateLocalTratsSQL,
         getObservacionesSQL,
-        updateLocalObservaciones,
         getPesajesSQL,
-        updateLocalPesajesSQL,
         getServiciosSQL,
-        updateLocalServiciosSQL,
         getInseminacionesSQL,
-        updateLocalInseminacionesSQL
+
+        updateLocalTratsSQLUser
+
     } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
@@ -102,7 +113,8 @@
     let pariciones = $state([])
     let tipostrat = $state([])
     let historial = $state([])
-
+    //animales para mostrar 
+    let animales = $state([])
     
     async function  getPariciones(id){
         const recordpariciones =  await pb.collection('nacimientos').getFullList({
@@ -322,7 +334,7 @@
         usuarioid = useroff.id
     }
     async function getLocalSQL() {
-        
+        let resanimales = await getAnimalesSQL(db)
         let tactostodos = await getTactosSQL(db)
         let nacimientostodos = await getNacimientosSQL(db)
         let pesajestodos = await getPesajesSQL(db)
@@ -332,25 +344,28 @@
         let observacionestodos = await getObservacionesSQL(db)
         let tipostratodos = await getTiposTratSQL(db)
         let historialtodos = await getHistorialAnimalesSQL(db)
+        animales = resanimales.lista
         pesajes = pesajestodos.lista.filter(p=>p.animal == slug)
         tratamientos = tratstodos.lista.filter(t=>t.animal == slug)
         observaciones = observacionestodos.lista.filter(o=>o.animal == slug)
         servicios = servistodos.lista.filter(s=>s.madre  == slug)
         inseminaciones = inseminacionestodos.lista.filter(i=>i.animal == slug)
-        tipostrat = tipostratodos.lista
+        tipostrat = tipostratodos.lista.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
         pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
         tactos = tactostodos.lista.filter(t=>t.animal == slug)
         historial = historialtodos.lista.filter(h=>h.animal == slug)
 
     }
     async function updateLocalSQL() {
-        let tactostodos = await updateLocalTactosSQL(db,pb,caboff.id)
-        let nacimientostodos = await updateLocalNacimientosSQL(db,pb,caboff.id)
-        let pesajestodos = await updateLocalPesajesSQL(db,pb,caboff.id)
-        let tratstodos = await updateLocalTratsSQL(db,pb,caboff.id)
-        let servistodos = await updateLocalServiciosSQL(db,pb,caboff.id)
-        let inseminacionestodos = await updateLocalInseminacionesSQL(db,pb,caboff.id)
-        let observacionestodos = await updateLocalObservacionesSQL(db,pb,caboff.id)
+        let resanimales = await getAnimalesSQL(db)
+        animales = resanimales.lista
+        let tactostodos = await updateLocalTactosSQLUser(db,pb,usuarioid)
+        let nacimientostodos = await updateLocalNacimientosSQLUser(db,pb,usuarioid)
+        let pesajestodos = await updateLocalPesajesSQLUser(db,pb,usuarioid)
+        let tratstodos = await updateLocalTratsSQLUser(db,pb,usuarioid)
+        let servistodos = await updateLocalServiciosSQLUser(db,pb,usuarioid)
+        let inseminacionestodos = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+        let observacionestodos = await updateLocalObservacionesSQLUser(db,pb,usuarioid)
         let tipostratodos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
         let historialtodos = await updateLocalHistorialAnimalesSQL(db,pb,caboff.id) 
         pesajes = pesajestodos.filter(p=>p.animal == slug)
@@ -358,7 +373,7 @@
         observaciones = observacionestodos.filter(o=>o.animal == slug)
         servicios = servistodos.filter(s=>s.madre  == slug)
         inseminaciones = inseminacionestodos.filter(i=>i.animal == slug)
-        tipostrat = tipostratodos
+        tipostrat = tipostratodos.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
         pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
         tactos = tactostodos.filter(t=>t.animal == slug)
         historial = historialtodos.filter(h=>h.animal == slug)
@@ -392,6 +407,7 @@
         let lastinter = await getInternetSQL(db)
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -399,13 +415,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -490,7 +507,7 @@
         {:else if tab =="pariciones"}
             <!--Animales nacimientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
-                <Pariciones {db} {useroff} {coninternet} bind:caravanamadre = {caravana} bind:comandos bind:pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
+                <Pariciones  {db} {useroff} {coninternet} bind:caravanamadre = {caravana} bind:animales bind:comandos bind:pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
             </CardAnimal>
         {:else if tab =="tactos"}
             <!--Tactos-->
@@ -500,7 +517,7 @@
         {:else if tab =="servicios"}
             <!--Animales servicios-->
             <CardAnimal cardsize="max-w-7xl" titulo="Servicios">
-                <Servicios {db} {coninternet} bind:caravana bind:comandos bind:servicios bind:inseminaciones cabid={cab.id} {categoria}/>
+                <Servicios {db} {coninternet} bind:caravana bind:comandos bind:servicios bind:inseminaciones bind:animales cabid={cab.id} {categoria}/>
                 <!--<Servicios {db} {coninternet} bind:caravana bind:comandos  cabid={cab.id} {categoria}/>-->
             </CardAnimal>
         {:else if tab =="clinica"}

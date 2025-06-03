@@ -20,6 +20,7 @@
     import cuentas from '$lib/stores/cuentas';
     import { getSexoNombre,capitalize,shorterWord } from '$lib/stringutil/lib';
     import{verificarNivel} from "$lib/permisosutil/lib"
+    
     ///ofline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -30,7 +31,9 @@
         getAnimalesSQL,
         setAnimalesSQL,
         addNewAnimalSQL,
-        updateLocalAnimalesSQL,
+        updateLocalAnimalesSQLUser,
+        updateLocalHistorialAnimalesSQLUser,
+        getAnimalesCabSQL
         
     } from "$lib/stores/sqlite/dbanimales"
 
@@ -39,6 +42,8 @@
         getRodeosSQL,
         updateLocalLotesSQL,
         updateLocalRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser,
+        getLotesRodeosSQL,
         addNewPesajeSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {generarIDAleatorio} from "$lib/stringutil/lib"
@@ -46,6 +51,11 @@
     //Banco pero esta dificil ahora que traiga los animales actuales
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import ListaAnimales from '$lib/components/animales/ListaAnimales.svelte';
+    import TablaAnimales from '$lib/components/animales/TablaAnimales.svelte';
+    import NuevoAnimal from '$lib/components/animales/NuevoAnimal.svelte';
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
     let usuarioid = $state("")
@@ -56,6 +66,8 @@
 
     let ruta = import.meta.env.VITE_RUTA
     //pre
+    let pre = ""
+    
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     let caber = createCaber()
@@ -162,7 +174,7 @@
         animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
         
         madres = animalescab.filter(a=>a.sexo == "H" && a.active)
-        padres = animalescab.filter(a=>a.sexo == "F" && a.active)
+        padres = animalescab.filter(a=>a.sexo == "M" && a.active)
         
     }
     function openNewModal(){
@@ -188,7 +200,6 @@
         }
         
     }
-    
     function getDetail(id){
         
         idanimal = id
@@ -265,7 +276,8 @@
             camposprov:conparicion?"nacimiento":""
         }
         comandos.push(comando)
-        await addNewAnimalSQL(db,data)
+        animales.push(data)
+        await setAnimalesSQL(db,animales);
         if(fechanacimiento){
             let datapesaje = {
                 animal:idprov,
@@ -352,6 +364,7 @@
 
             
             animales.push(recorda)
+            await setAnimalesSQL(db,animales)
             animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
             madres = animales.filter(a=>a.sexo=="H")
             padres = animales.filter(a=>a.sexo=="M")
@@ -369,13 +382,13 @@
         }
     }
     //Si los lotes sigue sin guardarse
-    async function guardar2() {
-        let totalanimals = await getTotalSQL(db)
+    async function guardar() {
+        //let totalanimals = await getTotalSQL(db)
         let verificar = true
         
-        if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
-            verificar =  false
-        }
+        //if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
+        //    verificar =  false
+        //}
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
             return {id:-1}
@@ -384,90 +397,15 @@
         if(coninternet.connected){
             await guardarOnline()
             onChangeAnimales()
+            filterUpdate()
         }
         else{
             await guardarOffline()
             onChangeAnimales()
-        }
-    
-    }
-    //Se puede guardar un animal con su nacimiento
-    async function guardar(){
-        let verificar = await verificarNivel(cab.id)
-        if(!verificar){
-            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
-            return
-        }
-        
-        try{
-            let recordparicion = null
-            if(conparicion){
-                let dataparicion = {
-                    madre,
-                    padre,
-                    fecha:fechanacimiento + " 03:00:00",
-                    nombremadre,
-                    nombrepadre,
-                    observacion,
-                    
-                    cab:cab.id
-                }
-                recordparicion = await pb.collection('nacimientos').create(dataparicion);
-                
-
-            }
-            let data = {
-                caravana,
-                active:true,
-                delete:false,
-                prenada,
-                fechanacimiento:fechanacimiento +" 03:00:00",
-                sexo,
-                peso,
-                lote,
-                rodeo,
-                categoria,
-                cab:cab.id,
-                rp
-            }
-            if(conparicion){
-                data.nacimiento = recordparicion.id
-            }
-            let recorda = await pb.collection('animales').create(data); 
-            if(conparicion){
-                recorda.expand = {
-                    nacimiento : recordparicion
-                }
-            }
-            if(fechanacimiento){
-                let datapesaje = {
-                    animal:recorda.id,
-                    fecha:fechanacimiento +" 03:00:00",
-                    pesoanterior:0,
-                    pesonuevo:peso
-                }
-                await pb.collection('pesaje').create(datapesaje)
-            }
-            animales.push(recorda)
-            animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-
-            madres = animales.filter(a=>a.sexo=="H")
-            padres = animales.filter(a=>a.sexo=="M")
             filterUpdate()
-            Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
-            caravana = ""
-            nacimiento = ""
-            fechanacimiento = ""
-            sexo = "H"
-
         }
-        catch(e){
-            console.error(e)
-            Swal.fire("Error guardar","Hubo un error para guardar el animal","error")
-        }
-        
-    }
     
+    }
     function filterUpdate(){
         animalesrows = animalescab
         totalAnimalesEncontrados = animalesrows.length
@@ -526,8 +464,6 @@
             totalAnimalesEncontrados = animalesrows.length
         }
     }
-
-
     function onSelectPadre(sex){
         if(sex=="H"){
             let m = madres.filter(a=>a.id == madre)[0]
@@ -551,13 +487,11 @@
             }
         }
     }
-
     function validarBoton(){
         botonhabilitado = true
         if(isEmpty(caravana)){
             botonhabilitado = false
         }
-        
     }
     async function onMountOriginal(){
         let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
@@ -568,19 +502,27 @@
         filterUpdate()
     }
     async function updateLocalSQL() {
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
+ 
+        let resanimales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = resanimales
+        animalescab = animales.filter(a=>a.cab == caboff.id)
+
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id) 
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
         
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
+        
         let resanimales = await getAnimalesSQL(db)
-        let reslotes = await getLotesSQL(db)
-        let resrodeos = await getRodeosSQL(db)
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
+        
         animales = resanimales.lista
-        lotes = reslotes.lista
-        rodeos = resrodeos.lista
+        animalescab = animales.filter(a=>a.cab == caboff.id)
+        
         filterUpdate()
     }
     async function initPage() {
@@ -590,27 +532,33 @@
         usuarioid = useroff.id
     }
     async function getDataSQL() {
+        
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        
         if (coninternet.connected){
             if(lastinter.internet == 0){
                 await updateLocalSQL()
+                await setInternetSQL(db,1,Date.now())
             }
             else{
                 let ahora = Date.now()
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
+                
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()
+                    await setInternetSQL(db,1,Date.now())
                 }
                 else{
+                    
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -691,7 +639,6 @@
     let selectforma = $state("caravana")
     //Ordenar animales
     function ordenarAnimalesDescendente(p_forma){
-        console.log(ascendente)
         let escalar = 1
         if(!ascendente){
             escalar = -1
@@ -727,7 +674,6 @@
         }
     }
     function ordenarAnimales(p_forma){
-        
         if(p_forma == forma){
             ascendente = !ascendente
         }
@@ -770,7 +716,30 @@
     }
 </script>
 <Navbarr>
-    
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                animales - {animales.length}
+            </div>
+            <div class="label">
+                animalescab - {animalescab.length}
+            </div>
+            <div class="label">
+                animalesrows - {animalesrows.length}
+            </div>
+            <div class="label">
+                madres - {madres.length}
+            </div>
+            <div class="label">
+                padres - {padres.length}
+            </div>
+            <div class="label">
+                lotes - {lotes.length}
+            </div><div class="label">
+                rodeos - {rodeos.length}
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div class="">
             <h1 class="text-2xl">Animales</h1>  
@@ -1000,162 +969,26 @@
         {/if}
     </div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
-        <table class="table table-lg w-full" >
-            <thead>
-                <tr >
-                    <th 
-                        onclick={()=>ordenarAnimales("caravana")}
-                        class={`
-                            text-base p-3 border-b dark:border-gray-600 
-                            hover:cursor-pointer hover:bg-gray-200 
-                            dark:hover:bg-gray-800
-                        `}  
-                    >
-                        Animal
-                    </th>
-                    <th 
-                        onclick={()=>ordenarAnimales("sexo")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
-                    >
-                        Sexo
-                    </th>
-                    <th 
-                        onclick={()=>ordenarAnimales("categoria")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  
-                    >
-                        Categoria
-                    </th>
-                    <th 
-                        onclick={()=>ordenarAnimales("estado")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800" 
-                    >
-                        Estado
-                    </th>
-                    <th 
-                        onclick={()=>ordenarAnimales("lote")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"  
-                    >
+        <TablaAnimales
+            bind:animalesrows
+            {shorterWord}
+            {getEstadoColor}
+            {getEstadoNombre}
+            {getSexoNombre}
+            {ordenarAnimales}
+        >
 
-                        Lote
-                    </th>
-                    <th 
-                        onclick={()=>ordenarAnimales("rodeo")}
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
-                    >
-                        Rodeo
-                    </th>
-                    <!--<th class="text-base"  >Acciones</th>-->
-                    
-                </tr>
-                
-            </thead>
-            
-            <tbody>
-                {#each animalesrows as a}
-                <tr class=" hover:bg-gray-200 dark:hover:bg-gray-900" onclick={()=>goto(`/animales/${a.id}`)}>
-                    <td class="text-base p-3 ">
-                        <div class="flex gap-1">
-                            {`${a.caravana}`}
-                            {#if !a.active}
-                                <div class={`
-                                    bg-transparent rounded-lg
-                                    p-0 m-0  ${estilos.danger}
-                                `}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-                                    </svg>
-                                </div>
-                            {/if}
-                        </div>
-                    </td>
-                    <td class="text-base p-3 "> {a.sexo}</td>
-                    <td class="text-base p-3 "> {a.categoria}</td>
-                    <td class="text-base p-3 "> 
-                        {getEstadoNombre(a.prenada)}
-                    </td>
-                    <td class="text-base p-3 ">
-                        {
-                            a.expand?
-                            a.expand.lote?
-                            a.expand.lote.nombre
-                            :""
-                            :""
-
-                        }
-                    </td>
-                    <td class="text-base p-3 ">
-                        {
-                            a.expand?
-                            a.expand.rodeo?
-                            a.expand.rodeo.nombre
-                            :""
-                            :""
-                        }
-                    </td>
-                    
-
-                </tr>
-                {/each}
-        </table>
+        </TablaAnimales>
     </div>
+    
     <div class="block  md:hidden justify-items-center mx-1">
-        {#each animalesrows as a}
-        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
-            <!--<button  onclick={()=>goto(`/animales/${a.id}`)}>-->
-            <button  onclick={()=>goto(`/animales/${a.id}`)}>
-                <div class="block p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-medium">{shorterWord(a.caravana)}</h3>
-                        {#if a.sexo == "H" && a.prenada != 1}
-                            <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
-                        {/if}
-                    </div>
-                    <div class="grid grid-cols-2 gap-y-2">
-                        <div class="flex items-start">
-                          <span class="font-semibold">{getSexoNombre(a.sexo)}</span>
-                        </div>
-                        <div class="flex items-start">
-                          <span >Categoría:</span> 
-                          <span class="font-semibold">
-                            {a.categoria}
-                          </span>
-                          
-                        </div>
-                        <div class="flex items-start">
-                          <span >Lote:</span>
-                          <span class="font-semibold">
-                            {
-                                a.expand?
-                                a.expand.lote?
-                                a.expand.lote.nombre
-                                :""
-                                :""
-  
-                            }
-                          </span> 
-                        </div>
-                        <div class="flex items-start">
-                            
-                          <span >Rodeo:</span> 
-                          <span class="font-semibold">
-                            {
-                                a.expand?
-                                a.expand.rodeo?
-                                a.expand.rodeo.nombre
-                                :""
-                                :""
-  
-                            }
-                          </span>
-                          
-                        </div>
-                    </div>
-                </div>
-            </button>
-        </div>
-            
-        {/each}
-        
+        <ListaAnimales
+            bind:animalesrows
+            {shorterWord}
+            {getEstadoColor}
+            {getEstadoNombre}
+            {getSexoNombre}
+        ></ListaAnimales>
     </div>
     
     
@@ -1183,327 +1016,26 @@
                 <h3 class="text-lg font-bold">Ver Animal</h3>  
             {/if}
             <div class="form-control">
-                <label for = "nombre" class="label">
-                    <span class="label-text text-base">Caravana</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2} 
-                            ${malcaravana?"input-error":""}
-                        `}
-                        bind:value={caravana}
-                        oninput={()=>oninput("NOMBRE")}
-                    />
-                    <div class={`label ${malcaravana?"":"hidden"}`}>
-                        <span class="label-text-alt text-red-400">Error debe escribir la caravana del animal</span>
-                    </div>
-                </label>
-                <label for = "rp" class="label">
-                    <span class="label-text text-base">RP:</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="rp" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2} 
-                            
-                        `}
-                        bind:value={rp}
-                        
-                    />
-                </label>
-                <label for = "sexo" class="label">
-                    <span class="label-text text-base">Sexo</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={sexo}>
-                        {#each sexos as s}
-                            <option value={s.id}>{s.nombre}</option>    
-                        {/each}
-                      </select>
-                </label>
-                <label for = "peso" class="label">
-                    <span class="label-text text-base">Peso (KG)</span>
-                </label>
-                <label class="input-group">
-                    <input id ="peso" type="number"  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={peso}
-                    />
-                </label>
-                {#if sexo == "H"}
-                    <div class="m-1 mt-3">
-                        <RadioButton bind:option={prenada} deshabilitado={false}/>
-                    </div>
-                    
-                    <label for = "estado" class="hidden label">
-                        <span class="label-text text-base">Estado</span>
-                    </label>
-                    <label class="input-group hidden">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} bind:value={prenada}>
-                            {#each estados as e}
-                                <option value={e.id}>{e.nombre}</option>    
-                            {/each}
-                        </select>
-                    </label>
-                {/if}
-                <label for = "categoria" class="label">
-                    <span class="label-text text-base">Categoria</span>
-                </label>
-                <label class="input-group">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={categoria}>
-                        {#each categorias as r}
-                            <option value={r.id}>{r.nombre}</option>    
-                        {/each}
-                    </select>
-                </label>
-                <label for = "rodeo" class="label">
-                    <span class="label-text text-base">Rodeo</span>
-                </label>
-                <label class="input-group">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={rodeo}>
-                        {#each rodeos as r}
-                            <option value={r.id}>{r.nombre}</option>    
-                        {/each}
-                    </select>
-                </label>
-                <label for = "lote" class="label">
-                    <span class="label-text text-base">Lote</span>
-                </label>
-                <label class="input-group">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={lote}>
-                        {#each lotes as r}
-                            <option value={r.id}>{r.nombre}</option>    
-                        {/each}
-                    </select>
-                </label>
-                <label for = "fechanacimiento" class="label">
-                    <span class="label-text text-base">Fecha nacimiento</span>
-                </label>
-                <label class="input-group ">
-                    <input id ="fechanacimiento" type="date" max={HOY}  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} 
-                        bind:value={fechanacimiento}
-                    />
-                </label>
-                <div class="form-group mt-3">
-                    
-                    <span class="label-text text-base">Con nacimiento</span>  
-                    <br>
-                    <input type="checkbox"  disabled={idanimal!=""} class="toggle"bind:checked={conparicion} />
-                </div>
-                {#if idanimal=="" && conparicion}
-                    <label for = "nombremadre" class="label">
-                        <span class="label-text text-base">Caravana madre</span>
-                    </label>
-                    <label class="input-group">
-                        <input 
-                            id ="nombremadre" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                w-full 
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={nombremadre}
-                        />
-                    </label>
-                    <label for = "madre" class="label">
-                        <span class="label-text text-base">Madre</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `}
-
-                            bind:value={madre}
-                            onchange={()=>onSelectPadre("F")}
-                        >
-                            {#each madres as m}
-                                <option value={m.id}>{m.caravana}</option>    
-                            {/each}
-                          </select>
-                    </label>
-                    <label for = "nombrepadre" class="label">
-                        <span class="label-text text-base">Caravana padre</span>
-                    </label>
-                    <label class="input-group">
-                        <input 
-                            id ="nombrepadre" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                w-full
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={nombrepadre}
-                        />
-                    </label>
-                    <label for = "madre" class="label">
-                        <span class="label-text text-base">Padre</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `}
-
-                            bind:value={padre}
-                            onchange={()=>onSelectPadre("M")}
-                        >
-                            {#each padres as p}
-                                <option value={p.id}>{p.caravana}</option>    
-                            {/each}
-                          </select>
-                    </label>
-                    
-                    <label class="form-control">
-                        <div class="label">
-                            <span class="label-text">Observacion</span>                    
-                        </div>
-                        <input 
-                            id ="observacion" 
-                            type="text"  
-                            class={`
-                                input 
-                                input-bordered 
-                                border border-gray-300 rounded-md
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                w-full
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={observacion}
-                        />
-                        
-                    </label>
-                    
-
-                {/if}
-                {#if idanimal!="" && nacimiento != ""}
-                    {#each [animal.expand.nacimiento] as n}
-                        <table class="table table-lg w-full">
-                            <thead>
-                                <tr>
-                                    <th class="text-base">Fecha</th>
-                                    <th class="text-base">Madre - Padre</th>
-                                    
-                                </tr>
-                            </thead>
-                            <tbody>
-                                    <tr>
-                                        <td class="text-base">{new Date(n.fecha).toLocaleDateString()}</td>
-                                        <td class="text-base">{n.nombremadre} , {n.nombrepadre}</td>
-                                    </tr>    
-                            </tbody>
-                        </table>
-                        <label class="form-control">
-                            <div class="label">
-                                <span class="label-text">Observacion</span>                    
-                            </div>
-                            <input 
-                                id ="observacion" 
-                                type="text"  
-                                class={`
-                                    input 
-                                    input-bordered 
-                                    border border-gray-300 rounded-md
-                                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                    w-full
-                                    ${estilos.bgdark2}
-                                `}
-                                bind:value={observacion}
-                            />
-                            
-                        </label>
-                    {/each}
-                {/if}
+                <NuevoAnimal
+                    {lotes} {rodeos}
+                    {oninput} {onSelectPadre}
+                    bind:madres bind:padres bind:caravana
+                    bind:malcaravana bind:rp bind:sexo
+                    bind:peso bind:prenada bind:categoria
+                    bind:rodeo bind:lote bind:fechanacimiento
+                    bind:idanimal bind:conparicion bind:nombremadre
+                    bind:madre bind:nombrepadre bind:padre
+                    bind:observacion bind:nacimiento bind:animal
+                >
+                </NuevoAnimal>
             </div>
+            
             <div class="modal-action justify-end ">
                 <form method="dialog" >
                     <!-- if there is a button, it will close the modal -->
+                     <button class="btn btn-error text-white" onclick={cerrarModal}>Cancelar</button>    
                     {#if idanimal==""}
-                        <button class="btn btn-error text-white" onclick={cerrarModal}>Cancelar</button>    
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar2} >Guardar</button>
-                        
-                    {:else}
-                        <button class="btn btn-error text-white" onclick={cerrarModal}>Cerrar</button>
+                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
                     {/if}
                     
 

@@ -16,12 +16,12 @@
     import { setAnimalesSQL, editarAnimalSQL, updateLocalAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     import {
         getNacimientosSQL,
-        updateLocalNacimientosSQL,
+        updateLocalNacimientosSQLUser,
         setNacimientosSQL
-
     } from "$lib/stores/sqlite/dbeventos"
-    import { validateHeaderName } from "http";
-    let {db,
+    
+    let {
+        db,
         coninternet,
         useroff,caboff,usuarioid,
         animales,animalesusuario,rodeos,lotes
@@ -236,7 +236,7 @@
         if(!sheetanimales){
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
-        
+        await getDataSQL()    
         let nacimientosprocesar = []
         let animaleshashmap = {}
         loading = true
@@ -329,7 +329,8 @@
             await procesarOnline(nuevoanimales)
         }
         else{
-            await procesarOffline(nuevoanimales)
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //await procesarOffline(nuevoanimales)
         }
         for(let i = 0;i<nacimientosprocesar.length;i++){
             let an = nacimientosprocesar[i]
@@ -423,9 +424,16 @@
         Swal.fire("Éxito importar","Se lograron importar los datos","success")
         
     }
-    onMount(async ()=>{
-        nacimientos = await getNacimientosSQL(db,caboff.id)
-    })
+    async function getLocalSQL() {
+        let resnacimiento = await getNacimientosSQL(db)
+        nacimientos = resnacimiento.lista
+    }
+    async function getDataSQL() {
+        //Creo que se podia hacer una comprobacion
+        //de actualizacion de datos por tiempo
+        await getLocalSQL()
+    }
+    
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     <button

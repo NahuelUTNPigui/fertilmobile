@@ -29,8 +29,9 @@
         updateLocalLotesSQL,
         updateLocalRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser,
-        getLotesRodeosSQL
-        
+        getLotesRodeosSQL,
+        updateLocalLotesSQLUser,
+        updateLocalRodeosSQLUser        
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
@@ -39,7 +40,8 @@
         updateLocalAnimalesSQLUser,
         getAnimalesCabSQL
     } from "$lib/stores/sqlite/dbanimales"
-    
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"  
 
     //OFLINE
     let db = $state(null)
@@ -80,23 +82,26 @@
         animalesusuario = animales.total
         lotes = reslotes.lista
         rodeos = resrodeos.lista
-        
+        cargado = true
     }
     async function updateLocalSQL() {
-        animales = await  updateLocalAnimalesSQL(db,pb,caboff.id)
-        lotes = await  updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await  updateLocalRodeosSQL(db,pb,caboff.id)
+        animales = await  updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        lotes = await  updateLocalLotesSQLUser(db,pb,usuarioid)
+        rodeos = await  updateLocalRodeosSQLUser(db,pb,usuarioid)
         
         animalesusuario = animales.totalItems
         cargado = true
 
     }
+    //Porque traer todos los datos y no solo cuando lo necesito?
+    
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        
         if (coninternet.connected){
             if(lastinter.internet == 0){
                 await updateLocalSQL()

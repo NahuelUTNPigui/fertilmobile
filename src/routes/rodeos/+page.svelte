@@ -22,7 +22,9 @@
         deleteRodeoSQL,
         setRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
+
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
@@ -133,7 +135,7 @@
         }
     }
     function changeRodeo(){
-        rodeoscab = rodeos.filter(r=>r.id==cab.id)
+        rodeoscab = rodeos.filter(r=>r.cab==caboff.id)
     }
     async function guardar(){
         if(coninternet.connected){
@@ -331,11 +333,13 @@
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
+        
+        rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
         changeRodeo()
         filterUpdate()
     }
     async function getLocalSQL() {
+        
         let resrodeos = await getRodeosSQL(db)
         rodeos = resrodeos.lista
         changeRodeo()
@@ -351,6 +355,7 @@
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -358,13 +363,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -397,6 +403,17 @@
     }
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="label">
+            rodeos - {rodeos.length}
+        </div>
+        <div class="label">
+            rodeoscab - {rodeoscab.length}
+        </div>
+        <div class="label">
+            rodeosrows - {rodeosrows.length}
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Rodeo</h1>  

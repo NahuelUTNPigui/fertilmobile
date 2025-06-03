@@ -65,6 +65,8 @@
     let animales = $state([])
     let animalescab = $state([]) 
     let animalesrows = $state([])
+    //Los pesajes
+    let pesajes = $state([])
     //Filtros
     let buscar = $state("")
     let lote = $state("")
@@ -267,8 +269,21 @@
                     animal:ps.id
                 }
                 await guardarHistorial(pb,selectanimales[i].id)
-                let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
-                await pb.collection("pesaje").create(data)
+                await pb.collection('animales').update(selectanimales[i].id, dataupdate);
+                animales = animales.map(a=>{
+                    if(a.id == ps.id){
+                        return {...a,peso:ps.pesonuevo}
+                    }
+                    return a
+                })
+                let p = await pb.collection("pesaje").create(data)
+                p = {
+                    ...p,
+                    expand:{
+                        animal:{id:ps.id,caravana:ps.caravana}
+                    }
+                }
+                pesajes.push(p)
 
             }
             catch(err){
@@ -292,16 +307,16 @@
                 delete selecthashmap[ps.id]
             }
         }
-        selectanimales =[]
         
-        await updateLocalPesajesSQL(db,pb,caboff.id)
-        animales  = updateLocalAnimalesSQL(db,pb,caboff.id)
+        
+        await setPesajesSQL(db,pesajes)
+        await setAnimalesSQL(db,animales)
         filterUpdate()
         selectanimales = []
     }
     async function crearPesajeOffline() {
-        let respesajes = await getPesajesSQL(db)
-        let pesajes = respesajes.lista
+        //let respesajes = await getPesajesSQL(db)
+        //let pesajes = respesajes.lista
         let errores = false
         let pesajeserror = []
         for(let i = 0;i<selectanimales.length ;i++){
@@ -346,8 +361,7 @@
                 }
                 comandos.push(comandopesaje)
                 comandos.push(comandoani)
-                await setComandosSQL(db,comandos)
-                await setPesajesSQL(db,pesajes)
+                
 
             }
             catch(err){
@@ -356,6 +370,9 @@
                 errores = true
             }
         }
+        await setComandosSQL(db,comandos)
+        await setPesajesSQL(db,pesajes)
+        await setAnimalesSQL(db,animales)
         if(errores){
             Swal.fire("Error pesaje","Hubo algun error en algun pesaje","error")
         }
@@ -403,13 +420,16 @@
         let resanimales = await getAnimalesSQL(db)
         let reslotes = await getLotesSQL(db)
         let resrodeos = await getRodeosSQL(db)
+        let respesajes = await getPesajesSQL(db)
         animales = resanimales.lista
+        pesajes = respesajes.lista
         animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)           
         lotes = reslotes.lista.filter(a=>a.active && a.cab == caboff.id)
         rodeos = resrodeos.lista.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
     async function updateLocalSQL() {
+        pesajes = await updateLocalPesajesSQLUser(db,pb,usuarioid)
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
         animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)
         lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
@@ -539,30 +559,6 @@
                         
                         filterUpdate = {filterUpdate}
                     />
-                </div>
-                <div class="hidden">
-                    <label for = "categorias" class="label">
-                        <span class="label-text text-base">Categorias</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} 
-                            bind:value={categoria}
-                            onchange={filterUpdate}
-                        >
-                                <option value="">Todos</option>
-                                {#each categorias as r}
-                                    <option value={r.id}>{r.nombre}</option>    
-                                {/each}
-                        </select>
-                    </label>
                 </div>
                 <button class="btn btn-neutral" onclick={limpiar}>
                     Limpiar

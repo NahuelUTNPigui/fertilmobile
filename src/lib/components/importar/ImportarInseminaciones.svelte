@@ -5,16 +5,19 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
-    import { onMount } from "svelte";
+    
     import {guardarHistorial} from "$lib/historial/lib"
     import {addDays, generarIDAleatorio} from "$lib/stringutil/lib"
+    import { esMismoDia } from '$lib/stringutil/lib';
     //offline
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
     import {
         getInseminacionesSQL,
         setInseminacionesSQL,
-        updateLocalInseminacionesSQL
+        
     } from "$lib/stores/sqlite/dbeventos"
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -71,7 +74,7 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesarOffline() {
+    async function procesarOffline(inseminacionesprocesar) {
         let comandos = []
         for(let i = 0;i<inseminacionesprocesar.length;i++){
             let ins = inseminacionesprocesar[i]
@@ -121,32 +124,62 @@
             }
         }
     }
-    async function procesarOnline() {
+    async function procesarOnline(inseminacionesprocesar) {
         for(let i = 0;i<inseminacionesprocesar.length;i++){
             let ins = inseminacionesprocesar[i]
             if(ins.madre != "" && ins.fecha != "" && ins.pajuela !=""){
                 try{
-                    //let recordmadre = await pb.collection("animales").getFirstListItem(`caravana="${ins.madre}" && cab='${cab.id}' && active = True`)
-                    //let recordspadre = await pb.collection("animales").getList(1,1,{
-                    //    filter:`caravana="${ins.pajuela}" && cab='${cab.id}' && active = True`,
-                    //    skipTotal:true
-                    //})
-                    let recordmadre = animales.filter(m=>m.caravana == ins.madre)[0]
-                    let recordspadre = animales.filter(m=>m.caravana == ins.pajuela)[0]
+                    let lista_madre = animales.filter(m=>m.caravana == ins.madre && m.cab == caboff.id)
+                    if(lista_madre.length == 0){
+                        continue
+                    }
+                    let recordmadre = lista_madre[0]
+                    let lista_padre = animales.filter(p=>p.caravana == ins.pajuela && p.cab == caboff.id)
+                    
+                    let fechaValida = new Date(ins.fecha).getTime() > 0
+                    if(!fechaValida){
+                        continue
+                    }
                     //let recordspadre = await pb.collection("animales").getList(`caravana="${ins.pajuela}" && cab='${cab.id}' && active = True`)
                     let datains = {
                         animal:recordmadre.id,
                         categoria:recordmadre.categoria,
                         pajuela:ins.pajuela,
-                        padre:recordspadre.items.length!=0?recordspadre.items[0].id:"",
-                        fechaparto:addDays(ins.fecha,280).toISOString().split("T")[0]+" 03:00:00",
-                        fechainseminacion:ins.fecha.toISOString().split("T")[0]+" 03:00:00",
+                        padre:lista_padre.items.length!=0?lista_padre.items[0].id:"",
+                        fechaparto:addDays(new Date(ins.fecha),280).toISOString().split("T")[0]+" 03:00:00",
+                        fechainseminacion:new Date(ins.fecha).toISOString().split("T")[0]+" 03:00:00",
                         active:true,
                         cab:caboff.id,
                         observacion:ins.observacion
                     }
-                    const record = await pb.collection("inseminacion").create(datains)
-                    inseminaciones.push(record)
+                    let datamod = {
+                        observacion:ins.observacion,
+                        pajuela:ins.pajuela
+                    }
+                    let i_idx = inseminaciones.findIndex(i=>{
+                        let mismains = i.animal == recordmadre.id
+                        mismains &&= esMismoDia(i.fechainseminacion, datains.fechainseminacion) 
+                        mismains &&= i.active
+                        return mismains
+                    })
+                    if(i_idx == -1){
+                        let record = await pb.collection("inseminacion").create(datains)
+                        record = {
+                            ...record,
+                            expand:{
+                                animal:{id:recordmadre.id,caravana:recordmadre.caravana},
+                            }
+                        }
+                        inseminaciones.push(record)
+                    }
+                    else{
+                        await pb.collection("inseminacion").update(inseminaciones[i_idx].id, datamod)
+                        inseminaciones[i_idx] = {
+                            ...inseminaciones[i_idx],
+                            ...datamod
+                        }
+                    }
+                    
 
                 }
                 catch(err){
@@ -164,6 +197,8 @@
         if(!sheetins){
             Swal.fire("Error","Debe subir un archivo válido","error")
         }
+        //Solo cuando lo necesito traigo todos los datos
+        await getDataSQL()
         let inseminacionesprocesar = []
         let inshash = {}
         loading = true
@@ -181,7 +216,7 @@
                     inshash[tail].pajuela = value.v
                 }
                 if(firstLetter=="C"){
-                    inshash[tail].fecha = value.w?new Date(value.w):""
+                    inshash[tail].fecha = value.w
                 }
                 if(firstLetter=="D"){
                     inshash[tail].observacion = value.v
@@ -198,7 +233,7 @@
                     inshash[tail].pajuela = value.v
                 }
                 if(firstLetter=="C"){
-                    inshash[tail].fecha = value.w?new Date(value.w):""
+                    inshash[tail].fecha = value.w
                 }
                 if(firstLetter=="D"){
                     inshash[tail].observacion = value.v
@@ -209,14 +244,15 @@
             inseminacionesprocesar.push(value)
         }
         if(coninternet.connected){
-            await procesarOnline()
+            await procesarOnline(inseminacionesprocesar)
             await setInseminacionesSQL(db,inseminaciones)
-            //await updateLocalInseminacionesSQL(db,pb,caboff.id)
+            
         }
         else{
-            let comandos = await procesarOffline()
-            await concatComandosSQL(db,comandos)
-            await setInseminacionesSQL(db,inseminaciones)
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let comandos = await procesarOffline(inseminacionesprocesar)
+            //await concatComandosSQL(db,comandos)
+            //await setInseminacionesSQL(db,inseminaciones)
         }
         
         filename = ""
@@ -229,15 +265,15 @@
     }
     async function getLocalSQL() {
         let resinseminaciones = await getInseminacionesSQL(db)
+        //No lo filtro porque 
         inseminaciones = resinseminaciones.lista
+
     }
     async function getDataSQL() {
+        //Creo que se podia hacer una comprobacion
+        //de actualizacion de datos por tiempo
         await getLocalSQL()
     }
-    onMount(async()=>{
-        
-        await getDataSQL()
-    })
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     <button

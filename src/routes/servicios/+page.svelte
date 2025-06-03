@@ -36,6 +36,7 @@
         
     } from "$lib/stores/sqlite/dbeventos"
     import {
+    addNewAnimalSQL,
         getAnimalesSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
@@ -168,9 +169,16 @@
                 if(fechahastaserv != ""){
                     dataser.fechahasta = fechahastaserv + " 03:00:00"
                 }
+                let s_idx = servicios.findIndex(s=>s.id == idserv)
+                servicios[s_idx].fechadesde = dataser.fechadesde
+                servicios[s_idx].fechaparto = dataser.fechaparto
+                servicios[s_idx].observacion = dataser.observacion
+                servicios[s_idx].madre = dataser.madre
+                servicios[s_idx].padres = dataser.padres
                 await pb.collection("servicios").update(idserv,dataser)
-                await getServicios()
+                await setServiciosSQL(db,servicios)
                 esservicio = false
+                onChangeServicios()
                 filterUpdate()
             }
             catch(err){
@@ -188,11 +196,18 @@
                     observacion,
                     categoria
                 }
-                const record = await pb.collection('inseminacion').update(idserv, data);
-                await getInseminaciones()
+                let idx  = inseminaciones.findIndex(ins=>ins.id == idserv)
                 
+                inseminaciones[idx].fechaparto = data.fechaparto
+                inseminaciones[idx].fechainseminacion = data.fechainseminacion
+                inseminaciones[idx].padre = data.padre
+                inseminaciones[idx].pajuela = data.pajuela
+                inseminaciones[idx].observacion = data.observacion
+                inseminaciones[idx].categoria = data.categoria
                 
-                
+                await pb.collection('inseminacion').update(idserv, data);
+                await setInseminacionesSQL(db,inseminaciones)
+                onChangeInseminaciones()
                 filterUpdate()
                 Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
                 esinseminacion = false
@@ -214,7 +229,7 @@
                     padres:padreslist.join()
                 }
                 let sidx = servicios.findIndex(s=>s.id == idserv)
-                if(sidx){
+                if(sidx != -1){
                     servicios[sidx].fechadesde = dataser.fechadesde
                     servicios[sidx].fechaparto = dataser.fechaparto
                     servicios[sidx].observacion = dataser.observacion
@@ -240,7 +255,7 @@
                     await setComandosSQL(db,comandos)
                     filterUpdate()
                 }
-                
+                onChangeServicios()
                 esservicio = false
                 filterUpdate()
             }
@@ -282,10 +297,8 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-
-                    
                 }
-                
+                onChangeInseminaciones()
                 filterUpdate()
                 Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
                 esinseminacion = false
@@ -434,6 +447,12 @@
         cargado = true
 
     }
+    function onChangeInseminaciones(){
+        inseminacionescab = inseminaciones.filter(s=>s.cab == cab.id)
+    }
+    function onChangeServicios(){
+        servicioscab = servicios.filter(s=>s.cab == cab.id)
+    }
     function validarBoton(){
     }
     function oninput(campo){
@@ -546,6 +565,7 @@
         servicioscab = servicios.filter(s=>s.cab == caboff.id)
         inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
         inseminacionescab = inseminaciones.filter(i=>i.cab == caboff.id)
+        
         filterUpdate()
     }
     async function getLocalSQL() {
@@ -562,15 +582,17 @@
                 nombre:item.caravana
             }
         })
+        
         cargado = true
         let resservicios = await getServiciosSQL(db)
         
         servicios = resservicios.lista
-        servicioscab = servicios.filter(s=>s.cab == s.caboff.id)
+        servicioscab = servicios.filter(s=>s.cab == caboff.id)
         let resinseminaciones = await getInseminacionesSQL(db)
         
         inseminaciones = resinseminaciones.lista
-        inseminacionescab = inseminaciones.filter(i=>i.cab == i.caboff.id)
+        inseminacionescab = inseminaciones.filter(i=>i.cab == caboff.id)
+        
         filterUpdate()
     }
     async function getDataSQL() {
@@ -583,6 +605,7 @@
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -590,13 +613,14 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()

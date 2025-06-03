@@ -14,6 +14,9 @@
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
     import { setAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+
     let {
         db,
         coninternet,
@@ -38,7 +41,7 @@
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
-    async function exportarTemplate(){
+    async function exportarTemplateOffline(params) {
         let csvData = [{
             caravana:"AAA",
             peso:"0",
@@ -70,6 +73,47 @@
             path: "Modelo animales.xlsx",
             directory: Directory.Documents
         });
+    }
+    async function exportarTemplateOnline(params) {
+        let csvData = [{
+            caravana:"AAA",
+            peso:"0",
+            sexo:"H/M",
+            rodeo:"",
+            lote:"",
+            categoria:""
+        }].map(item=>({
+            CARAVANA:item.caravana,
+            PESO:item.peso,
+            SEXO:item.sexo,
+            RODEO:item.rodeo,
+            LOTE:item.lote,
+            CATEGORIA:item.categoria
+        }))
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(csvData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Animales');
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo animales.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo animales.xlsx",
+            directory: Directory.Documents
+        });
+    }
+    async function exportarTemplate(){
+        if(coninternet.connected){
+            await exportarTemplateOnline()
+        }
+        else{
+            await exportarTemplateOffline()
+        }
         
     }
     
@@ -85,7 +129,8 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesoOffline(nuevosanimales) {
+    async function procesoOffline(animalesimportar,nuevosanimales) {
+        let errores = false
         let verificar = await verificarNivelOffline(animalesusuario,nuevosanimales)
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
@@ -174,11 +219,17 @@
                 
             }
         }
-        return comandos
+        let procesodata ={
+            errores,
+            comandos
+        }
+        return procesodata
     }
-    async function procesoOnline(nuevoanimales) {
+    //debo verificar el nivel de la cuenta
+    async function procesoOnline(animalesimportar,nuevosanimales) {
+        let errores = false
         //El verificar es saber si puede agregar los animales
-        let verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
+        let verificar = await verificarNivelCantidad(caboff.id,nuevosanimales)
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
             loading = false
@@ -188,10 +239,29 @@
             let an = animalesimportar[i]
             let conlote = false
             let contropa = false
-            let lote = lotes.filter(l=>l.nombre==an.lote)[0]
-            let rodeo = rodeos.filter(r=>r.nombre==an.rodeo)[0]
-            let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
-
+            //LO hago case insensitive?
+            let lote = ""
+            let rodeo = ""
+            let categoria = ""
+            if(an.lote != ""){
+                let lista = lotes.filter(l=>l.nombre==an.lote)
+                if(lista.length>0){
+                    lote = lista[0].id
+                }
+            }
+            if(an.rodeo != ""){
+                let lista = rodeos.filter(r=>r.nombre==an.rodeo)
+                if(lista.length>0){
+                    rodeo = lista[0].id
+                }
+            }
+            if(an.categoria != ""){
+                let lista = categorias.filter(c=>c.id==an.categoria.toLowerCase())
+                if(lista.length>0){
+                    categoria = lista[0].id
+                }
+                
+            }
             let dataadd = {
                 caravana:an.caravana,
                 active:true,
@@ -205,31 +275,93 @@
                 caravana:an.caravana,
                 sexo:an.sexo,
                 peso:an.peso,
-                    
             }
-            if(lote){
-                dataadd.lote = lote.id
-                datamod.lote = lote.id
+            if(lote != ""){
+                dataadd.lote = lote
+                datamod.lote = lote
             }
-            if(rodeo){
-                dataadd.rodeo = rodeo.id
-                datamod.rodeo = rodeo.id
+            if(rodeo != ""){
+                dataadd.rodeo = rodeo
+                datamod.rodeo = rodeo
             }
-            if(categoria){
-                dataadd.categoria = categoria.id
-                datamod.categoria = categoria.id
+            if(categoria != ""){
+                dataadd.categoria = categoria
+                datamod.categoria = categoria
             }
             let aidx = animales.findIndex(a=>a.caravana == an.caravana)
             if(aidx == -1){
-                let a = await pb.collection('animales').create(dataadd);
-                animales.push(a)
+                //if(modedebug){
+                //    loger.addLog({
+                //        time:Date.now(),
+                //        text:"add"
+                //    })    
+                //}
+                
+                
+                try{
+                    let a = await pb.collection('animales').create(dataadd);
+                    animales.push(a)
+                    //if(modedebug){
+                    //    loger.addLog({
+                    //        time:Date.now(),
+                    //        text:JSON.stringify(dataadd,null,2)
+                    //    })    
+                    //}
+                    
+                
+                }
+                catch(err){
+                    errores = true
+                    //if(modedebug){
+                    //    loger.addError({
+                    //        time:Date.now(),
+                    //        text:JSON.stringify(err,null,2)
+                    //    })
+                    //}
+                    
+                    
+                }
+                
             }
             else{
-                await pb.collection('animales').update(animales[aidx].id, datamod);
-                animales[aidx] = {
-                    ...animales[aidx],
-                    ...datamod
+                //let test = {
+                //    ...animales[aidx],
+                //    ...datamod
+                //}
+                //if(modedebug){
+                //    loger.addLog({
+                //        time:Date.now(),
+                //        text:"update"
+                //    })
+                //}
+                
+                try{
+                    await pb.collection('animales').update(animales[aidx].id, datamod);
+                    animales[aidx] = {
+                        ...animales[aidx],
+                        ...datamod
+                    }
+                    //Falta el historial del animal
+                    //if(modedebug){
+                    //    loger.addLog({
+                    //        time:Date.now(),
+                    //        text:JSON.stringify(datamod,null,2)
+                    //    })
+                    //}
+                    
                 }
+                catch(err){
+                    errores = true
+                    //if(modedebug){
+                    //    loger.addError({
+                    //        time:Date.now(),
+                    //        text:JSON.stringify(err,null,2)
+                    //    })
+                    //}
+                    
+                }
+                
+                
             }
         }
         
@@ -252,7 +384,7 @@
         
         let animaleshashmap = {}
         loading = true
-        
+        let errores = false
         for (const [key, value ] of Object.entries(sheetanimales)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
@@ -308,23 +440,24 @@
             }
         }
         let animalesimportar = []
-        let nuevoanimales = 0
+        let nuevosanimales = 0
         for (const [key, value ] of Object.entries(animaleshashmap)) {
             animalesimportar.push(value)
             let conocido = animales.filter(a=>a.caravana == value.caravana).length == 0
             if(!conocido ){
-                nuevoanimales += 1
+                nuevosanimales += 1
             }
         }
         
         if(coninternet.connected){
-            await procesoOnline(nuevoanimales)
+            errores = await procesoOnline(animalesimportar,nuevosanimales)
             await setAnimalesSQL(db,animales)
-            //await updateLocalAnimalesSQL(db,pb,caboff.id)
+            
         }
         else{
-            let comandos = await procesoOffline(nuevoanimales)
-            await concatComandosSQL(db,comandos)
+            let procesodata = await procesoOffline(animalesimportar,nuevosanimales)
+            errores = procesodata.errores
+            await concatComandosSQL(db,procesodata.comandos)
             await setAnimalesSQL(db,animales)
 
         }
@@ -334,7 +467,13 @@
         
         filename = ""
         wkbk = null
-        Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        if(!errores){
+            Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        }
+        else{
+            Swal.fire("Error importar","No se lograron importar todos los datos","success")
+        }
+        
         
     }
     async function onmountoriginal(params) {

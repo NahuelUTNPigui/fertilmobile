@@ -439,7 +439,9 @@
     </div>
     <div class="modal-action justify-start ">
         <form method="dialog" >
-            <button class="btn btn-success text-white" disabled='{!inseminacion.botonhabilitadoins}' onclick={guardarInseminacion} >Guardar</button>
+            <!--<button class="btn btn-success text-white" disabled='{!inseminacion.botonhabilitadoins}' onclick={guardarInseminacion} >Guardar</button>-->
+            <button class="btn btn-success text-white"  onclick={guardarInseminacion} >Guardar</button>
+            
         </form>
     </div>
 {/if}

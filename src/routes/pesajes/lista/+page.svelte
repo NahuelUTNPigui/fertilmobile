@@ -36,6 +36,7 @@
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -91,7 +92,7 @@
         procesarUltimosPesajes()
     }
     async function editarPesajeOffline() {
-      let data = {
+        let data = {
             fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
             pesonuevo
         }
@@ -123,8 +124,13 @@
                 fecha:new Date(fecha).toISOString().split("T")[0]+" 03:00:00",
                 pesonuevo
             }
+            let idx_pesaje = pesajes.findIndex(p=>p.id==idpesaje)
+
             await pb.collection("pesaje").update(idpesaje,data)
-            await getPesajes()
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            onchangePesajes()
+            await setPesajesSQL(db,pesajes)
             filterUpdate()
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
         }   
@@ -157,7 +163,7 @@
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
                     await setPesajesSQL(db,pesajes)
                     let comando = {
-                        tipo:"delet",
+                        tipo:"delete",
                         coleccion:"pesaje",
                         data:{},
                         hora:Date.now(),
@@ -167,6 +173,7 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
+                    onChangePesajes()
                     filterUpdate()
                     detallePesaje.close()
                 }
@@ -191,7 +198,7 @@
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
                     await setPesajesSQL(db,pesajes)
                     await pb.collection("pesaje").delete(idpesaje)
-                    
+                    onChangePesajes()
                     filterUpdate()
                     detallePesaje.close()
                 }
@@ -338,14 +345,17 @@
         filterUpdate()
     }
     function onChangePesajes(){
-        pesajescab  = pesajes.filter(p=>p.expand.animal.cab.id == caboff.id) 
+        
+        pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
     }
     async function updateLocalSQL(){
+        
         pesajes = await updateLocalPesajesSQLUser(db,pb,usuarioid)
         onChangePesajes()
         filterUpdate()
     }
     async function getLocalSQL() {
+        
         let respesajes = await getPesajesSQL(db)
         pesajes = respesajes.lista
         onChangePesajes()
@@ -391,6 +401,17 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+    <div class="label">
+            pesajes - {pesajes.length}
+        </div>
+        <div class="label">
+            pesajescab - {pesajescab.length}
+        </div>
+        <div class="label">
+            pesajesrows - {pesajesrows.length}
+        </div>
+    {/if}
     <div class="grid grid-cols-1  lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl col-span-2 lg:col-span-1">Historia pesajes - Últimos {ultimos}</h1>  

@@ -9,10 +9,20 @@
     import { guardarHistorial } from "$lib/historial/lib";
     import { goto } from "$app/navigation";
     import categorias from "$lib/stores/categorias";
-    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
+    import { getTactosSQL,setTactosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { esMismoDia } from "$lib/stringutil/lib";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+
+    let {
+        db,coninternet,useroff,caboff,
+        usuarioid,animales
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
+    let tactos = $state([])
     
     //Los templates en el cellphobe
     //Con internet te de este excel sin internet te de uno comun
@@ -24,11 +34,13 @@
     let wkbk = $state(null)
     let loading = $state(false)
     
-    async function exportarTemplate(){
+    
+
+    async function exportarTemplateOffline() {
         let csvData = [{
             fecha:"MM/DD/AAAA",
             caravana:"AAA",
-            prenada:"preñada/dudosa/vacia/servicio",
+            prenada:"preñada/vacia/servicio",
             tipo:"eco/tacto",
             observacion:"",
             categoria:""
@@ -58,6 +70,48 @@
             directory: Directory.Documents
         });
     }
+    async function exportarTemplateOnline() {
+        let csvData = [{
+            fecha:"MM/DD/AAAA",
+            caravana:"AAA",
+            prenada:"preñada/vacia/servicio",
+            tipo:"eco/tacto",
+            observacion:"",
+            categoria:""
+        }].map(item=>({
+            FECHA: item.fecha,
+            CARAVANA: item.caravana,
+            PREÑADA: item.prenada,
+            TIPO_TACTO: item.tipo,
+            OBSERVACION: item.observacion,
+            CATEGORIA:item.categoria
+        }))
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(csvData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Tactos');
+        
+        const data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+        try {
+            await Filesystem.deleteFile({
+                path: "Modelo Tactos.xlsx",
+                directory: Directory.Documents
+            });
+        } catch(e) {}
+        /* attempt to write to the device */
+        await Filesystem.writeFile({
+            data,
+            path: "Modelo Tactos.xlsx",
+            directory: Directory.Documents
+        });
+    }
+    async function exportarTemplate(){
+        if(coninternet.connected){
+            await exportarTemplateOnline()
+        }
+        else{
+            await exportarTemplateOffline()
+        }
+    }
     function importarArchivo(event){
         let file = event.target.files[0];
         
@@ -71,106 +125,190 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesarArchivo(){
-        if(filename == ""){
-            Swal.fire("Error","Seleccione un archivo","error")
-        }
-
-        let sheettactos = wkbk.Sheets.Tactos
-        if(!sheettactos){
-            Swal.fire("Error","Debe subir un archivo válido","error")
-        }
+    async function procesarArchivoOnline(tactosimportar){
+        let errores = false
         
-        let tactos = []
-        let tactoshashmap = {}
-        loading = true
-        for (const [key, value ] of Object.entries(sheettactos)) {
-            const firstLetter = key.charAt(0);  // Get the first character
-            const tail = key.slice(1);
-            if(key == "!ref" || key == "!margins" || tail == "1"){
+        
+        for(let i = 0;i<tactosimportar.length;i++){
+            let ta = tactosimportar[i]
+            let lista_categoria = categorias.filter(c=>c.id.toLowerCase()==ta.categoria.toLowerCase())
+
+            let ans = animales.filter(a=>a.caravana==ta.caravana && a.cab == caboff.id)
+
+            let categoria = ans.categoria
+            if(lista_categoria.length != 0){
+                categoria = lista_categoria[0].id
+            }
+            if(ans.length == 0){
+                if(modedebug){
+                    loger.addError({
+                        time:Date.now(),
+                        text:"mal animal"
+                    })
+                }
                 continue
             }
-            if(tactoshashmap[tail]){
-                if(firstLetter=="A"){
-                    tactoshashmap[tail].fecha = value.w?new Date(value.w):""
+            //que pasa si hay mas de un animal con esa caravana?
+            let an = ans[0]
+            if(an.sexo == "M"){
+                if(modedebug){
+                    loger.addError({
+                        time:Date.now(),
+                        text:"mal sexo"
+                    })
                 }
-                if(firstLetter=="B"){
-                    tactoshashmap[tail].caravana = value.v
+                continue
+            }
+            if(ta.fecha == ""){
+                if(modedebug){
+                    loger.addError({
+                        time:Date.now(),
+                        text:"mal fecha"
+                    })
                 }
-                if(firstLetter=="C"){
-                    let estado = value.v.toLocaleLowerCase()
-                    if (estado == "preñada"){
-                        tactoshashmap[tail].prenada = 2
+                continue
+            }
+            if(modedebug){
+                loger.addLog({
+                    time:Date.now(),
+                    text:"fecha tacto: " + ta.fecha +" \n fecha iso: " + new Date(ta.fecha).toISOString().split("T")[0] + " 03:00:00"
+                })
+            }
+            let esFechaValida = new Date(ta.fecha).getTime() > 0
+            if(!esFechaValida){
+                continue
+            }
+            let fecha = new Date(ta.fecha).toISOString().split("T")[0] + " 03:00:00"
+            let dataadd = {
+                fecha: fecha,
+                active: true,
+                observacion: ta.observacion,
+                animal: an.id,
+                categoria: an.categoria,
+                prenada: ta.prenada,
+                tipo: ta.tipo,
+                cab: caboff.id
+            }
+            let datamod = {
+                observacion: ta.observacion,
+                prenada: ta.prenada,
+                tipo: ta.tipo,
+                
+            }
+            //Si hay algun animal con esa caravana, se va a modificar
+            let t_idx = tactos.findIndex(t=>{
+                let mismotacto = t.animal == an.id
+                
+                
+                mismotacto = mismotacto && esMismoDia(fecha,t.fecha)
+                mismotacto = mismotacto &&   t.active
+                return mismotacto
+            })
+            //Si no existe lo guardo
+            if (t_idx == -1){
+                try {
+                    if(modedebug){
+                        loger.addLog({
+                            time:Date.now(),
+                            text:"add tacto"
+                        })  
                     }
-                    else if(estado == "dudosa"){
-                        tactoshashmap[tail].prenada = 1
+                    let recordtacto = await pb.collection('tactos').create(dataadd);
+                    recordtacto = {
+                        ...recordtacto,
+                        expand:{
+                            animal: {
+                                id: recordtacto.animal,
+                                caravana: an.caravana,
+                                categoria: an.categoria
+                            },
+                            cab:{
+                                user:{id:usuarioid}
+                            }
+                        }
                     }
-                    else if(estado == "servicio"){
-                        tactoshashmap[tail].prenada = 3
-                    }
-                    else{
-                        tactoshashmap[tail].prenada = 0
+                    tactos.push(recordtacto)
+                    if(modedebug){
+                        loger.addLog({
+                            time:Date.now(),
+                            text:JSON.stringify(dataadd,null,2)
+                        })    
                     }
                 }
-                if(firstLetter=="D"){
-                    tactoshashmap[tail].tipo = value.v.toLowerCase()
-                }
-                if(firstLetter=="E"){
-                    tactoshashmap[tail].observacion = value.v
-                }
-                if(firstLetter=="F"){
-                    tactoshashmap[tail].categoria = value.v
+                catch(err){
+                    if(modedebug){
+                        loger.addError({
+                            time:Date.now(),
+                            text:JSON.stringify(err,null,2)
+                        })
+                    }
+                    console.error(err)
+                    errores = true
                 }
                 
             }
             else{
-                tactoshashmap[tail]={
-                    fecha:"", observacion:"", caravana:"", categoria:"", prenada:"", tipo:"", nombreveterinario:""
+                try{
+                    if(modedebug){
+                        loger.addLog({
+                            time:Date.now(),
+                            text:"update"
+                        })
+                    }
+                    //let test = {
+                    //    ...tactos[t_idx],
+                    //    ...datamod
+                    //}
+                    await pb.collection('tactos').update(tactos[t_idx].id, datamod);
+                    tactos[t_idx]={
+                        ...tactos[t_idx],
+                        ...datamod
+                    }
+                    if(modedebug){
+                        loger.addLog({
+                            time:Date.now(),
+                            text:JSON.stringify(datamod,null,2)
+                        })
+                    }
                 }
-                if(firstLetter=="A"){
-                    tactoshashmap[tail].fecha = value.w?new Date(value.w):""
+                catch(err){
+                    if(modedebug){
+                        loger.addError({
+                            time:Date.now(),
+                            text:JSON.stringify(err,null,2)
+                        })
+                    }
+                    console.error(err)
+                    errores = true
                 }
                 
-                if(firstLetter=="B"){
-                    tactoshashmap[tail].caravana = value.v
-                }
-                
-                if(firstLetter=="C"){
-                    let estado = value.v.toLocaleLowerCase()
-                    if (estado == "preñada"){
-                        tactoshashmap[tail].prenada = 2
-                    }
-                    else if(estado == "dudosa"){
-                        tactoshashmap[tail].prenada = 1
-                    }
-                    else if(estado == "servicio"){
-                        tactoshashmap[tail].prenada = 3
-                    }
-                    else{
-                        tactoshashmap[tail].prenada = 0
-                    }
-                }
-                if(firstLetter=="D"){
-                    tactoshashmap[tail].tipo = value.v.toLowerCase()
-                }
-                if(firstLetter=="E"){
-                    tactoshashmap[tail].observacion = value.v
-                }
-                if(firstLetter=="F"){
-                    tactoshashmap[tail].categoria = value.v
-                }
-                
-            }
-        }
-        for (const [key, value ] of Object.entries(tactoshashmap)) {
-            if(value.caravana != "" && value.fecha != "" && value.tipo != ""){
-                tactos.push(value)
             }
             
         }
+        return errores
+    }
+    async function mostrarTactos() {
+        await getDataSQL()
+        let ans = animales.filter(a=>a.caravana=="AAA")
+        loger.addLog({
+            time:Date.now(),
+            text:JSON.stringify(ans.length,null,2)
+        })
+        loger.addLog({
+            time:Date.now(),
+            text:JSON.stringify(ans,null,2)
+        })
+        //let ts = tactos.filter(t=>t.animal == ans[0].id)
+        //loger.addLog({
+        //    time:Date.now(),
+        //    text:JSON.stringify(ts,null,2)
+        //})
+    }
+    async function procesarArchivoOffline(tactosimportar) {
         let errores = false
-        for(let i = 0;i<tactos.length;i++){
-            let ta = tactos[i]
+        let comandos = []
+        for(let i = 0;i<tactosimportar.length;i++){
+            let ta = tactosimportar[i]
             let categoria = categorias.filter(c=>c.id==an.categoria || c.nombre==an.categoria)[0]
             let ans = animales.filter(a=>a.caravana==ta.caravana)
             if(ans.length == 0){
@@ -221,8 +359,142 @@
                 await pb.collection("animales").update(an.id,{prenada:ta.prenada})
             }
         }
+        let dataprocesar = {
+            errores,
+            comandos
+        }
+        return dataprocesar
+    }
+    async function procesarArchivo(){
+        if(filename == ""){
+            Swal.fire("Error","Seleccione un archivo","error")
+        }
+
+        let sheettactos = wkbk.Sheets.Tactos
+        if(!sheettactos){
+            Swal.fire("Error","Debe subir un archivo válido","error")
+        }
+        await getDataSQL()
+        let tactosprocesar = []
+        let tactoshashmap = {}
+        loading = true
+        if(modedebug){
+            loger.addLog({
+                time:Date.now(),
+                text:"antes de leer sheet"
+            })
+        }
+        for (const [key, value ] of Object.entries(sheettactos)) {
+            const firstLetter = key.charAt(0);  // Get the first character
+            const tail = key.slice(1);
+            if(key == "!ref" || key == "!margins" || tail == "1"){
+                continue
+            }
+            if(tactoshashmap[tail]){
+                if(firstLetter=="A"){
+                    tactoshashmap[tail].fecha = value.w?value.w:""
+                }
+                if(firstLetter=="B"){
+                    tactoshashmap[tail].caravana = value.v
+                }
+                if(firstLetter=="C"){
+                    let estado = value.v.toLocaleLowerCase()
+                    if (estado == "preñada"){
+                        tactoshashmap[tail].prenada = 2
+                    }
+                    else if(estado == "dudosa"){
+                        tactoshashmap[tail].prenada = 1
+                    }
+                    else if(estado == "servicio"){
+                        tactoshashmap[tail].prenada = 3
+                    }
+                    else{
+                        tactoshashmap[tail].prenada = 0
+                    }
+                }
+                if(firstLetter=="D"){
+                    tactoshashmap[tail].tipo = value.v.toLowerCase()
+                }
+                if(firstLetter=="E"){
+                    tactoshashmap[tail].observacion = value.v
+                }
+                if(firstLetter=="F"){
+                    tactoshashmap[tail].categoria = value.v
+                }
+                
+            }
+            else{
+                tactoshashmap[tail]={
+                    fecha:"", observacion:"", caravana:"", categoria:"", prenada:"", tipo:"", nombreveterinario:""
+                }
+                if(firstLetter=="A"){
+                    tactoshashmap[tail].fecha = value.w?value.w:""
+                }
+                
+                if(firstLetter=="B"){
+                    tactoshashmap[tail].caravana = value.v
+                }
+                
+                if(firstLetter=="C"){
+                    let estado = value.v.toLocaleLowerCase()
+                    if (estado == "preñada"){
+                        tactoshashmap[tail].prenada = 2
+                    }
+                    else if(estado == "dudosa"){
+                        tactoshashmap[tail].prenada = 1
+                    }
+                    else if(estado == "servicio"){
+                        tactoshashmap[tail].prenada = 3
+                    }
+                    else{
+                        tactoshashmap[tail].prenada = 0
+                    }
+                }
+                if(firstLetter=="D"){
+                    tactoshashmap[tail].tipo = value.v.toLowerCase()
+                }
+                if(firstLetter=="E"){
+                    tactoshashmap[tail].observacion = value.v
+                }
+                if(firstLetter=="F"){
+                    tactoshashmap[tail].categoria = value.v
+                }
+                
+            }
+        }
+        if(modedebug){
+            loger.addLog({
+                time:Date.now(),
+                text:"antes de guardar la lista"
+            })
+        }
+        for (const [key, value ] of Object.entries(tactoshashmap)) {
+            if(value.caravana != "" && value.fecha != "" && value.tipo != ""){
+                tactosprocesar.push(value)
+            }
+            
+        }
+        
+        let errores = false
+        if(modedebug){
+            loger.addLog({
+                time:Date.now(),
+                text:"antes de procesar " + tactosprocesar.length
+            })
+        }
+        if(coninternet.connected){
+            errores = await procesarArchivoOnline(tactosprocesar)
+            await setTactosSQL(db,tactos)
+        }
+        else{
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let dataprocesar = await procesarArchivoOffline(tactosprocesar)
+            //errores = dataprocesar.errores
+            //let comandos = dataprocesar.comandos
+            //await setTactosSQL(db,tactos)
+        }
         if(errores){
-            Swal.fire("Error importart","Hubo algún tacto con error","error")
+            Swal.fire("Error importar","Hubo algún tacto con error","error")
         }
         else{
             Swal.fire("Éxito importar","Se lograron importar los datos","success")
@@ -232,26 +504,28 @@
         loading = false
         
     }
-    onMount(async ()=>{
-        const tactos = await pb.collection('tactos').getFullList({
-            filter:`active = true && cab ='${cab.id}'`
-        })
-        //animales = await pb.collection('animales').getFullList({
-        //    filter:`delete = false && cab ='${cab.id}'`,
-        //}) 
-    })
+    async function getLocalSQL() {
+        let restactos = await getTactosSQL(db)
+        tactos = restactos.lista
+    }
+    async function getDataSQL(){
+        await getLocalSQL()
+    }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
-    <a
+    {#if modedebug}
+        <button class="btn btn-primary" onclick={mostrarTactos}>Mostrar Tactos</button>
+    {/if}
+    <button
         class={`
             w-full text-center
             ${estilos.basico} ${estilos.grande} ${estilos.secundario}
         `}
-        href="{`${ruta}/Modelo tactos validados.xlsx`}"
+        onclick={exportarTemplate}
         
     >
        Descargar Plantilla
-    </a>
+    </button>
     <div class={`
         w-full
         

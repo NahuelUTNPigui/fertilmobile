@@ -60,11 +60,13 @@ export async function addNewAnimalSQL(db,animal) {
     
 }
 export async function updateLocalAnimalesSQLUser(db,pb,userid) {
+    
     const recordsa = await pb.collection("animales").getFullList({
         filter:`delete=false && cab.user='${userid}'`,
         expand:"rodeo,lote,nacimiento,cab"
     })
     let animales = recordsa
+    
     await setAnimalesSQL(db,animales)
     await setUltimoAnimalesSQL(db)
     return animales
@@ -122,8 +124,8 @@ export async function deleteHistorialAnimalesSQL(db,id) {
 //Esto de los historiales no seria filtrado por establecimiento sino por  el  usuario que le pertenece el animal
 export async function updateLocalHistorialAnimalesSQLUser(db,pb,userid) {
     const recordsa = await pb.collection("historialanimales").getFullList({
-        filter:`active=true && delete=false && animal.cab.user='${userid}'`,
-        expand:"rodeo,lote,nacimiento,animal,animal.cab"
+        filter:`active=true && delete=false && user='${userid}'`,
+        expand:"rodeo,lote,nacimiento,animal"
     })
     let historial = recordsa
     await setHistorialAnimalesSQL(db,historial)

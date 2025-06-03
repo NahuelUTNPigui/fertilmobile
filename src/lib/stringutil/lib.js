@@ -58,3 +58,11 @@ export function shorterWord(cadena){
     ? cadena.substring(0, maxLongitud) + sufijo
     : cadena;
 }
+export function esMismoDia(fecha1, fecha2) {
+  const d1 = new Date(fecha1);
+  const d2 = new Date(fecha2);
+
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
