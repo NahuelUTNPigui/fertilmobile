@@ -31,22 +31,30 @@
         getPesajesSQL,
         setPesajesSQL,
         updateLocalPesajesSQL,
-        updateLocalPesajesSQLUser
+        updateLocalPesajesSQLUser,
+        setUltimoPesajesSQL,
+        getUltimoPesajeSQL,
+
+        setUltimoRodeosLotesSQL
+
     } from "$lib/stores/sqlite/dbeventos"
     import {
         getAnimalesSQL,
         updateLocalAnimalesSQL,
         setAnimalesSQL,
-        updateLocalAnimalesSQLUser
+        updateLocalAnimalesSQLUser,
+        setUltimoAnimalesSQL,
+        
     } from "$lib/stores/sqlite/dbanimales"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
-
+    import { ACTUALIZACION } from "$lib/stores/constantes";
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_pesajes = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -429,6 +437,9 @@
         filterUpdate()
     }
     async function updateLocalSQL() {
+        await setUltimoRodeosLotesSQL(db)
+        await setUltimoAnimalesSQL(db)
+        await setUltimoPesajesSQL(db)
         pesajes = await updateLocalPesajesSQLUser(db,pb,usuarioid)
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
         animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)
@@ -443,14 +454,16 @@
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_pesajes = await getUltimoPesajeSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
+                let antes = ultimo_pesajes.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()
@@ -459,7 +472,7 @@
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()

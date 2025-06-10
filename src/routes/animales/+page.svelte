@@ -22,6 +22,7 @@
     import{verificarNivel} from "$lib/permisosutil/lib"
     
     ///ofline
+    import { ACTUALIZACION } from '$lib/stores/constantes';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -33,7 +34,10 @@
         addNewAnimalSQL,
         updateLocalAnimalesSQLUser,
         updateLocalHistorialAnimalesSQLUser,
-        getAnimalesCabSQL
+        getAnimalesCabSQL,
+        getUltimoAnimalesSQL,
+        setUltimoAnimalesSQL
+        
         
     } from "$lib/stores/sqlite/dbanimales"
 
@@ -43,6 +47,7 @@
         updateLocalLotesSQL,
         updateLocalRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser,
+        setUltimoRodeosLotesSQL,
         getLotesRodeosSQL,
         addNewPesajeSQL
     } from "$lib/stores/sqlite/dbeventos"
@@ -55,6 +60,7 @@
     import TablaAnimales from '$lib/components/animales/TablaAnimales.svelte';
     import NuevoAnimal from '$lib/components/animales/NuevoAnimal.svelte';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
@@ -62,8 +68,9 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_animal = $state({})
     let comandos = $state([])
-
+    let getlocal = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     //pre
     let pre = ""
@@ -381,6 +388,24 @@
             Swal.fire("Error guardar","Hubo un error para guardar el animal","error")
         }
     }
+    function getNombreLote(idlote){
+        let ls = lotes.filter(l=>l.id==idlote)
+        if(ls.length>0){
+            return ls[0].nombre
+        }
+        else{
+            return ""
+        }
+    }
+    function getNombreRodeo(idrodeo){
+        let rs = rodeos.filter(r=>r.id==idrodeo)
+        if(rs.length>0){
+            return rs[0].nombre
+        }
+        else{
+            return ""
+        }
+    }
     //Si los lotes sigue sin guardarse
     async function guardar() {
         //let totalanimals = await getTotalSQL(db)
@@ -502,11 +527,12 @@
         filterUpdate()
     }
     async function updateLocalSQL() {
- 
+        await setUltimoAnimalesSQL(db)
+        await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         let resanimales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
         animales = resanimales
         animalescab = animales.filter(a=>a.cab == caboff.id)
-
+        await setUltimoRodeosLotesSQL(db)
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id) 
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
@@ -514,7 +540,7 @@
         filterUpdate()
     }
     async function getLocalSQL() {
-        
+        getlocal = true
         let resanimales = await getAnimalesSQL(db)
         let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         lotes = lotesrodeos.lotes
@@ -526,7 +552,15 @@
         filterUpdate()
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -536,25 +570,27 @@
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                //Para que cuando vaya al inicio se actualice si o si
+                await setInternetSQL(db,1,0)
+
                 await updateLocalSQL()
-                await setInternetSQL(db,1,Date.now())
+                
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
+                let antes = ultimo_animal.ultimo
+                const cincoMinEnMs = ACTUALIZACION;
                 
                 if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                    await setInternetSQL(db,1,Date.now())
+                    await updateLocalSQL()        
                 }
                 else{
-                    
                     await getLocalSQL()            
                 }
             }
@@ -735,9 +771,35 @@
             </div>
             <div class="label">
                 lotes - {lotes.length}
-            </div><div class="label">
+            </div>
+            <div class="label">
                 rodeos - {rodeos.length}
             </div>
+            <div class="label">
+                Hora actual: {Date.now()}
+            </div>
+            <div class="label">
+                <span>
+                    last internet: {ultimo_animal.ultimo}
+                </span>
+            </div>
+            <div class="label">
+                Distancia: {Date.now() - ultimo_animal.ultimo}
+            </div>
+            <div class="label">
+                Distancia min: {(Date.now() - ultimo_animal.ultimo) / 60000}
+            </div>
+            <div class="label">
+                <span>
+                    con internet: {coninternet.connected}
+                </span>
+            </div>
+            <div class="label">
+                <span>
+                    get local: {getlocal}
+                </span>
+            </div>
+            
         </div>
     {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
@@ -976,6 +1038,8 @@
             {getEstadoNombre}
             {getSexoNombre}
             {ordenarAnimales}
+            {getNombreLote}
+            {getNombreRodeo}
         >
 
         </TablaAnimales>
@@ -988,6 +1052,8 @@
             {getEstadoColor}
             {getEstadoNombre}
             {getSexoNombre}
+            {getNombreLote}
+            {getNombreRodeo}
         ></ListaAnimales>
     </div>
     

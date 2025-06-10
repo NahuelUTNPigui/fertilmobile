@@ -109,13 +109,13 @@
     {#if isEmpty(nacimiento.madrenac)}
         
             <span class="label-text">
-                madre vacua
+                madre vacia
             </span>
     {/if}
     {#if !nacimiento.botonhabilitadonac}
         
             <span class="label-text">
-                madre vacua
+                mal boton
             </span>
     {/if}
 {/if}

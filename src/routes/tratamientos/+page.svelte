@@ -26,12 +26,12 @@
         setUltimoTratsSQL,
         addNewTrataSQL,
         updateLocalTratsSQLUser,
-
         getTiposTratSQL,
         setTiposTratSQL,
         addNewTipoTratSQL,
         setUltimoTiposTratSQL,
-        updateLocalTiposTratSQLUser
+        updateLocalTiposTratSQLUser,        
+        getUltimoTratsSQL
 
     } from '$lib/stores/sqlite/dbeventos';
     import {
@@ -39,12 +39,17 @@
         getAnimalesSQL,
         updateLocalAnimalesSQL ,
         getUpdateLocalAnimalesSQLUser,
-        getAnimalesCabSQL
+        getAnimalesCabSQL,
+        setUltimoAnimalesSQL,
+        getUltimoAnimalesSQL
+
 
     } from '$lib/stores/sqlite/dbanimales';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { ACTUALIZACION } from '$lib/stores/constantes';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //Offline
     let db = $state(null)
@@ -52,6 +57,8 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let getlocal = $state(false)
+    let ultimo_tratamientos = $state({})
     let comandos = $state([])
 
     let caber = createCaber()
@@ -598,7 +605,7 @@
 
     }
     function filterUpdate(){
-        tratamientosrow = tratamientos
+        tratamientosrow = tratamientoscab
         totalTratamientosEncontrados = tratamientosrow.length
         if(buscar != ""){
             tratamientosrow = tratamientosrow.filter(t=>t.expand.animal.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
@@ -620,6 +627,7 @@
             tratamientosrow = tratamientosrow.filter(t=>t.tipo==buscartipo)
             totalTratamientosEncontrados = tratamientosrow.length
         }
+        tratamientosrow.sort((a,b)=>new Date(b.fecha) - new Date(a.fecha))
     }
     async function onmountoriginal(params) {
         await getTratamientos()
@@ -632,14 +640,25 @@
     //ENcima pocket base taambien guardar la info del usuario
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     //Este metodo deberia tomar los datos de la nube y pisar lo que tengo sqlite
     // Se supone que los comandos ya fueron flush
+
     async function updateLocalSQL() {
+        await setUltimoTratsSQL(db)
+        await setUltimoAnimalesSQL(db   )
         tratamientos = await updateLocalTratsSQLUser(db,pb,usuarioid)
         tratamientos = tratamientos.filter(t=>t.cab == caboff.id)
         animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
@@ -649,32 +668,35 @@
     }
     async function getLocalSQL() {
         let restratamientos = await getTratsSQL(db)
-        tratamientos = restratamientos.lista,filterUpdate(t=>t.cab == caboff.id)
+        tratamientos = restratamientos.lista
+        tratamientoscab = tratamientos.filter(t=>t.cab == caboff.id && t.active)
         animales = await getAnimalesCabSQL(db,caboff.id)
         
         let restipos = await getTiposTratSQL(db)
         tipotratamientos = restipos.lista.filter(tt=>tt.generico || tt.cab == caboff.id)
         filterUpdate()
+
     }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_tratamientos = await getUltimoTratsSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                    let antes = lastinter.ultimo
-                    const cincoMinEnMs = 300000;
+                    let antes = ultimo_tratamientos.ultimo
+                    const cincoMinEnMs = ACTUALIZACION;
                     if((ahora - antes) >= cincoMinEnMs){
-                        await setInternetSQL(db,1,Date.now())
+                        
                         await updateLocalSQL()
                     }
                     else{
@@ -710,6 +732,18 @@
     {#if modedebug}
         <button onclick={updateLocalSQL} class="btn">Forzar update</button>
         <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+        <div class="grid grid-cols-3">
+            <div class="label">
+                <span>
+                    con internet: {coninternet.connected}
+                </span>
+            </div>
+            <div class="label">
+                <span>
+                    get local: {getlocal}
+                </span>
+            </div>
+        </div>
     {/if}
     
     <div class="grid grid-cols-3 lg:grid-cols-4 mx-1 lg:mx-10 mt-1 w-11/12">

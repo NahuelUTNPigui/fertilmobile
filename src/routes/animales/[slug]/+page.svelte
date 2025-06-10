@@ -431,6 +431,7 @@
         cargado = true
     }
     //Necesito una funcion que traiga toda la informacion del animal
+    //Para mi es siempre get
     onMount(async ()=>{
         slug = $page.params.slug
         await initPage()

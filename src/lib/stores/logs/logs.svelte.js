@@ -21,28 +21,3 @@ export const loger = {
         errores = [];
     },
 };
-/*
-export function createLoger(){
-    let loges = $state([])
-    let errores = $state([])
-
-    return {
-        get loges(){
-            return loges;
-        },
-        get errores(){
-            return errores;
-        },
-        addLog:(item)=>{
-            loges = [...loges, item]
-            
-        },
-        addError:(item)=>{
-            errores = [...errores, item]
-            
-        },
-        cleanLog:()=>(loges = []),
-        cleanErrores:()=>(errores = []),
-    }
-}
-    */

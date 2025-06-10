@@ -27,6 +27,7 @@
   import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
   import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
   import {openDB} from '$lib/stores/sqlite/main'
+  import { shorterWord } from "$lib/stringutil/lib";
   let {children} = $props();
   let pageurl = $page.url.pathname  
   let ruta = import.meta.env.VITE_RUTA
@@ -68,9 +69,9 @@
   onMount(async ()=>{
     let caber = createCaber()
     nombreestablecimiento = caber.cab.nombre
-    if (window.innerWidth <= 600) { // Pantallas pequeñas
-      nombreestablecimiento= nombreestablecimiento.slice(0,15)
-    }
+    //if (window.innerWidth <= 600) { // Pantallas pequeñas
+    //  nombreestablecimiento= nombreestablecimiento.slice(0,15)
+    //}
     let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
     usuarioid = pb_json.record.id
     nombreusuario = pb_json.record.username
@@ -153,7 +154,7 @@
               <a href={"/establecimientos"} 
                 class={`ps-0 btn btn-ghost text-xl ${classtextnavbar}`}
               >
-                {nombreestablecimiento}
+                {shorterWord(nombreestablecimiento)}
               </a>
             </div>
             <div class="flex mr-1 pr-1 lg:mr-5 lg:pr-5">
@@ -165,7 +166,7 @@
                       <span class="indicator-item badge dark:badge-error badge-error badge-xs"></span>
                     {/if}
                     
-                    <span class={` px-2`} >{nombreusuario}</span>
+                    <span class={` px-2`} >{shorterWord(nombreusuario)}</span>
                     
                   </div>
                 </summary>

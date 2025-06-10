@@ -37,24 +37,27 @@
     import InicioServicio from "$lib/components/inicio/Servicio.svelte"
     import InicioObservacion from "$lib/components/inicio/Observacion.svelte"
     //Offline
+    import { ACTUALIZACION } from '$lib/stores/constantes';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
-    import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import {getInternetSQL, setInternetSQL,setUltimosSQL} from '$lib/stores/sqlite/dbinternet'
     
     import {getCabData,getCabDataByID} from "$lib/stores/cabsdata"
     import {
         addNewTactoSQL,
         getEventosSQL, 
-        setEventosSQL, 
         setUltimoEventosSQL,
         addNewNacimientoSQL,
         addNewTrataSQL,
         addNewObservacionSQL,
         addnewInseminacionSQL,
         addNewServicioSQL,
-        updateLocalEventosSQLUser
+        updateLocalEventosSQLUser,
+
+        getTratsSQL
+
     } from '$lib/stores/sqlite/dbeventos';
     import { 
         setAnimalesSQL,
@@ -72,7 +75,7 @@
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from '$lib/stores/logs/logs.svelte';
-    
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     let ruta = import.meta.env.VITE_RUTA
@@ -356,85 +359,85 @@
             
             comandos.push(comando)
             //await setComandosSQL(db,comandos)
-            
+            totaleventos.animales += 1
             return data
         }
         
 
     }
+    async function guardarTactoAnimal(idprov){
+        if(caravana == ""){
+            Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
+            return
+        }
+            
+        let a = await guardarAnimal(true,false)
+        if(a.id == -1){
+            return
+        }
+        animales.push(a)
+        onChangeAnimales()
+        await setAnimalesSQL(db,animales)
+        let data = {
+            fecha:tacto.fechatacto +" 03:00:00" ,
+            observacion:tacto.observaciontacto,
+            animal:a.id,
+            categoria:tacto.categoriatacto,
+            prenada:prenadatacto,
+            tipo:tacto.tipotacto,
+            nombreveterinario:"",
+            cab:caboff.id,
+            active:true
+        }
+        if(coninternet.connected){
+            try{
+                //que pasa si el animal no existe
+                let record = await pb.collection('tactos').create(data);
+                record = {
+                    ...record,
+                    expand:{
+                      animal:{caravana:a.caravana},
+                      cab:{nombre:caboff.nombre}
+                    }
+                }
+                
+                await addNewTactoSQL(db,record)
+                Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+            }
+            catch(err){
+                console.error(err)
+                Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+            }
+        }
+        else{
+            data.id = idprov
+            let comando = {
+                tipo:"add",
+                coleccion:"tactos",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:5,
+                idprov,    
+                camposprov:"animal"
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            data = {
+                    ...data,
+                    expand:{
+                      animal:{caravana:a.caravana},
+                      cab:{nombre:caboff.nombre}
+                    }
+                }
+            await addNewTactoSQL(db,data)
+            
+            Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+        }
+    }
     async function guardarTacto(){
         let idprov = "nuevo_tacto_"+generarIDAleatorio()
         if(agregaranimal){
-            if(caravana == ""){
-                Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
-                return
-            }
-            
-            let a = await guardarAnimal(true,false)
-            if(a.id == -1){
-                return
-            }
-            animales.push(a)
-            totaleventos.animales += 1
-            onChangeAnimales()
-            await setAnimalesSQL(db,animales)
-            let data = {
-                fecha:tacto.fechatacto +" 03:00:00" ,
-                observacion:tacto.observaciontacto,
-                animal:a.id,
-                categoria:tacto.categoriatacto,
-                prenada:prenadatacto,
-                tipo:tacto.tipotacto,
-                nombreveterinario:"",
-                cab:caboff.id,
-                active:true
-            }
-            if(coninternet.connected){
-                try{
-                    //que pasa si el animal no existe
-                    let record = await pb.collection('tactos').create(data);
-                    record = {
-                        ...record,
-                        expand:{
-                          animal:{caravana:a.caravana},
-                          cab:{nombre:caboff.nombre}
-
-                        }
-                    }
-                    
-                    await addNewTactoSQL(db,record)
-                    Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
-                }
-                catch(err){
-                    console.error(err)
-                    Swal.fire("Error guardar","No se pudo guardar el tacto","error")
-                }
-            }
-            else{
-                data.id = idprov
-                let comando = {
-                    tipo:"add",
-                    coleccion:"tactos",
-                    data:{...data},
-                    hora:Date.now(),
-                    prioridad:5,
-                    idprov,    
-                    camposprov:"animal"
-                }
-                comandos.push(comando)
-                await setComandosSQL(db,comandos)
-                data = {
-                        ...data,
-                        expand:{
-                          animal:{caravana:a.caravana},
-                          cab:{nombre:caboff.nombre}
-
-                        }
-                    }
-                await addNewTactoSQL(db,data)
-                
-                Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
-            }
+            await guardarTactoAnimal(idprov)
         }
         else{
             
@@ -476,8 +479,9 @@
                 
             }
             else{
+
                 try{
-                    let nuevoanimal = animaltacto.split("_")[0]=="nuevo"
+                    let nuevoanimal = tacto.animaltacto.split("_")[0]=="nuevo"
                     data.id = idprov
                     let comando = {
                         tipo:"add",
@@ -500,13 +504,13 @@
                     //    comandos.push(comandohisto)
                     //}
                     
-                    
+                    let a = animales.filter(an=>an.id==tacto.animaltacto)[0]
                     await setComandosSQL(db,comandos)
                     data = {
                         ...data,
                         expand:{
-                            animal:{caravana:a.caravana},
-                            cab:{nombre:caboff.nombre}
+                            animal:{caravana:a.caravana,id:a.id},
+                            cab:{nombre:caboff.nombre,id:caboff.id}
 
                         }
                     }
@@ -523,6 +527,142 @@
 
             }
         }
+    }
+    async function guardarNacimientoOnline(dataparicion){
+        //debo agregar el lote y rodeo de la madre
+        try{
+            let recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            recordparicion = {
+                ...recordparicion,
+                caravana:"",
+                animalid:"",
+                expand:{
+                    madre:{
+                        caravana:dataparicion.nombremadre
+                    },
+                    padre:{
+                        caravana:dataparicion.nombrepadre
+                    },
+                    cab:{
+                        nombre:caboff.nombre
+                    }
+                }
+            }
+            
+            if(agregaranimal){
+                let data = {
+                    caravana:caravana,
+                    active:true,
+                    delete:false,
+                    fechanacimiento:nacimiento.fechanac +" 03:00:00",
+                    sexo:sexo,
+                    cab:caboff.id,
+                    peso:peso,
+                    nacimiento:recordparicion.id
+                }
+                let recorda = await pb.collection('animales').create(data); 
+                recordparicion.caravana = caravana
+                recordparicion.animalid=recorda.id
+                totaleventos.animales += 1
+                animales.push(recorda)
+                onChangeAnimales()  
+                await setAnimalesSQL(db,animales)
+            }
+            await addNewNacimientoSQL(db,recordparicion)
+            totaleventos.nacimientos += 1
+            Swal.fire("Éxito guardar","Se pudo guardar la parición con exito","success")
+            nuevoModalNacimiento.close()
+        }
+        catch(err){
+            console.error(err)
+            loger.addError({
+                time: Date.now(),
+                text:JSON.stringify(err,null,2)
+            })
+            Swal.fire("Error guardar","No se pudo guardar la parición","error")
+            return
+        }
+    }
+    async function guardarNacimientoOffline(dataparicion,idprov) {
+        dataparicion.id = idprov
+        let  dataanimal = {
+            id:"",
+            caravana:""
+        }
+        if(agregaranimal){
+            
+            let idanimal = "nuevo_animal_"+generarIDAleatorio() 
+            dataanimal = {
+                caravana:caravana,
+                active:true,
+                delete:false,
+                fechanacimiento:fechanacimiento +" 03:00:00",
+                sexo:sexo,
+                cab:caboff.id,
+                peso:peso,
+                nacimiento:idprov,
+                id:idanimal
+            }
+            
+            animales.push(dataanimal)
+            onChangeAnimales()
+            //Debo guardar el animal
+            
+            await setAnimalesSQL(db,animales)
+            totaleventos.animales += 1
+
+        }
+        
+        let esnuevopadre = dataparicion.padre.split("_").length>0
+        let esnuevomadre = dataparicion.madre.split("_").length>0
+        let camposprov = `${esnuevomadre && esnuevopadre?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
+        //Comandos
+        let comandonac = {
+            tipo:"add",
+            coleccion:"nacimientos",
+            data:{...dataparicion},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov
+        }
+        
+        comandos.push(comandonac)
+        let datanacimiento={
+            ...dataparicion,
+            caravana:dataanimal.caravana,
+            animalid:dataanimal.id,
+            expand:{
+                madre:{
+                    caravana:dataparicion.nombremadre
+                },
+                padre:{
+                    caravana:dataparicion.nombrepadre
+                },
+                cab:{
+                    nombre:caboff.nombre
+                }
+            }
+        }
+        totaleventos.nacimientos += 1
+        //Debo guardar el nacimiento
+        
+        await addNewNacimientoSQL(db,datanacimiento)
+        if(agregaranimal){
+            let comandoani = {
+                tipo:"add",
+                coleccion:"animales",
+                data:{...dataanimal},
+                hora:Date.now(),
+                prioridad:3,
+                idprov,    
+                camposprov:"nacimiento"
+            }
+            comandos.push(comandoani)
+            
+        }
+        Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
+        await setComandosSQL(db,comandos)
     }
     async function guardarNacimiento() {
         let idprov = "nuevo_nac_"+generarIDAleatorio() 
@@ -555,170 +695,91 @@
             })
         }
         if(coninternet.connected){
-            //debo agregar el lote y rodeo de la madre
-            try{
-                let recordparicion = await pb.collection('nacimientos').create(dataparicion);
-                recordparicion = {
-                    ...recordparicion,
-                    expand:{
-                        madre:{caravana:nacimiento.nombremadrenac},
-                        
-                        cab:{nombre:caboff.nombre}
-                    }
-                }
-                await addNewNacimientoSQL(db,recordparicion)
-                if(agregaranimal){
-                    let data = {
-                        caravana:caravana,
-                        active:true,
-                        delete:false,
-                        fechanacimiento:nacimiento.fechanac +" 03:00:00",
-                        sexo:sexo,
-                        cab:caboff.id,
-                        peso:peso,
-                        nacimiento:recordparicion.id
-                    }
-                    let recorda = await pb.collection('animales').create(data); 
-
-                    loger.addLog({
-                        time: Date.now(),
-                        text:JSON.stringify(dataparicion,null,2)
-                    })
-                    totaleventos.animales += 1
-                    animales.push(recorda)
-                    onChangeAnimales()  
-                    await setAnimalesSQL(animales)
-                }
-            
-                totaleventos.nacimientos += 1
-                Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
-                nuevoModalNacimiento.close()
-            }
-            catch(err){
-                console.error(err)
-                loger.addError({
-                    time: Date.now(),
-                    text:JSON.stringify(err,null,2)
-                })
-                Swal.fire("Error guardar","No se pudo guardar el nacimiento","error")
-                return
-            }
-            
-            
+            await guardarNacimientoOnline(dataparicion)
         }
         else{
-            let  dataanimal = {}
-            if(agregaranimal){
-                let idanimal = "nuevo_animal_"+generarIDAleatorio() 
-                dataparicion.id= idprov
-                dataanimal = {
-                    caravana:caravananac,
-                    active:true,
-                    delete:false,
-                    fechanacimiento:fechanac +" 03:00:00",
-                    sexo:sexonac,
-                    cab:caboff.id,
-                    peso:pesonac,
-                    nacimiento:idprov
-                }
-                animales.push(dataanimal)
-                onChangeAnimales()
-                //Debo guardar el animal
-                await setAnimalesSQL(animales)
-                
-                totaleventos.animales += 1
-            }
-            
-            totaleventos.nacimientos += 1
-            //Debo guardar el nacimiento
-            await addNewNacimientoSQL(db,dataparicion)
-            
-            
-            let esnuevopadre = padrenac.split("_").length>0
-            let esnuevomadre = madrenac.split("_").length>0
-            //Comandos
-            let comandonac = {
-                tipo:"add",
-                coleccion:"nacimientos",
-                data:{...dataparicion},
-                hora:Date.now(),
-                prioridad:2,
-                idprov,    
-                camposprov:""
-            }
-            comandos.push(comandonac)
-            if(agregaranimal){
-                let comandoani = {
-                    tipo:"add",
-                    coleccion:"animales",
-                    data:{...dataanimal},
-                    hora:Date.now(),
-                    prioridad:3,
-                    idprov,    
-                    camposprov:"nacimiento"
-                }
-                comandos.push(comandoani)
-            }
-            
-            await setComandosSQL(db,comandos)
+            await guardarNacimientoOffline(dataparicion,idprov)
         }
         initNacimiento()
+    }
+    async function guardarTratAnimal(idprov) {
+        if(caravana == ""){
+            Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
+            return
+        }
+            
+        let a = await guardarAnimal(false,false)
+        if(a.id == -1){
+            return
+        }
+        animales.push(a)
+
+        onChangeAnimales()
+        await setAnimalesSQL(db,animales)
+        
+           
+        let data = {
+            animal:a.id,
+            categoria:a.categoria,
+            tipo:tratamiento.tipotrat,
+            fecha:tratamiento.fechatrat +" 03:00:00",
+            active : true,
+            observacion:tratamiento.observaciontrat,
+            cab:caboff.id
+        }
+        let tts= tipotratamientos.filter(t=>t.id == tratamiento.tipotrat)
+        //si tengo internet lo hgao derecho
+        
+        if(coninternet.connected){
+            let record = await pb.collection("tratamientos").create(data)
+            record = {
+                ...record,
+                expand:{
+                    animal:{caravana:a.caravana},
+                    tipo:{nombre:tts[0].nombre},
+                    cab:{nombre:caboff.nombre}
+                }
+            }
+            Swal.fire("Éxito guardar","Se pudo guardar el tratamiento con exito","success")
+            totaleventos.tratamientos += 1
+        }
+        //Sino tengo que crear un comando
+        else{
+            data.id = idprov
+            let esnuevoanimal = a.id.split("_").length>0
+            let comando = {
+                tipo:"add",
+                coleccion:"tratamiento",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:5,
+                idprov,    
+                camposprov:esnuevoanimal?"animal":""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            data={
+                ...data,
+                expand:{
+                    animal:{caravana:a.caravana},
+                    tipo:{nombre:tts[0].nombre},
+                    cab:{nombre:caboff.nombre}
+                }
+            }
+            await addNewTrataSQL(db,data)
+            totaleventos.tratamientos += 1
+            Swal.fire("Éxito guardar","Se pudo guardar el tratamiento","success")
+        }
     }
     async function guardarTrat() {
         let idprov = "nuevo_trat_"+generarIDAleatorio() 
         if(agregaranimal){
-            if(caravana == ""){
-                Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
-                return
-            }
             
-            let a = await guardarAnimal(true,false)
-            if(a.id == -1){
-                return
-            }
-            animales.push(a)
-
-            onChangeAnimales()
-            await setAnimalesSQL(db,animales)
-            //await updateAnimales(a)
-           
-            let data = {
-                animal:a.id,
-                categoria:a.categoria,
-                tipo:tratamiento.tipotrat,
-                fecha:tratamiento.fechatrat +" 03:00:00",
-                active : true,
-                observacion:tratamiento.observaciontrat,
-                cab:caboff.id
-            }
-            //si tengo internet lo hgao derecho
-            if(coninternet.connected){
-                const  record = await pb.collection("tratamientos").create(data)
-                Swal.fire("Éxito guardar","Se pudo guardar el tratamiento con exito","success")
-                totaleventos.tratamientos += 1
-            }
-            //Sino tengo que crear un comando
-            else{
-                data.id = idprov
-                let comando = {
-                    tipo:"add",
-                    coleccion:"tratamiento",
-                    data:{...data},
-                    hora:Date.now(),
-                    prioridad:5,
-                    idprov,    
-                    camposprov:"animal"
-                }
-                comandos.push(comando)
-                await setComandosSQL(db,comandos)
-                await addNewTrataSQL(db,data)
-                totaleventos.tratamientos += 1
-                Swal.fire("Éxito guardar","Se pudo guardar el tratamiento","success")
-            }
-            
+            await guardarTratAnimal(idprov)
         }
         //Animal existente
         else{
+            let tts= tipotratamientos.filter(t=>t.id == tratamiento.tipotrat)
             let data = {
                 animal:tratamiento.animaltrat,
                 categoria:tratamiento.categoriatrat,
@@ -735,6 +796,7 @@
                     record = {
                         ...record,
                         expand:{
+                            tipo:{nombre:tts[0].nombre},
                             animal:{caravana:a.caravana},
                             cab:{nombre:caboff.nombre}
                         }
@@ -746,13 +808,11 @@
                 catch(err){
                     console.error(err)
                     Swal.fire("Error guardar","No se pudo guardar el tratamiento con exito","error")
-
                 }
-
             }
             else{
                 try{
-                    let nuevoanimal = animaltrat.split("_")[0]=="nuevo"
+                    let nuevoanimal = tratamiento.animaltrat.split("_")[0]=="nuevo"
                     data.id = idprov
                     let comando = {
                         tipo:"add",
@@ -764,74 +824,62 @@
                         camposprov:nuevoanimal?"animal":""
                     }
                     let a = animales.filter(an=>an.id==tratamiento.animaltrat)[0]
-
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
                     //Add new trata
                     data = {
                         ...data,
                         expand:{
+                            tipo:{nombre:tts[0].nombre},
                             animal:{caravana:a.caravana},
                             cab:{nombre:caboff.nombre}
                         }
                     }
+                    totaleventos.tratamientos += 1
                     
                     await addNewTrataSQL(db,data)
-                    totaleventos.tratamientos += 1
+                    
                     Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
                 }
                 catch(err){
                     console.error(err)
                     Swal.fire("Error guardar","No se pudo guardar el tratamiento con exito","error")
                 }
-                
             }
-            
         }
     }
-    async function updateAnimales(a) {
+    async function guardarInseminacionAnimal(idprov) {
+        if(caravana == ""){
+            Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
+            return
+        }
+        let a = await guardarAnimal(true,false)
+        if(a.id == -1){
+            return
+        }
         animales.push(a)
         onChangeAnimales()
-        totaleventos.animales += 1
-        
         await setAnimalesSQL(db,animales)
-    }
-    async function guardarInseminacion() {
-        let idprov = "nuevo_ins_"+generarIDAleatorio()
-        if(agregaranimal){
-            if(caravana == ""){
-                Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
-                return
-            }
-            let a = await guardarAnimal(true,false)
-            if(a.id == -1){
-                return
-            }
-            animales.push(a)
-            onChangeAnimales()
-            await setAnimalesSQL(db,animales)
-            //await updateAnimales(a)
-            
-            let data = {
-                cab:caboff.id,
-                animal: a.id,
-                fechaparto: inseminacion.fechapartoins +' 03:00:00',
-                fechainseminacion: inseminacion.fechainseminacion + ' 03:00:00',
-                active:true,
-                padre:inseminacion.padreins,//Si es nuevo padre
-                pajuela:inseminacion.pajuelains,
-                categoria:a.categoria,
-            }
-            if(coninternet.connected){
-                try{
-                    
-                    let record = await pb.collection('inseminacion').create(data);
+        //await updateAnimales(a)
+        
+        let data = {
+            cab:caboff.id,
+            animal: a.id,
+            fechaparto: inseminacion.fechapartoins +' 03:00:00',
+            fechainseminacion: inseminacion.fechainseminacion + ' 03:00:00',
+            active:true,
+            padre:inseminacion.padreins,//Si es nuevo padre
+            pajuela:inseminacion.pajuelains,
+            categoria:a.categoria,
+        }
+        if(coninternet.connected){
+            try{
+                let record = await pb.collection('inseminacion').create(data);
                     record = {
                         ...record,
                         expand:{
                           animal:{caravana:a.caravana},
                           cab:{nombre:caboff.nombre}
-
                         }
                     }
                     await addnewInseminacionSQL(db,record)
@@ -842,33 +890,43 @@
                     console.error(err)
                     Swal.fire("Error guardar","Hubo un error para guardar la inseminación","error")
                 }
-            }
-            else{
-                try{
-                    let animalins = animales.filter(an=>an.id==a.id)[0]
-                    data.id = idprov
-                    let comando = {
-                        tipo:"add",
-                        coleccion:"inseminaciones",
-                        data:{...data},
-                        hora:Date.now(),
-                        prioridad:5,
-                        idprov,
-                        camposprov:"animal"
+        }
+        else{
+            try{
+                let animalins = animales.filter(an=>an.id==a.id)[0]
+                data.id = idprov
+                let comando = {
+                    tipo:"add",
+                    coleccion:"inseminaciones",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:5,
+                    idprov,
+                    camposprov:"animal"
+                }
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
+                data={
+                    ...data,
+                    expand:{
+                      animal:{caravana:a.caravana},
+                      cab:{nombre:caboff.nombre}
                     }
-                    comandos.push(comando)
-                    await setComandosSQL(db,comandos)
-                    await addnewInseminacionSQL(db,data)
-                    Swal.fire("Éxito guardar","Se pudo guardar la inseminación con exito","success")
-                    totaleventos.inseminaciones += 1
                 }
-                catch(err){
-                    console.error(err)
-                    Swal.fire("Error guardar","Hubo un error para guardar la inseminación","error")
-                }
+                await addnewInseminacionSQL(db,data)
+                Swal.fire("Éxito guardar","Se pudo guardar la inseminación con exito","success")
+                totaleventos.inseminaciones += 1
             }
-
-            
+            catch(err){
+                console.error(err)
+                Swal.fire("Error guardar","Hubo un error para guardar la inseminación","error")
+            }
+        }
+    }
+    async function guardarInseminacion() {
+        let idprov = "nuevo_ins_"+generarIDAleatorio()
+        if(agregaranimal){
+            await guardarInseminacionAnimal(idprov)
         }
         else{
             let data = {
@@ -913,7 +971,7 @@
             }
             else{
                 let animalins = animales.filter(an=>an.id==inseminacion.idanimalins)[0]
-                let nuevoanimal = idanimalins.split("_")[0]=="nuevo"
+                let nuevoanimal = inseminacion.idanimalins.split("_")[0]=="nuevo"
                 data.id = idprov
                 let comando = {
                     tipo:"add",
@@ -922,7 +980,7 @@
                     hora:Date.now(),
                     prioridad:5,
                     idprov,    
-                    camposprov:"animal"
+                    camposprov:`${nuevoanimal?"animal":""}`
                 }
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
@@ -938,13 +996,10 @@
                 Swal.fire("Éxito guardar","Se pudo guardar la inseminación con exito","success")
                 totaleventos.inseminaciones += 1
             }
-
         }
     }
-    async function guardarServicio(){
-        let idprov = "nuevo_serv_"+generarIDAleatorio() 
-        if(agregaranimal){
-            if(caravana == ""){
+    async function guardarServicioAnimal(idprov) {
+        if(caravana == ""){
                 Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
                 return
             }
@@ -969,7 +1024,12 @@
                 dataser.fechahasta = servicio.fechahastaserv + " 03:00:00"
             }
             if(coninternet.connected){
-                await pb.collection("servicios").create(dataser)
+                let record = await pb.collection("servicios").create(dataser)
+                record = {
+                    ...record,
+                    madre:{caravana:a.caravana},
+                    cab:{nombre:caboff.nombre}
+                }
                 totaleventos.servicios += 1
                 Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
             }
@@ -986,10 +1046,21 @@
                 }
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
+                dataser = {
+                    ...dataser,
+                    madre:{caravana:a.caravana},
+                    cab:{nombre:caboff.nombre}
+                    
+                }
                 await addNewServicioSQL(db,dataser)
                 Swal.fire("Éxito guardar","Se pudo guardar el servicio con exito","success")
                 totaleventos.servicios += 1
             }
+    }
+    async function guardarServicio(){
+        let idprov = "nuevo_serv_"+generarIDAleatorio() 
+        if(agregaranimal){
+            await guardarServicioAnimal(idprov)
         }
         //Animal seleccionado
         else{
@@ -1007,12 +1078,12 @@
             }
             if(coninternet.connected){
                 try{
-                    let madre = animales.filter(an=>an.id==servicio.madre)[0] 
+                    let madre = animales.filter(an=>an.id==servicio.idanimalser)[0] 
                     let record = await pb.collection("servicios").create(dataser)
                     record= {
                         ...record,
                         expand:{
-                            madre:{caravana:animales.filter(an=>an.id==servicio.idanimalser)[0].caravana},
+                            madre:{caravana:madre.caravana},
                             cab:{nombre:caboff.nombre}
                         }
                     }
@@ -1027,7 +1098,7 @@
                 
             }
             else{
-                let nuevoanimal = idanimalser.split("_")[0]=="nuevo"
+                let nuevoanimal = servicio.idanimalser.split("_")[0]=="nuevo"
                 dataser.id = idprov
                 let comando = {
                     tipo:"add",
@@ -1038,90 +1109,93 @@
                     idprov,
                     camposprov:nuevoanimal?"animal":""
                 }
+                
+                comandos.push(comando)
+                await setComandosSQL(db,comandos)
                 dataser = {
                     ...dataser,
                     expand:{
-                        madre:{caravana:animales.filter(an=>an.id==servicio.idanimalser)[0].caravana},
+                        madre:{caravana:animales.filter(an=>an.id==dataser.madre)[0].caravana},
                         cab:{nombre:caboff.nombre}
                     }
                 }
-                comandos.push(comando)
-                await setComandosSQL(db,comandos)
                 await addNewServicioSQL(db,dataser)
                 Swal.fire("Éxito guardar","Se pudo guardar el servicio con éxito","success")
                 totaleventos.servicios += 1
             }
         }
     }
+    async function guardarObservacionAnimal(idprov) {
+        if(caravana == ""){
+            Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
+            return
+        }
+        let a = await guardarAnimal(false,true)
+        if(a.id == -1){
+            return
+        }
+        animales.push(a)
+        onChangeAnimales()
+        await setAnimalesSQL(db,animales)
+            
+            
+        let data = {
+            animal:a.id,
+            categoria:a.categoria,
+            fecha:observacion.fechaobs +" 03:00:00",
+            cab:caboff.id,
+            observacion:observacion.observacionobs,
+            active:true
+        }
+        if(coninternet.connected){
+           try{
+               let record = await pb.collection('observaciones').create(data);
+               record = {
+                   ...record,
+                   expand:{
+                        animal:{caravana:a.caravana},
+                        cab:{nombre:caboff.nombre}
+                   }
+               }
+               await addNewObservacionSQL(db,record)
+               Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
+               totaleventos.observaciones += 1
+            }
+            catch(err){
+               console.error(err)
+               Swal.fire("Error guardar","No se pudo guardar la observación","error")
+            }
+               
+        }
+        else{
+            data.id = idprov
+            let comando = {
+                tipo:"add",
+                coleccion:"observaciones",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:5,
+                idprov,
+                camposprov:"animal"
+            }        
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            data = {
+                ...data,
+                expand:{
+                  animal:{caravana:a.caravana},
+                  cab:{nombre:caboff.nombre}
+                }
+            }
+            await addNewObservacionSQL(db,data)
+            Swal.fire("Éxito guardar","Se pudo guardar la observación con exito","success")
+            totaleventos.observaciones += 1
+        }
+    }
     async function guardarObservacion() {
         let idprov = "nuevo_obs_"+generarIDAleatorio() 
         if(agregaranimal){
-            if(caravana == ""){
-                Swal.fire("Error guardar","No se pudo guardar el tacto porque el animal no tiene caravana","error")
-                return
-            }
-            let a = await guardarAnimal(false,true)
-            if(a.id == -1){
-                return
-            }
-            animales.push(a)
-            onChangeAnimales()
-            await setAnimalesSQL(db,animales)
-            
-            
-            let data = {
-                animal:a.id,
-                categoria:a.categoria,
-                fecha:observacion.fechaobs +" 03:00:00",
-                cab:caboff.id,
-                observacion:observacion.observacionobs,
-                active:true
-            }
-            if(coninternet.connected){
-                try{
-                    let record = await pb.collection('observaciones').create(data);
-                    record = {
-                        ...record,
-                        expand:{
-                          animal:{caravana:a.caravana},
-                          cab:{nombre:caboff.nombre}
-
-                        }
-                    }
-                    Swal.fire("Éxito guardar","Se pudo guardar la observación","success")
-                    totaleventos.observaciones += 1
-                }
-                catch(err){
-                    console.error(err)
-                    Swal.fire("Error guardar","No se pudo guardar la observación","error")
-                }
-                
-            }
-            else{
-                data.id = idprov
-                let comando = {
-                    tipo:"add",
-                    coleccion:"observaciones",
-                    data:{...data},
-                    hora:Date.now(),
-                    prioridad:5,
-                    idprov,
-                    camposprov:"animal"
-                }
-                
-                comandos.push(comando)
-                await setComandosSQL(db,comandos)
-                data = {
-                    ...data,
-                    expand:{
-                      animal:{caravana:a.caravana},
-                      cab:{nombre:caboff.nombre}
-                    }
-                }
-                await addNewObservacionSQL(db,data)
-                Swal.fire("Éxito guardar","Se pudo guardar la observación con exito","success")
-                totaleventos.observaciones += 1
-            }
+            await guardarObservacionAnimal(idprov)
         }
         //Animal seleccionado
         else{
@@ -1155,7 +1229,7 @@
             }
             else{
                 let a = animales.filter(an=>an.id==observacion.animalobs)[0]
-                let nuevoanimal = animalobs.split("_")[0]=="nuevo"
+                let nuevoanimal = observacion.animalobs.split("_")[0]=="nuevo"
                 data.id = idprov
                 let comando = {
                     tipo:"add",
@@ -1222,7 +1296,13 @@
         totaleventos.rodeos = recordsrodeos.totalItems
     }
     function setArbitrarioInternet(conectado){
+        if(modedebug){
+            offliner.setOffline(!conectado)
+        }
+        
         coninternet.connected  = conectado
+        
+        
     }
     async function reinicarDB() {
         await resetTables(db)
@@ -1244,7 +1324,7 @@
     }
     async function updateLocalSQL(db) {
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
-        onChangeAnimales()
+        
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         //Debo traer los datos de la cabaña
         await updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
@@ -1256,6 +1336,7 @@
         
         let datatotal = await getTotalAnimales(pb)
         animales = animalesuser
+        onChangeAnimales()
         totaleventos.tactos = datauser.tactos.filter(t=>t.cab == caboff.id).length
         totaleventos.inseminaciones = datauser.inseminaciones.filter(t=>t.cab == caboff.id).length
         totaleventos.nacimientos = datauser.nacimientos.filter(t=>t.cab == caboff.id).length
@@ -1268,10 +1349,11 @@
         totaleventos.animales = animales.filter(a=>a.cab == caboff.id &&  a.active).length
         
         tipotratamientos = datauser.tipostrat.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
-        await setUltimoAnimalesSQL(db)
-        await setUltimoEventosSQL(db)
-        await setTotalSQL(db,datatotal)
-        await setUltimoTotalSQL(db)
+        //await setUltimoAnimalesSQL(db)
+        //await setUltimoEventosSQL(db)
+        //await setTotalSQL(db,datatotal)
+        //await setUltimoTotalSQL(db)
+        await setUltimosSQL(db)
     }
     async function getLocalSQL(db) {
         let dataanimales = await getAnimalesSQL(db)
@@ -1303,8 +1385,18 @@
         cargadoanimales = true
     }
     async function initPage() {
-        //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        //
+        //coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
+        
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -1316,19 +1408,20 @@
         
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        
         if (coninternet.connected){
                 //await flushComandosSQL(db,pb)
                 comandos = []
                 if(lastinter.internet == 0){   
                     
                     await updateLocalSQL(db)
-                    await setInternetSQL(db,1,ahora)
+                    await setInternetSQL(db,1,Date.now())
                 }
                 else{
                     //Logica con internet previo
                     let ahora = Date.now()
                     let antes = lastinter.ultimo
-                    const cincoMinEnMs = 300000;
+                    const cincoMinEnMs = ACTUALIZACION;
                     
                     if((ahora - antes) >= cincoMinEnMs){
                         //await flushComandosSQL(db)
@@ -1505,7 +1598,8 @@
             bind:peso 
             bind:sexo 
             bind:fechanacimiento bind:categoria 
-            bind:agregaranimal bind:tacto bind:prenadatacto bind:madres bind:cargadoanimales 
+            bind:agregaranimal bind:tacto 
+            bind:prenadatacto bind:madres bind:cargadoanimales 
             {guardarTacto}>
         </InicioTacto>
         
@@ -1521,9 +1615,12 @@
         <form method="dialog">
             <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
         </form>
-        <h3 class="text-lg font-bold">Nuevo nacimiento</h3>  
+        <h3 class="text-lg font-bold">Nueva parición</h3>  
         
         <InicioNacimiento 
+            bind:caravana bind:peso bind:sexo 
+            bind:fechanacimiento bind:categoria 
+            bind:agregaranimal 
             bind:listamadres bind:listapadres
             bind:animales={animalescab}
             bind:nacimiento = {nacimiento} 
@@ -1545,11 +1642,15 @@
         
         <h3 class="text-lg font-bold">Nuevo tratamiento</h3>  
         <InicioTratamiento 
+            bind:caravana bind:peso bind:sexo 
+            bind:fechanacimiento bind:categoria 
+            bind:agregaranimal 
             bind:tipotratamientos = {tipotratamientos}  
             bind:animales={animalescab}
             bind:tratamiento = {tratamiento} 
             bind:cargadoanimales={cargadoanimales}  
-            {guardarTrat}></InicioTratamiento>
+            {guardarTrat}>
+        </InicioTratamiento>
 
         
     </div>
@@ -1568,7 +1669,8 @@
         </form>
         <h3 class="text-lg font-bold">Nueva observación</h3>  
         <InicioObservacion
-            bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento
+            bind:agregaranimal bind:caravana bind:categoria 
+            bind:sexo bind:peso bind:fechanacimiento
             bind:animales={animalescab}
             bind:cargadoanimales
             bind:observacion
@@ -1590,15 +1692,13 @@
         </form>
         <h3 class="text-lg font-bold">{esServicio?"Nuevo servicio":"Nueva inseminación"}</h3>  
         <InicioServicio
-            bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento
+            bind:agregaranimal bind:caravana bind:categoria 
+            bind:sexo bind:peso bind:fechanacimiento
             bind:esServicio
-            bind:madres
-            bind:padres
+            bind:madres bind:padres
             bind:animales={animalescab}
-            bind:servicio
-            bind:inseminacion
-            bind:cargadoanimales
-            bind:listapadres
+            bind:servicio bind:inseminacion
+            bind:cargadoanimales bind:listapadres
             {guardarInseminacion}
             {guardarServicio}
         ></InicioServicio>

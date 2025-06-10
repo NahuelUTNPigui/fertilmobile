@@ -33,9 +33,15 @@
         updateLocalTactosSQLUser,
         updateLocalTactosSQL,
         setTactosSQL,
-        getTactosSQL
+        getTactosSQL,
+        setUltimoTactosSQL,
+        getUltimoTactosSQL
     } from '$lib/stores/sqlite/dbeventos';
     import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     
     //offline
     let db = $state(null)
@@ -43,7 +49,9 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_tacto = $state({})
     let comandos = $state([])
+    let getlocal = $state(false)
     let caber = createCaber()
     let cab = caber.cab
     let per = createPer()
@@ -164,7 +172,7 @@
             categoria = tacto.categoria
             prenada = tacto.prenada
             tipo = tacto.tipo
-            nombreveterinario = tacto.nombreveterinario
+            
             nuevoModal.showModal()
         }
         else{
@@ -304,12 +312,22 @@
         await getAnimales()
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
+        await setUltimoTactosSQL(db)
+        await setUltimoAnimalesSQL(db)
         tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
         
         onChangeTactos()
@@ -318,31 +336,55 @@
         filterUpdate()
     }
     async function getLocalSQL() {
+        getlocal = true
         let resanimales = await getAnimalesSQL(db)
         let restactos = await getTactosSQL(db)
-        animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)
-
-        tactos = restactos.lista.filter(t=>t.cab ==  caboff.id)
+        
+        animales = resanimales.lista.filter(a=>a.cab == caboff.id)
+        tactos = restactos.lista
+        
         onChangeTactos()
+        
+        if(modedebug){
+            if(offliner.offline){
+                let nuevo_tactos = tactoscab.filter(t=>t.id.split("_")[0].includes("nue")) 
+                if(nuevo_tactos.length>0){
+                    for(let i = 0;i<1;i++){
+                        loger.addLog({
+                            time: Date.now(),
+                            text:JSON.stringify(nuevo_tactos[i],null,2)  
+                        })
+                        loger.addLog({
+                            time: Date.now(),
+                            text:JSON.stringify(tactos[i],null,2)  
+                        })
+                    }
+                }
+                
+            }
+            
+        }
         filterUpdate()
+        
     }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_tacto = await getUltimoTactosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
+                let antes = ultimo_tacto.ultimo
+                const cincoMinEnMs = ACTUALIZACION;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
+                    
                     await updateLocalSQL()
                 }
                 else{
@@ -353,7 +395,9 @@
         }
         else{
             await getLocalSQL()
+            
             await setInternetSQL(db,0,Date.now())
+
         }
     }
     onMount(async ()=>{
@@ -372,7 +416,7 @@
         prenada = opcion
     }
     function onChangeTactos(){
-        tactoscab = tactos.filter(t=>t.cab == cab.id && t.active)
+        tactoscab = tactos.filter(t=>t.cab == caboff.id && t.active)
     }
     async function editarOffline() {   
         try{
@@ -523,6 +567,25 @@
     }
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_tacto.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-1 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Tactos</h1>
@@ -545,21 +608,6 @@
                     data = {tactosrow}
                     {prepararData}
                 />
-            </div>
-            <div class="hidden">
-                <button
-                    onclick={()=>goto("/tactos/cab/movimiento")}
-                    class={`
-                        bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                        ${estilos.btnsecondary}
-                        rounded-full
-                        px-4 pt-2 pb-3
-                    `} 
-                    aria-label="Exportar"
-                >
-                    <span  class="text-xl font-semibold ">Múltiples</span>
-                    
-                </button>
             </div>
         </div>
     </div>
@@ -699,7 +747,7 @@
             </div>
         {/if}
     </div>
-    
+
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
@@ -723,7 +771,9 @@
                             {`${t.expand.animal.caravana}`}
                         </td>
                         <td class="text-base ">
-                            {`${capitalizeFirstLetter(t.expand.animal.categoria)}`}
+                            
+                            {`${capitalizeFirstLetter(t.categoria)}`}
+                            
                         </td>
                         <td class="text-base p-3 "> {
                             getEstadoNombre(t.prenada)
@@ -739,12 +789,13 @@
             </tbody>
         </table>
     </div>
+  
     <div class="block w-full md:hidden justify-items-center mx-1">
         {#each tactosrow as t}
         <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
             <button onclick={()=>openModalEdit(t.id) }>
                 <div class="block p-4">
-                    <div class="flex justify-between items-start mb-2">
+                    <div class="flex justify-between items-start mb-2 ">
                         <h3 class="font-medium">{`${new Date(t.fecha).toLocaleDateString()}`}</h3>
                         {#if t.prenada != 1}
 

@@ -32,7 +32,10 @@
         updateLocalServiciosSQL,
         updateLocalServiciosSQLUser,
         setServiciosSQL,
-        setInseminacionesSQL
+        setInseminacionesSQL,
+        getUltimoServiciosSQL,
+        setUltimoServiciosSQL
+
         
     } from "$lib/stores/sqlite/dbeventos"
     import {
@@ -40,12 +43,14 @@
         getAnimalesSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
-        updateLocalHistorialAnimalesSQLUser
+        updateLocalHistorialAnimalesSQLUser,
+        setUltimoAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    
-    
-    
+    import { loger } from '$lib/stores/logs/logs.svelte';
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { ACTUALIZACION } from '$lib/stores/constantes';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     let pre=""
 
@@ -55,7 +60,9 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_servicio = $state({})
     let comandos = $state([])
+    let getlocal = $state(false)
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -543,13 +550,22 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
-        
+        await setUltimoAnimalesSQL(db)
+        await setUltimoServiciosSQL(db)
         let animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
         animales = animales.filter(a=>a.active && a.cab ==  caboff.id)
         madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
@@ -596,24 +612,26 @@
         filterUpdate()
     }
     async function getDataSQL() {
+        getlocal = true
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_servicio = await getUltimoServiciosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
+                let antes = ultimo_servicio.ultimo
+                const cincoMinEnMs = ACTUALIZACION;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
+                    
                     await updateLocalSQL()
                 }
                 else{
@@ -684,6 +702,25 @@
     }
 </script>
 <Navbarr>
+    {#if modedebug}
+    <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_servicio.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-1 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Servicios</h1>

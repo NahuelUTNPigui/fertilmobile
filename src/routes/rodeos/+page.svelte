@@ -20,8 +20,12 @@
         addNewRodeoSQL,
         updateRodeoSQL,
         deleteRodeoSQL,
-        setRodeosSQL
+        setRodeosSQL,
+        setUltimoRodeosLotesSQL,
+        getUltimoRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
 
@@ -30,6 +34,7 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_rodeo = $state({})
     let comandos = $state([])
     //offline
     let ruta = import.meta.env.VITE_RUTA
@@ -44,6 +49,7 @@
     let rodeosrows = $state([])
     let buscar = $state("")
     let mostrarVacios =$state(true)
+    let animales = $state([])
 
 
     //Guardar
@@ -135,7 +141,13 @@
         }
     }
     function changeRodeo(){
-        rodeoscab = rodeos.filter(r=>r.cab==caboff.id)
+        rodeoscab = rodeos.filter(r=>r.cab==caboff.id).map(r=>({...r,total:0}))
+        
+        for(let i = 0;i<rodeoscab.length;i++){
+            
+            rodeoscab[i].total = animales.filter(a=>a.rodeo == rodeoscab[i].id).length
+        }
+
     }
     async function guardar(){
         if(coninternet.connected){
@@ -144,6 +156,8 @@
         else{
             await guardarOffline()
         }
+        changeRodeo()
+        filterUpdate()
         
     }
     function openEditModal(id){
@@ -215,7 +229,8 @@
         else{
             await guardarOffline(id)
         }
-        
+        changeRodeo()
+        filterUpdate()
 
     }
     function eliminarOnline(id) {
@@ -303,6 +318,8 @@
         else{
             eliminarOffline(id)
         }
+        changeRodeo()
+        filterUpdate()
     }
     function filterUpdate(){
         rodeosrows = rodeoscab
@@ -333,13 +350,14 @@
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
-        
+        animales = await getAnimalesCabSQL(db,caboff.id)
+        await setUltimoRodeosLotesSQL(db)
         rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
         changeRodeo()
         filterUpdate()
     }
     async function getLocalSQL() {
-        
+        animales = await getAnimalesCabSQL(db,caboff.id)
         let resrodeos = await getRodeosSQL(db)
         rodeos = resrodeos.lista
         changeRodeo()
@@ -350,20 +368,21 @@
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_rodeo = await getUltimoRodeosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
+                let antes = ultimo_rodeo.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
+                    
                     await updateLocalSQL()
                 }
                 else{

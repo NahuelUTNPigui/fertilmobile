@@ -191,7 +191,7 @@ export async function flushComandosSQL(db,pb) {
         listacomandos.push(c)
     }
     
-    //No puedo usar batchs porquequiero los 
+    //No puedo usar batchs porquequiero los id
     for(let i = 0;i<listacomandos.length;i++){
         let c = listacomandos[i]
         

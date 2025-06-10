@@ -5,7 +5,9 @@
         shorterWord,
         getEstadoColor,
         getEstadoNombre,
-        getSexoNombre
+        getSexoNombre,
+        getNombreLote,
+        getNombreRodeo,
     } = $props();
 
 </script>
@@ -35,11 +37,7 @@
                     <span >Lote:</span>
                     <span class="font-semibold">
                         {
-                            a.expand?
-                            a.expand.lote?
-                            a.expand.lote.nombre
-                            :""
-                            :""
+                            getNombreLote(a.lote)
                         }
                     </span> 
                     </div>
@@ -48,11 +46,7 @@
                     <span >Rodeo:</span> 
                     <span class="font-semibold">
                         {
-                            a.expand?
-                            a.expand.rodeo?
-                            a.expand.rodeo.nombre
-                            :""
-                            :""
+                            getNombreRodeo(a.rodeo)
                         }
                     </span>
                     

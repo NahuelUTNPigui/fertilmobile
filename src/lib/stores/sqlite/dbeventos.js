@@ -1,3 +1,5 @@
+import { loger } from "../logs/logs.svelte"
+
 export async function updateLocalEventosSQLUser(db,pb,userid) {
 
     let pesajes = await updateLocalPesajesSQLUser(db,pb,userid)
@@ -163,6 +165,11 @@ export async function getTratsSQL(db) {
     coleccion.lista = lista
     return coleccion
 }
+export async function getUltimoNacimientosSQL(db) {
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 3")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
 export async function getNacimientosSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 3")
     let fila = lista_json.values[0]
@@ -216,6 +223,11 @@ export async function updateLocalPesajesSQL(db,pb,cabid) {
     await setUltimoPesajesSQL(db)
     return pesajes
 }
+export async function getUltimoPesajeSQL(db) {
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 12")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
 //TACTOS
 export async function updateLocalTactosSQLUser(db,pb,userid) {
     const recordst = await pb.collection('tactos').getFullList({
@@ -254,6 +266,11 @@ export async function setTactosSQL(db,tactos) {
 export async function setUltimoTactosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 11`)
 }
+export async function getUltimoTactosSQL(db) {
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 11")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
 //SERVICIOS
 export async function updateLocalServiciosSQLUser(db,pb,userid) {
     const records = await pb.collection('servicios').getFullList({
@@ -289,7 +306,12 @@ export async function setServiciosSQL(db,servicios) {
 export async function setUltimoServiciosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 10`)
 }
-//INSEMINACIONES
+export async function getUltimoServiciosSQL(db){
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 10")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
+//INSEMINACIONES va a usar servicios para el internet
 export async function updateLocalInseminacionesSQLUser(db,pb,userid) {
     const records = await pb.collection('inseminacion').getFullList({
         sort: '-fechainseminacion ',
@@ -359,6 +381,11 @@ export async function setObservacionesSQL(db,observaciones) {
 export async function setUltimoObservacionesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 8`)
 }
+export async function getUltimoObservacionesSQL(db){
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 8")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
 //LOTES
 
 export async function updateLocalLotesSQLUser(db,pb,userid) {
@@ -416,6 +443,11 @@ export async function setLotesSQL(db,lotes) {
 }
 export async function setUltimoLotesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 7`)
+}
+export async function getUltimoLotesSQL(db){
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 7")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
 }
 //RODEOS
 export async function updateLocalRodeosSQLUser(db,pb,userid) { 
@@ -475,6 +507,11 @@ export async function setRodeosSQL(db,rodeos) {
 export async function setUltimoRodeosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 6`)
 }
+export async function getUltimoRodeosSQL(db){
+    let fila_json = await db.query("select id,ultimo from Colecciones where id = 6")
+    let fila = fila_json.values[0]
+    return fila
+}
 // LOTES Y RODEOS
 export async function getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,cabid) {
     let lotes = await getUpdateLocalLotesSQLUserCab(db,pb,usuarioid,cabid)
@@ -492,6 +529,11 @@ export async function getLotesRodeosSQL(db,cabid) {
         lotes,rodeos
     };
 }
+export async function setUltimoRodeosLotesSQL(db) {
+    await setUltimoLotesSQL(db)
+    await setUltimoRodeosSQL(db)
+}
+
 //TIPOS DE TRATAMIENTOS
 export async function updateLocalTiposTratSQLUser(db,pb,userid) {
     const genericos = await pb.collection('tipotratamientos').getFullList({
@@ -566,6 +608,10 @@ export async function addNewTrataSQL(db,trat) {
     let trats = await getTratsSQL(db)
     let lista = trats.lista
     lista.push(trat)
+    loger.addLog({
+        time:Date.now(),
+        text:JSON.stringify(trat,null,2)
+    })
     await setTratsSQL(db,lista)
 }
 export async function setTratsSQL(db,trats) {
@@ -573,6 +619,11 @@ export async function setTratsSQL(db,trats) {
 }
 export async function setUltimoTratsSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 4`)
+}
+export async function getUltimoTratsSQL(db) {
+    let fila_json = await db.query("select id,ultimo from Colecciones where id = 4")
+    let fila = fila_json.values[0]
+    return fila
 }
 //NACIMIENTOS
 export async function updateLocalNacimientosSQLUser(db,pb,userid) {

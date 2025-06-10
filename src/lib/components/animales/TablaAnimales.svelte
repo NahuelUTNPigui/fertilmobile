@@ -6,6 +6,8 @@
         getEstadoColor,
         getEstadoNombre,
         getSexoNombre,
+        getNombreLote,
+        getNombreRodeo,
         ordenarAnimales
     } = $props();
 
@@ -84,20 +86,13 @@
             </td>
             <td class="text-base p-3 ">
                 {
-                    a.expand?
-                    a.expand.lote?
-                    a.expand.lote.nombre
-                    :""
-                    :""
+                    getNombreLote(a.lote)
+                    
                 }
             </td>
             <td class="text-base p-3 ">
                 {
-                    a.expand?
-                    a.expand.rodeo?
-                    a.expand.rodeo.nombre
-                    :""
-                    :""
+                    getNombreRodeo(a.rodeo)
                 }
             </td>
             

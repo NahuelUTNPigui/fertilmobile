@@ -14,8 +14,8 @@
     import AgregarAnimal from "$lib/components/eventos/AgregarAnimal.svelte";
     import cuentas from "$lib/stores/cuentas";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
-    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
     //offline
     import { openDB } from "$lib/stores/sqlite/main";
     import { Network } from "@capacitor/network";
@@ -28,6 +28,8 @@
         getAnimalesSQL,
         setUltimoAnimalesSQL,
         updateLocalAnimalesSQLUser,
+        
+
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -38,10 +40,12 @@
         getTotalSQL,
         setTotalSQL,
         setUltimoTotalSQL,
+
     } from "$lib/stores/sqlite/dbtotal";
     import {
         getUserOffline,
         setDefaultUserOffline,
+
     } from "$lib/stores/capacitor/offlineuser";
     import {
         getCabOffline,
@@ -53,16 +57,21 @@
         addNewObservacionSQL,
         getObservacionesSQL,
         updateLocalObservacionesSQLUser,
+        setUltimoObservacionesSQL,
+        getUltimoObservacionesSQL
     } from "$lib/stores/sqlite/dbeventos";
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import Animal from "$lib/svgs/animal.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
     let caboff = $state({});
     let coninternet = $state({});
+    let ultimo_observaciones = $state({});
+    let getlocal = $state(false)
     let comandos = $state([]);
     //online
 
@@ -620,7 +629,15 @@
         await getAnimales();
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline();
         caboff = await getCabOffline();
         usuarioid = useroff.id;
@@ -632,7 +649,8 @@
         animalescab = animales.filter((a) => a.cab == caboff.id);
     }
     async function updateLocalSQL() {
-
+        await setUltimoObservacionesSQL(db)
+        await setUltimoAnimalesSQL(db)
         observaciones = await updateLocalObservacionesSQLUser(
             db,
             pb,
@@ -658,6 +676,7 @@
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
+        let ultimo_observaciones = await getUltimoObservacionesSQL(db)
         comandos = rescom.lista;
         
         if (coninternet.connected) {
@@ -669,14 +688,14 @@
                         text:"updatelocalsql"
                     })
                 }
-                await setInternetSQL(db, 1, Date.now());
+                await setInternetSQL(db, 1, 0);
                 await updateLocalSQL();
             } else {
                 let ahora = Date.now();
-                let antes = lastinter.ultimo;
-                const cincoMinEnMs = 300000;
+                let antes = ultimo_observaciones.ultimo;
+                const cincoMinEnMs = ACTUALIZACION;
                 if (ahora - antes >= cincoMinEnMs) {
-                    await setInternetSQL(db, 1, Date.now());
+                    
                     await updateLocalSQL();
                     
                 } else {
@@ -703,6 +722,25 @@
 </script>
 
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_observaciones.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-2 lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Observaciones</h1>

@@ -22,7 +22,9 @@
         addnewLoteSQL,
         updateLoteSQL,
         deleteLoteSQL,
-        setLotesSQL
+        setLotesSQL,
+        setUltimoRodeosLotesSQL,
+        getUltimoRodeosSQL
 
     } from "$lib/stores/sqlite/dbeventos"
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
@@ -36,6 +38,7 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_rodeo = $state({})
     let comandos = $state([])
     let animales = $state([])
 
@@ -101,13 +104,7 @@
             
             record.total = 0
             lotes.push(record)
-            onChangeLote()
-            
             await setLotesSQL(db,lotes)
-            
-            ordenar(lotes)
-            
-            filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
         }catch(err){
             console.error(err)
@@ -137,10 +134,10 @@
         await setComandosSQL(db,comandos)
         lotes.push(data)
         await setLotesSQL(db,lotes)
-        onChangeLote()
         
-        ordenar(lotes)
-        filterUpdate()
+        
+        
+        
     }
     async function guardar() {
         if(coninternet.connected){
@@ -149,6 +146,9 @@
         else{
             await guardarOffline()
         }
+        onChangeLote()
+        filterUpdate()
+        ordenar(lotes)
     }
     function contarAnimales(){
         for(let i = 0;i<lotes.length;i++){
@@ -192,10 +192,7 @@
             
             
             await setLotesSQL(db,lotes)
-            onChangeLote()
-            ordenar(lotes)
             
-            filterUpdate()
             Swal.fire("Éxito editar","Se pudo editar el lote","success")
         }
         catch(err){
@@ -224,9 +221,7 @@
         lotes[idx].nombre = data.nombre
         comandos.push(comando)
         await setLotesSQL(db,lotes)
-        onChangeLote()
-        ordenar(lotes)
-        filterUpdate()
+        
         await setComandosSQL(db,comandos)
     }
     async function editar(idlote){
@@ -236,7 +231,9 @@
         else{
             await  editarOffline(idlote)
         }
-        
+        onChangeLote()
+        filterUpdate()
+        ordenar(lotes)
 
     }
     function eliminarOffline(id) {
@@ -265,10 +262,10 @@
                     }
                     
                     lotes = lotes.filter(r=>r.id!=idlote)
-                    onChangeLote()
-                    ordenar(lotes)
-                    filterUpdate()
                     
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    await setLotesSQL(db,lotes)
                     Swal.fire('Lote eliminado!', 'Se eliminó el lote correctamente.', 'success');
                 }
                 catch(e){
@@ -318,6 +315,9 @@
         else{
             eliminarOffline(id)
         }
+        onChangeLote()
+        ordenar(lotes)
+        filterUpdate()
     }
     function filterUpdate(){
         lotesrows = lotescab
@@ -348,6 +348,7 @@
     }
     async function getAnimales() {
         animales = await getAnimalesCabSQL(db,caboff.id)
+        
     }
     async function getLocalSQL() {
         await getAnimales()
@@ -357,6 +358,7 @@
         filterUpdate()
     }
     async function updateLocalSQL() {
+        await setUltimoRodeosLotesSQL(db)
         await getAnimales()
         lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
         onChangeLote()
@@ -367,20 +369,21 @@
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        //Uso rodeo como guia
+        ultimo_rodeo = await getUltimoRodeosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             //await flushComandosSQL(db)
             //comandos = []
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
+                let antes = ultimo_rodeo.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{

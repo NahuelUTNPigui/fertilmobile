@@ -23,6 +23,11 @@ export async function getAnimalSQLByID(db,id) {
 export async function setAnimalesSQL(db,animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 1`)
 }
+export async function getUltimoAnimalesSQL(db) {
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 1")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
+}
 export async function setUltimoAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 1`)
 }

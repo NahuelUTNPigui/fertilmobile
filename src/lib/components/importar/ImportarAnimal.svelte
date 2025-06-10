@@ -455,10 +455,11 @@
             
         }
         else{
-            let procesodata = await procesoOffline(animalesimportar,nuevosanimales)
-            errores = procesodata.errores
-            await concatComandosSQL(db,procesodata.comandos)
-            await setAnimalesSQL(db,animales)
+            Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
+            //let procesodata = await procesoOffline(animalesimportar,nuevosanimales)
+            //errores = procesodata.errores
+            //await concatComandosSQL(db,procesodata.comandos)
+            //await setAnimalesSQL(db,animales)
 
         }
         

@@ -62,7 +62,7 @@
         if(servicio.fechadesdeserv==""){
             servicio.botonhabilitadoser = false
         }
-        if(servicio.idanimalser==""){
+        if(!agregaranimal && servicio.idanimalser==""){
             servicio.botonhabilitadoser = false
         }
     }
