@@ -170,8 +170,8 @@
                 m.rodeo = ms[0].rodeo
             }
             let tipomadre = m.categoria
-            let esnuevopadre = padre.split("_").length>0
-            let esnuevomadre = m.id.split("_").length>0
+            let esnuevopadre = padre.split("_").length > 1
+            let esnuevomadre = m.id.split("_").length > 1
             let dataparicion = {
                 madre:m.id,
                 padre,
@@ -214,8 +214,8 @@
                 }
                 futuroanimal.id = dataanimal.id
                 futuroanimal.caravana = dataanimal.caravana
-                let nlote = m.lote.split("_").length>0
-                let nrodeo = m.rodeo.split("_").length>0
+                let nlote = m.lote.split("_").length > 1
+                let nrodeo = m.rodeo.split("_").length > 1
                 let comandoani = {
                     tipo:"add",
                     coleccion:"animales",
@@ -473,8 +473,8 @@
             observacion,    
         }
         try{
-            let esnuevopadre = padre.split("_").length>0
-            let esnuevomadre = m.id.split("_").length>0
+            let esnuevopadre = padre.split("_").length > 1
+            let esnuevomadre = m.id.split("_").length > 1
             let nidx = nacimientos.findIndex(n=>n.id == idnacimiento)
             if (nidx != -1){
                 let comandonac = {
@@ -512,7 +512,7 @@
             }
             let aidx = animales.findIndex(a=>a.id == idanimal)
             if(aidx != -1){
-                let esnuevonacimiento= idnacimiento.split("_").length>0
+                let esnuevonacimiento= idnacimiento.split("_").length > 1
                 let comandoani = {
                     tipo:"update",
                     coleccion:"animales",
@@ -724,7 +724,7 @@
                     await setNacimientosSQL(db,nacimientos)
                     filterUpdate()
                     if(idanimal != ""){
-                        let esnuevonacimiento= idnacimiento.split("_").length>0
+                        let esnuevonacimiento= idnacimiento.split("_").length > 1
                         let comandoani = {
                             tipo:"update",
                             coleccion:"animales",

@@ -1,4 +1,5 @@
 import { getAnimalSQLByID } from "$lib/stores/sqlite/dbanimales"
+//dEbo guardar
 export async function guardarHistorialOffline(db,idanimal,user) {
     let a = await getAnimalSQLByID(db,idanimal)
     let histo = {
@@ -28,12 +29,12 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         camposprov:""
     }
 }
+//Debo guardar el historial en la lista de historiales
 export async function guardarHistorial(pb,idanimal){
     let record = await pb.collection("animales").getOne(idanimal,{expand:"cab"})
     let histo ={
         animal:idanimal,
         caravana:record.caravana,
-        
         user:record.expand.cab.user,
         active:true,
         delete:false,

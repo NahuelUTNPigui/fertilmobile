@@ -226,7 +226,7 @@
                 }
                 try{
 
-                    let nanimal = animal.split("_").length>0
+                    let nanimal = animal.split("_").length > 1
                     let comando = {
                         tipo:"update",
                         coleccion:"tactos",
@@ -430,7 +430,7 @@
                nombreveterinario,
                id:idtacto
             }
-            let nanimal = animal.split("_").length>0
+            let nanimal = animal.split("_").length > 1
             let comando = {
                 tipo:"update",
                 coleccion:"tactos",

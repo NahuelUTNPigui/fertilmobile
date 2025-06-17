@@ -17,33 +17,32 @@
     import PredictSelect from "../PredictSelect.svelte";
     import {shorterWord} from "$lib/stringutil/lib"
     //ofline
+    //Creo que no harai falta
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
-        updateLocalLotesSQL,
-        getLotesSQL,
-        updateLocalRodeosSQL,
-        getRodeosSQL,
-        addNewNacimientoSQL
+        addNewNacimientoSQL,
+
+        editarNacimientoSQL
 
     } from "$lib/stores/sqlite/dbeventos";
     import {
-        updateLocalAnimalesSQL,
-        getAnimalesSQL,
         editarAnimalSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
-    let db = $state(null)
+    //let db = $state(null)
     let usuarioid = $state("")
-    let useroff = $state({})
-    let caboff = $state({})
-    let coninternet = $state({})
-    let comandos = $state([])
+    //let useroff = $state({})
+    //let caboff = $state({})
+    //let coninternet = $state({})
+    //let comandos = $state([])
     let {
         caravana,
         rodeo,
@@ -56,6 +55,14 @@
         categoria,
         prenada,
         rp,
+        lotes,
+        rodeos,
+        coninternet,
+        useroff,
+        caboff,
+        animales,
+        comandos=$bindable([]),
+        db,
         modohistoria=$bindable()
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
@@ -72,7 +79,7 @@
     let nombrerodeo = $state("")
     let nombrelote = $state("")
     let modoedicion = $state(false)
-    let animales = $state([])
+    //let animales = $state([])
     let cargadoanimales = $state(false)
     //Datos edicion
     let pesoviejo = $state("")
@@ -106,8 +113,8 @@
     let tipomadre = $state("")
     
     let observacion = $state("") 
-    let rodeos = $state([])
-    let lotes = $state([])
+    let rodeosrows = $state([])
+    let lotesrows = $state([])
     
     function onwrite(){
 
@@ -249,7 +256,13 @@
                 observacion,
                 cab:caboff.id
             }
-            const recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            let recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            recordparicion = {
+                animalid:id,
+                caravana:caravana,
+                ...recordparicion,
+                
+            }
             await addNewNacimientoSQL(db,recordparicion)
             let datanimal = {
                 nacimiento:recordparicion.id,
@@ -269,21 +282,23 @@
                 categoria,
                 animal:id
             }
+            
+            
             const record = await pb.collection('animales').update(id, datanimal);
             //NO va porque tengo que evaluar las fechas
             await pb.collection("historialanimales").create(datahistorial)
-            await guardarHistorial(pb,madre)
-            // Pero si las fechas no me coinciden, si guardo un nacimiento viejo
-            let datamadre = {
-                prenada : 0
-            }
-            //Si guardo un nacimiento viejo, no deberia cambiar la categoria
-            if(tipomadre == "vaquillona"){
-                datamadre.categoria = "vaca"
-                
-            }
-            
-            await pb.collection('animales').update(madre, datamadre);
+            //await guardarHistorial(pb,madre)
+            //// Pero si las fechas no me coinciden, si guardo un nacimiento viejo
+            //let datamadre = {
+            //    prenada : 0
+            //}
+            ////Si guardo un nacimiento viejo, no deberia cambiar la categoria
+            //if(tipomadre == "vaquillona"){
+            //    datamadre.categoria = "vaca"
+            //    
+            //}
+            //
+            //await pb.collection('animales').update(madre, datamadre);
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
             connacimiento = true
             nacimiento = recordparicion
@@ -306,8 +321,7 @@
             observacion,
             cab:caboff.id
         }
-        await addNewNacimientoSQL(db,dataparicion)
-
+        
         //Comandos
         let comandonac = {
             tipo:"add",
@@ -320,6 +334,14 @@
         }
         comandos.push(comandonac)
         await setComandosSQL(db,comandos)
+        dataparicion = {
+            animalid:id,
+            caravana:caravana,
+            ...dataparicion
+        }
+        await addNewNacimientoSQL(db,dataparicion)
+        connacimiento = true
+        nacimiento = recordparicion
         Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
     }
     async function guardarNacimiento() {
@@ -330,8 +352,36 @@
             await guardarNaciminentoOffline()
         }
     }
-    async function editarNacimientoOfline() {
-        
+    async function editarNacimientoOffline() {
+        let dataparicion = {
+            madre,
+            padre,
+            fecha:fecha + " 03:00:00",
+            nombremadre,
+            nombrepadre,
+            observacion
+        }  
+        let nuevomadre = madre.split("_")[0]=="nuevo"
+        let nuevopadre = padre.split("_")[0]=="nuevo"
+        //Comandos
+        let comandonac = {
+            tipo:"update",
+            coleccion:"nacimientos",
+            data:{...dataparicion},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov:nuevomadre && nuevopadre?"madre,padre":nuevomadre?"madre":nuevopadre?"padre":""        
+        }
+        comandos.push(comandonac)
+        await setComandosSQL(db,comandos)
+        dataparicion = {
+            animalid:id,
+            caravana:caravana,
+            ...dataparicion
+        }
+        await editarNacimientoSQL(db,dataparicion,id)
+        Swal.fire("Éxito editar","Se pudo editar el nacimiento","success")
     }
     async function editarNacimientoOnline() {
         let data = {
@@ -341,6 +391,7 @@
             nombremadre,
             nombrepadre,
             observacion,
+            caravana
         }
         let datahistorial = {
             prenada,
@@ -357,20 +408,30 @@
             animal:id
         }
         try{
-            const recordparicion = await pb.collection('nacimientos').update(idnacimiento,data);
+            let recordparicion = await pb.collection('nacimientos').update(idnacimiento,data);
+            recordparicion = {
+                ...recordparicion,
+                animalid:id,
+                caravana:caravana,
+            }
+            await editarNacimientoSQL(db,recordparicion,id)
             await pb.collection("historialanimales").create(datahistorial)
-            
+            Swal.fire("Éxito editar","Se pudo editar el nacimiento","success")
         }
         catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err,null,2))
+            }
             console.error(err)
+            Swal.fire("Error editar","No se pudo editar el nacimiento","error")
         }
     }
     async function editarNacimiento() {
         if(coninternet.connected){
-            await editarNacimientoOfline()
+            await editarNacimientoOnline()
         }
         else{
-            await editarNacimientoOnline()
+            await editarNacimientoOffline()
         }
     }
     function getNombreMadre(){
@@ -389,7 +450,7 @@
             peso,
             sexo,
             caravana,
-            rodeo:rodeo,
+            rodeo,
             lote,
             prenada,
             categoria,
@@ -419,6 +480,7 @@
             else{
                 nombrelote = ""
             }
+            await editarAnimalSQL(db,id,data)
             Swal.fire("Éxito editar","Se pudo editar el animal","success")
             modoedicion = false
 
@@ -439,6 +501,9 @@
             rp
         }
         await editarAnimalSQL(db,id,data)
+        let nuevolote = lote.split("_").length > 1
+        let nuevorodeo = rodeo.split("_").length > 1
+        let camposprov = `${nuevolote && nuevorodeo?"lote,rodeo":nuevolote?"lote":nuevorodeo?"rodeo":""}`
         let comando = {
             tipo:"update",
             coleccion:"animales",
@@ -446,10 +511,13 @@
             hora:Date.now(),
             prioridad:2,
             idprov:id,
+            camposprov
+            
         }
         comandos.push(comando)
+        //deo guardar el historial
         await setComandosSQL(db,comandos) 
-
+        modoedicion = false
     }
     async function editarAnimal(){
         if(coninternet.connected){
@@ -480,9 +548,9 @@
         nuevoModal.close()
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
-        useroff = await getUserOffline()
-        caboff = await getCabOffline()
+        //coninternet = await Network.getStatus();
+        //useroff = await getUserOffline()
+        //caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     function processAnimales(){
@@ -508,8 +576,7 @@
         processAnimales()
 
     }
-    
-    async function getLocalSQL() {
+    async function getLocalSQL1() {
         let reslotes = await getLotesSQL(db)
         lotes = reslotes.lista
         let resrodeo = await getRodeosSQL(db)
@@ -518,7 +585,34 @@
         animales = resanimales.lista 
         processAnimales()
     }
-    async function getDataSQL() {
+    async function getLocalSQL() {
+        
+        id = $page.params.slug
+        processAnimales()  
+        nombrelote = ""
+        nombrerodeo = ""
+        if(lote != ""){
+            let l_idx = lotes.findIndex(l=>l.id==lote)
+            if(l_idx != -1){
+                nombrelote = lotes[l_idx].nombre
+            }
+        }
+        if(rodeo != ""){
+            let r_idx = rodeos.findIndex(r=>r.id == rodeo)
+            if(r_idx != -1){
+                nombrerodeo = rodeos[r_idx].nombre
+            }
+        }
+        
+        listamadres = animales.filter(a=>a.cab==caboff.id && a.active && a.sexo == "H" && a.id != id).map(a=>({id:a.id,nombre:a.caravana}))   
+        listapadres = animales.filter(a=>a.cab==caboff.id && a.active && a.sexo == "M" && a.id != id).map(a=>({id:a.id,nombre:a.caravana}))
+        //if(modedebug){
+        //    loger.addTextLogArray(animales)
+        //    loger.addTextLogArray(listamadres)
+        //    loger.addTextLogArray(listapadres)
+        //}
+    }
+    async function getUpdateDataSQL() {
         db = await openDB()
         id = $page.params.slug
         //Reviso el internet
@@ -549,7 +643,11 @@
             await setInternetSQL(db,0,Date.now())
         }
     }
+    async function getDataSQL() {
+        await getLocalSQL()
+    }
     onMount(async ()=>{
+        
         await initPage()
         await getDataSQL()
         if(connacimiento){
@@ -585,13 +683,12 @@
                 ${estilos.basico} ${estilos.chico}
                 ${estilos.btnsecondary}
                 ${modoedicion?"hidden":""}
-                `}
-                aria-label="Editar"
+            `}
+            aria-label="Editar"
         >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
             </svg>
-          
         </button>    
     </div>
 </div>
@@ -926,93 +1023,18 @@
                     bind:value={fecha}
                 />
             </label>
-            <div class="hidden">
-                <label for = "nombremadre" class="label">
-                    <span class="label-text text-base">Nombre madre</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombremadre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none 
-                            focus:ring-2 focus:ring-green-500 
-                            focus:border-green-500
-                            w-full 
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombremadre}
-                    />
-                </label>
-                <label for = "madre" class="label">
-                    <span class="label-text text-base">Madre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={madre}
-                        onchange={getNombreMadre}
-                    >
-                        {#each madres as m}
-                            <option value={m.id}>{m.caravana}</option>    
-                        {/each}
-                    </select>
-                </label>
-            </div>
-            <div class="hidden">
-                <label for = "nombrepadre" class="label">
-                    <span class="label-text text-base">Nombre padre</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombrepadre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none 
-                            focus:ring-2 focus:ring-green-500 
-                            focus:border-green-500
-                            w-full 
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombrepadre}
-                    />
-                </label>
-                <label for = "padre" class="label">
-                    <span class="label-text text-base">Padre</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={padre}
-                        onchange={getNombrePadre}
-                    >
-                        {#each padres as p}
-                            <option value={p.id}>{p.caravana}</option>    
-                        {/each}
-                    </select>
-                </label>
-            </div>
             {#if cargadoanimales}
-                <PredictSelect bind:valor={madre} etiqueta = {"Madre"} bind:cadena={nombremadre} lista = {listamadres} {onelegir} {onwrite}/>
-                <PredictSelect bind:valor={padre} etiqueta = {"Padre"} bind:cadena={nombrepadre} lista = {listapadres} {onelegir} {onwrite}/>
+                <PredictSelect 
+                    bind:valor={madre} etiqueta = {"Madre"} 
+                    bind:cadena={nombremadre} lista = {listamadres} 
+                    {onelegir} {onwrite}
+                />
+                <PredictSelect 
+                    bind:valor={padre} etiqueta = {"Padre"} 
+                    bind:cadena={nombrepadre} 
+                    lista = {listapadres} 
+                    {onelegir} {onwrite}
+                />
             {/if}
             <label class="form-control">
                 <div class="label">

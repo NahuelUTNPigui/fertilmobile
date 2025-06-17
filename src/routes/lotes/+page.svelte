@@ -151,9 +151,9 @@
         ordenar(lotes)
     }
     function contarAnimales(){
-        for(let i = 0;i<lotes.length;i++){
-            let total = animales.filter(an=>an.lote==lotes[i].id).length
-            lotes[i].total = total
+        for(let i = 0;i<lotescab.length;i++){
+            let total = animales.filter(an=>an.lote==lotescab[i].id).length
+            lotescab[i].total = total
         }
     }
     function onChangeLote(){

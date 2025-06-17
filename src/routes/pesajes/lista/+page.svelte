@@ -97,7 +97,7 @@
             pesonuevo
         }
         try{
-            let idx_pesaje = pesajes.findIndex(p=>pesajes)
+            let idx_pesaje = pesajes.findIndex(p=>p.id == idpesaje)
             pesajes[idx_pesaje].fecha = data.fecha
             pesajes[idx_pesaje].pesonuevo = data.pesonuevo
             onchangePesajes()
@@ -111,6 +111,8 @@
                 idprov:idpesaje,
                 camposprov:""
             }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
         }  
         catch(err){

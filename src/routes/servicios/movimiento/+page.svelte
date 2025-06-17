@@ -637,8 +637,8 @@
                 if(fechahastaserv != ""){
                     dataser.fechahasta = fechahastaserv + " 03:00:00"
                 }
-                let nmadre = dataser.madre.split("_").length>0
-                let npadres = dataser.padres.split("_").length>0
+                let nmadre = dataser.madre.split("_").length > 1
+                let npadres = dataser.padres.split("_").length > 1
                 let comando = {
                     tipo:"add",
                     coleccion:"servicios",
@@ -752,8 +752,8 @@
             }
             try{
                 inseminaciones.push(data)
-                let nmadre = data.animal.split("_").length>0
-                let npadre = data.padre.split("_").length>0
+                let nmadre = data.animal.split("_").length > 1
+                let npadre = data.padre.split("_").length > 1
                 let comando = {
                     tipo:"add",
                     coleccion:"inseminacion",

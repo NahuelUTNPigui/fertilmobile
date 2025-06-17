@@ -152,7 +152,7 @@ async function addComando(pb,c,tablaids) {
 async function modComando(pb,c,tablaids) {
     let id = c.idprov
     // Aca veo si editor un registro local y por ende necesito revisar el id asignado
-    if(id.split("_").length > 0){
+    if(id.split("_").length > 1){
         let id = tablaids[id]
     }
     //Campos deberia tener el nombre del atributo
@@ -172,7 +172,7 @@ async function modComando(pb,c,tablaids) {
 async function delComando(pb,c,tablaids) {
     let id = c.idprov
     // Aca veo si editor un registro local y por ende necesito revisar el id asignado
-    if(id.split("_").length > 0){
+    if(id.split("_").length > 1){
         let id = tablaids[id]
     }
     let coleccion = c.coleccion

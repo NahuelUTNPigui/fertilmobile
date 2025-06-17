@@ -348,7 +348,7 @@
                     animales[aidx].peso = ps.pesonuevo
                 }
                 let idanimal = aidx!=-1?animales[aidx]:""
-                let nanimal = idanimal.split("_").length>0
+                let nanimal = idanimal.split("_").length > 1
                 let comandopesaje = {
                     tipo:"add",
                     coleccion:"pesaje",

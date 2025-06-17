@@ -7,7 +7,7 @@
     import Swal from "sweetalert2";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import {addNewTrataSQL} from '$lib/stores/sqlite/dbeventos';
+    import {addNewTrataSQL,setTratsSQL} from '$lib/stores/sqlite/dbeventos';
     let{
         cabid,categoria,
         caravana=$bindable(""),
@@ -20,6 +20,7 @@
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
+    let tratamientosrows = $state([])
 
     let id = $state("")
     //Nuevo tratamiento
@@ -54,6 +55,171 @@
         fecha = ""
         nuevoTratamiento.showModal()
     }
+
+    async function eliminarTratamientoOffline() {
+        Swal.fire({
+            title: 'Eliminar tratamiento',
+            text: '¿Seguro que deseas eliminar el tratamiento?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result=>{
+            if(result.value){
+                
+                let data = {active:false}
+                try{
+                    
+                    tratamientos = tratamientos.filter(t=>t.id != id)
+                    await setTratsSQL(db,tratamientos)
+                    onChangeTrats()
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"tratamientos",
+                        data:{...dataparicion},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:id,
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db.comandos)
+                    editModal.close()
+                    Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
+                }
+                catch(err){
+                    console.error(err)
+                    editModal.close()
+                    Swal.fire("Error eliminar","Hubo un error para eliminar el tratamiento","error")
+                }
+
+
+            }
+        })
+    }
+    async function eliminarTratamientoOnline() {
+        Swal.fire({
+            title: 'Eliminar tratamiento',
+            text: '¿Seguro que deseas eliminar el tratamiento?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result=>{
+            if(result.value){
+                
+                let data = {active:false}
+                try{
+                    await pb.collection("tratamientos").update(id,data)
+                    tratamientos = tratamientos.filter(t=>t.id != id)
+                    await setTratsSQL(db,tratamientos)
+                    onChangeTrats()
+                    editModal.close()
+                    Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
+                }
+                catch(err){
+                    console.error(err)
+                    editModal.close()
+                    Swal.fire("Error eliminar","Hubo un error para eliminar el tratamiento","error")
+                }
+            }
+        })
+    }
+    async function eliminarTratamiento() {
+        if(coninternet.connected){
+            await eliminarTratamientoOnline()
+        }
+        else{
+            await eliminarTratamientoOffline()
+        }
+        
+    }
+    //Editar
+    async function editarTratamientoOffline() {
+        try{
+            let data = {
+                //animal,
+                categoria,
+                tipo,
+                observacion,
+                fecha:fecha +" 03:00:00",
+                id
+            }
+            let tidx = tratamientos.findIndex(t=>t.id==idtipotratamiento)
+            let tt_idx = tipostrat.findIndex(tipo=>t.id == tipo)
+            if(tidx != -1){
+                tratamientos[tidx].categoria = data.categoria
+                tratamientos[tidx].tipo = data.tipo
+                tratamientos[tidx].observacion = data.observacion
+                tratamientos[tidx].fecha = data.fecha
+                //Muy confuso pero basicamente si existe el tipo, fijarse si es nuevo, sino es falso tanto como viejo como inexistente
+                let ntipo = tips[0]?tips[0].split("_").length > 1:false
+                let comando={
+                    tipo:"update",
+                    coleccion:"tratamientos",
+                    data:{...data},
+                    hora:Date.now(),
+                    prioridad:2,
+                    idprov:idtratamiento,
+                    camposprov:ntipo?"tipo":""
+                }
+                comando.push(comando)
+                await setComandosSQL(db,comandos)
+                
+                if(tt_idx != -1){
+                    tratamientos[t_idx].expand.tipo.id = tipo
+                    tratamientos[t_idx].expand.tipo.nombre = tipotratamientos[tt_idx].nombre
+                }
+                await setTratsSQL(db,tratamientos)
+                
+            }
+            onChangeTrats()
+            Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar","Hubo un error para editar el tratamiento","error")
+        }
+    }
+    async function editarTratamientoOnline() {
+        try{
+            let data = {
+                //animal,
+                categoria,
+                tipo,
+                observacion,
+                fecha:fecha +" 03:00:00"
+            }
+            let t_idx = tratamientos.findIndex(t=>t.id==idtratamiento)  
+            await pb.collection("tratamientos").update(idtratamiento,data)
+            tratamientos[t_idx]={
+                ...tratamientos[t_idx],
+                ...data,
+            }
+            let tt_idx = tipostrat.findIndex(tipo=>t.id == tipo)
+            if(tt_idx != -1){
+                tratamientos[t_idx].expand.tipo.id = tipo
+                tratamientos[t_idx].expand.tipo.nombre = tipostrat[tt_idx].nombre
+            }
+            await setTratsSQL(db,tratamientos)
+            onChangeTrats()
+            Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar","Hubo un error para editar el tratamiento","error")
+        }
+    }
+    async function editarTratamiento() {
+        if(coninternet.connected){
+            await editarTratamientoOnline()
+        }
+        else{
+            await editarTratamientoOffline()
+        }
+        editModal.close()
+    }
+
     async function guardarTratamientoOnline(){
         try{
             let data = {
@@ -66,12 +232,34 @@
                 cab:cabid
             }
             
-            const  record = await pb.collection("tratamientos").create(data)
-            await getTratamientos()
+            let record = await pb.collection("tratamientos").create(data)
+            let tt_idx = tipostrat.findIndex(tt=>tt.id == tipo)
+            record= {
+                ...record,
+                expand:{
+                    animal:{
+                        id,caravana
+                    },
+                    tipo:{
+                        id:"",
+                        nombre:""
+                    }
+
+                }
+            }
+            if(tt_idx != -1){
+                record.expand.tipo.id = tipostrat[tt_idx].id
+                record.expand.tipo.nombre = tipostrat[tt_idx].nombre
+            }
+            tratamientos.push(record)
+            await addNewTrataSQL(db,record)
+            onChangeTrats()
+            
             Swal.fire("Éxito guardar","Se logró guardar el tratamiento","success")
         }
         catch(err){
             console.error(err)
+            Swal.fire("Error guardar","No se logró guardar el tratamiento","success")
         }
     }
     async function guardarTratamientoOffline(){
@@ -84,19 +272,11 @@
             fecha:fecha +" 03:00:00",
             active : true,
             observacion,
-            cab:cabid,
-            expand:{
-                animal:{
-                    caravana
-                },
-                tipo:{
-                    nombre:tipotratamientos.filter(t=>t.id==tipo)[0].nombre
-                }
-            }
+            cab:cabid
         }
-        await addNewTrataSQL(db,data)
-        tratamientos.push(data)
-        let nanimal = id.split("_").length>0
+        
+        
+        let nanimal = id.split("_").length>1
         let comando = {
             tipo:"add",
             coleccion:"tratamientos",
@@ -108,6 +288,23 @@
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
+        data = {
+            ...data,
+            expand:{
+                animal:{
+                    id,
+                    caravana
+                },
+                tipo:{
+                    id:tipo,
+                    nombre:tipotratamientos.filter(t=>t.id==tipo)[0].nombre
+                }
+            }
+
+        }
+        await addNewTrataSQL(db,data)
+        tratamientos.push(data)
+        onChangeTrats()
         Swal.fire("Éxito guardar","Se logró guardar el tratamiento","success")
     }
     async function guardarTratamiento(){
@@ -119,8 +316,12 @@
         }
         nuevoTratamiento.close()
     }
+    function onChangeTrats(){
+        tratamientosrows = tratamientos.filter(t=>t.active && t.animal == id)
+    }
     onMount(async ()=>{
         id = $page.params.slug
+        onChangeTrats()
     })
 </script>
 <div class="w-full flex justify-items-start gap-2">
@@ -150,7 +351,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each tratamientos as t}
+                    {#each tratamientosrows as t}
                         <tr onclick={()=>openEditModal(t.id)} class=" hover:bg-gray-200 dark:hover:bg-gray-900">
                             <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(t.fecha).toLocaleDateString()}</td>
                             <td class="text-base mx-1 px-1">
@@ -164,7 +365,7 @@
             </table>
         </div> 
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each tratamientos as t}
+            {#each tratamientosrows as t}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openEditModal(t.id)}>
                     <div class="block p-4">

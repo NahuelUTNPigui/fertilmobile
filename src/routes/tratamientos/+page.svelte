@@ -244,18 +244,14 @@
                 id:idtratamiento
             }
             let tidx = tratamientos.findIndex(t=>t.id==idtipotratamiento)
-            let tips = tipotratamientos.filter(ti=>ti.id == tipo)
+            let tt_idx = tipotratamientos.findIndex(tipo=>t.id == tipo)
             if(tidx != -1){
                 tratamientos[tidx].categoria = data.categoria
                 tratamientos[tidx].tipo = data.tipo
                 tratamientos[tidx].observacion = data.observacion
                 tratamientos[tidx].fecha = data.fecha
-                if(tips.length>0){
-                    tratamientos[tidx].expand = {tipo:tips[0]}
-                }
-                await setTratsSQL(db,tratamientos)
                 //Muy confuso pero basicamente si existe el tipo, fijarse si es nuevo, sino es falso tanto como viejo como inexistente
-                let ntipo = tips[0]?tips[0].split("_").length>0:false
+                let ntipo = tips[0]?tips[0].split("_").length > 1:false
                 let comando={
                     tipo:"update",
                     coleccion:"tratamientos",
@@ -267,6 +263,13 @@
                 }
                 comando.push(comando)
                 await setComandosSQL(db,comandos)
+
+                if(tt_idx != -1){
+                    tratamientos[t_idx].expand.tipo.id = tipo
+                    tratamientos[t_idx].expand.tipo.nombre = tipotratamientos[tt_idx].nombre
+                }
+                await setTratsSQL(db,tratamientos)
+                
             }
             onChangeTratamientos()
             Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
@@ -290,6 +293,11 @@
             tratamientos[t_idx]={
                 ...tratamientos[t_idx],
                 ...data,
+            }
+            let tt_idx = tipotratamientos.findIndex(tipo=>t.id == tipo)
+            if(tt_idx != -1){
+                tratamientos[t_idx].expand.tipo.id = tipo
+                tratamientos[t_idx].expand.tipo.nombre = tipotratamientos[tt_idx].nombre
             }
             await setTratsSQL(db,tratamientos)
             onChangeTratamientos()
@@ -326,7 +334,7 @@
                     await setTratsSQL(db,tratamientos)
                     onChangeTratamientos()
                     let comando = {
-                        tipo:"add",
+                        tipo:"update",
                         coleccion:"tratamientos",
                         data:{...dataparicion},
                         hora:Date.now(),
@@ -336,7 +344,7 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db.comandos)
-                    tratamientosrow = tratamientos
+                    
                     Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
                 }
                 catch(err){

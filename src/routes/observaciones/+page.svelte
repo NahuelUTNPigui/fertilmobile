@@ -28,8 +28,6 @@
         getAnimalesSQL,
         setUltimoAnimalesSQL,
         updateLocalAnimalesSQLUser,
-        
-
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -63,6 +61,7 @@
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import Animal from "$lib/svgs/animal.svelte";
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let db = $state(null);
@@ -502,7 +501,7 @@
                 hora: Date.now(),
                 prioridad: 0,
                 idprov: id,
-                camposprov: animal.split("_").length > 0 ? "animal" : "",
+                camposprov: animal.split("_").length > 1 ? "animal" : "",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);

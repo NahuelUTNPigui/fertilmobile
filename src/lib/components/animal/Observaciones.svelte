@@ -7,7 +7,8 @@
     import Swal from "sweetalert2";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    import {addNewObservacionSQL} from '$lib/stores/sqlite/dbeventos';
+    import {addNewObservacionSQL,setObservacionesSQL} from '$lib/stores/sqlite/dbeventos';
+    import { loger } from "$lib/stores/logs/logs.svelte";
     let {
         coninternet,
         comandos=$bindable([]),
@@ -18,8 +19,10 @@
 
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]
     const pb = new PocketBase(ruta);
+    let observacionesrows = $state([])
     let id = $state("")
     //let observaciones = $state([])
     //datos observacion
@@ -27,6 +30,204 @@
     let fecha = $state("")
     let observacion = $state("")
     let categoriaobs = $state("")
+    //Eliminar
+    async function eliminarOffline() {
+        Swal.fire({
+            title: "Eliminar observación",
+            text: "¿Seguro que deseas eliminar la observacion?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Si",
+            cancelButtonText: "No",
+        }).then(async (result) => {
+            if (result.value) {
+                idobservacion = id;
+                let data = {
+                    active: false,
+                };
+                try {
+                    let comando = {
+                        tipo: "update",
+                        coleccion: "observaciones",
+                        data: { ...data },
+                        hora: Date.now(),
+                        prioridad: 0,
+                        idprov: id,
+                        camposprov: "",
+                    };
+                    comandos.push(comando);
+                    await setComandosSQL(db, comandos);
+                    observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
+                    onChangeObservaciones()
+                    await setObservacionesSQL(db, observaciones);
+                    
+                    Swal.fire(
+                        "Observación eliminada!",
+                        "Se eliminó la observación correctamente.",
+                        "success",
+                    );
+                } catch (err) {
+                    Swal.fire(
+                        "Acción cancelada",
+                        "No se pudo eliminar la observacion",
+                        "error",
+                    );
+                    console.error(err);
+                }
+                idobservacion = "";
+                observacion = "";
+                categoria = "";
+                fecha = "";
+            }
+        });
+    }
+    async function eliminarOnline() {
+        Swal.fire({
+            title: "Eliminar observación",
+            text: "¿Seguro que deseas eliminar la observacion?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Si",
+            cancelButtonText: "No",
+        }).then(async (result) => {
+            if (result.value) {
+                idobservacion = id;
+                let data = {
+                    active: false,
+                };
+                try {
+                    const recordedit = await pb
+                        .collection("observaciones")
+                        .update(idobservacion, data);
+                    observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
+                    onChangeObservaciones()
+                    
+                    Swal.fire(
+                        "Observación eliminada!",
+                        "Se eliminó la observación correctamente.",
+                        "success",
+                    );
+                } catch (err) {
+                    Swal.fire(
+                        "Acción cancelada",
+                        "No se pudo eliminar la observacion",
+                        "error",
+                    );
+                    console.error(err);
+                }
+                idobservacion = "";
+                observacion = "";
+                categoria = "";
+                fecha = "";
+            }
+        });
+    }
+    async function eliminar() {
+        if(coninternet.connected){
+            await eliminarOnline()
+
+        }
+        else{
+            await eliminarOffline()
+        }
+    }
+    //Editar
+    async function editarOffline() {
+        try {
+            let data = {
+                
+                fecha: fecha + " 03:00:00",
+                categoria,
+                observacion,
+                id: idobservacion,
+            };
+
+            let comando = {
+                tipo: "update",
+                coleccion: "observaciones",
+                data: { ...data },
+                hora: Date.now(),
+                prioridad: 0,
+                idprov: id,
+                camposprov: animal.split("_").length > 1 ? "animal" : "",
+            };
+            comandos.push(comando);
+            await setComandosSQL(db, comandos);
+            
+            
+            observaciones[idx] = {
+                ...observaciones[idx],
+                ...data
+            }
+            
+            observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
+            await setObservacionesSQL(db, observaciones);
+            onChangeObservaciones()
+            Swal.fire(
+                "Éxito editar",
+                "Se pudo editar la observación",
+                "success",
+            );
+        } catch (err) {
+            console.error(err);
+            Swal.fire(
+                "Error editar",
+                "No se pudo editar la observación",
+                "error",
+            );
+        }
+    }
+    async function editarOnline() {
+        try {
+            let data = {
+            
+                fecha: fecha + " 03:00:00",
+                categoria,
+                observacion,
+            };
+            await pb
+                .collection("observaciones")
+                .update(idobservacion, data);
+            
+            let idx = observaciones.findIndex((o) => o.id == idobservacion);
+            observaciones[idx] ={
+                ...observaciones[idx],
+                ...data
+            }
+            
+            observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
+            onChangeObservaciones()
+            Swal.fire(
+                "Éxito editar",
+                "Se pudo editar la observación",
+                "success",
+            );
+        } catch (err) {
+            console.error(err);
+            Swal.fire(
+                "Error editar",
+                "No se pudo editar la observación",
+                "error",
+            );
+        }
+    }
+    async function editar() {
+        if(coninternet.connected){
+            await editarOnline()
+        }
+        else{
+            await editarOffline()
+        }
+    }
+    //Guardar
     async function guardarObservacionOnline() {
         try{
             let data = {
@@ -37,9 +238,22 @@
                 observacion,
                 active:true
             }
-            const record = await pb.collection('observaciones').create(data);
-            await getObservaciones()
+            let record = await pb.collection('observaciones').create(data);
+            record = {
+                ...record,
+                expand:{
+                    animal:{
+                        id,caravana
+                    }
+                }
+                
+            }
+
+            observaciones.push(record)
             
+            await addNewObservacionSQL(db,record)
+            onChangeObservaciones()
+
             Swal.fire("Éxito guardar","Se logró guardar la observación","success")
 
         }
@@ -58,15 +272,10 @@
             cab:cabid,
             observacion,
             active:true,
-            expand:{
-                animal:{
-                    caravana
-                }
-            }
+            
         }
-        await addNewObservacionSQL(db,data)
-        observaciones.push(data)
-        let nanimal = id.split("_").length>0
+        
+        let nanimal = id.split("_").length>1
         let comando = {
             tipo:"add",
             coleccion:"observaciones",
@@ -78,6 +287,18 @@
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
+        data = {
+            ...data,
+            expand:{
+                animal:{
+                    id,
+                    caravana
+                }
+            }
+        }
+        await addNewObservacionSQL(db,data)
+        observaciones.push(data)
+        onChangeObservaciones()
         Swal.fire("Éxito guardar","Se logró guardar la observación","success")  
     }
     async function guardarObservacion(){
@@ -114,9 +335,15 @@
         });
         observaciones = records
     }
+    function onChangeObservaciones(){
+        
+        observacionesrows = observaciones.filter(o=>o.animal == id)
+        
+
+    }
     onMount(async ()=>{
         id = $page.params.slug
-        
+        onChangeObservaciones()
     })
 </script>
 
@@ -135,7 +362,7 @@
     </div>
 </div>
 <div class="w-full flex justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if observaciones.length == 0}
+    {#if observacionesrows.length == 0}
         <p class="mt-5 text-lg ">No hay observaciones</p>
     {:else}
         <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
@@ -150,7 +377,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each observaciones as o}
+                    {#each observacionesrows as o}
                         <tr>
                             <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(o.fecha).toLocaleDateString()}</td>
                             <td class="text-base mx-1 px-1">
@@ -165,7 +392,7 @@
             </table>
         </div>
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each observaciones as o}
+            {#each observacionesrows as o}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openNewModal(o.id)}>
                     <div class="block p-4">

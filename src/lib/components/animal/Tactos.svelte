@@ -13,7 +13,8 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
-        addNewTactoSQL
+        addNewTactoSQL,
+        setTactosSQL
     } from "$lib/stores/sqlite/dbeventos"
     //VEr el historial de los animales
     let ruta = import.meta.env.VITE_RUTA
@@ -22,13 +23,17 @@
     const today = new Date();
     
     let id = $state("")
+    let tactosrows = $state([])
     let {
         coninternet,
         comandos=$bindable([]),
         tactos=$bindable([]),
         db,
         caravana=$bindable(""),
-        cabid,prenadaori=$bindable(0),categoria} = $props()
+        cabid,prenadaori=$bindable(0),categoria
+    } = $props()
+
+
     //Datos tacto
     let idtacto = $state("")
     let fecha = $state("")
@@ -59,6 +64,177 @@
         
         nuevoTactoAnimal.showModal()
     }
+    //Eliminar
+    async function eliminarOffline() {
+        Swal.fire({
+            title: 'Eliminar tacto',
+            text: '¿Seguro que deseas eliminar el tacto?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idtacto = id
+                let data = {
+                    active:false
+                }
+                try{
+
+                    let nanimal = animal.split("_").length > 1
+                    let comando = {
+                        tipo:"update",
+                        coleccion:"tactos",
+                        data:{...data},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:idtacto,
+                        camposprov:nanimal?"animal":""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    tactos = tactos.filter(t=>t.id!=idtacto)
+                    await setTactosSQL(db,tactos)
+                    onChangeTactos()
+                    
+                    Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
+                }
+                idtacto = ""
+                tacto = null
+            }
+        })
+    }
+    async function eliminarOnline() {
+        Swal.fire({
+            title: 'Eliminar tacto',
+            text: '¿Seguro que deseas eliminar el tacto?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                idtacto = id
+                let data = {
+                    active:false
+                }
+                try{
+                    await pb.collection('tactos').update(idtacto,data);
+                    tactos = tactos.filter(t=>t.id!=idtacto)
+                    await setTactosSQL(db,tactos)
+                    onChangeTactos()
+                    //deberia modificar la base de datos
+                    
+                    Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
+                }
+                catch(e){
+                    Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
+                }
+                idtacto = ""
+                tacto = null
+            }
+        })
+    }
+    async function eliminar() {
+        if(coninternet.connected){
+            await eliminarOnline()
+        }
+        else{
+            await eliminarOffline()
+        }
+        nuevoTactoAnimal.close()
+    }
+    //EDitar
+    async function editarTactoOffline() {
+        try{
+            let data = {
+               fecha:fecha +" 03:00:00" ,
+               observacion,
+               animal,
+               categoria,
+               prenada,
+               tipo,
+               nombreveterinario,
+               id:idtacto
+            }
+            let nanimal = animal.split("_").length > 1
+            let comando = {
+                tipo:"update",
+                coleccion:"tactos",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idtacto,
+                camposprov:nanimal?"animal":""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            let idx = tactos.findIndex(t=>t.id==idtacto)
+            let a = animales.filter(an=>an.id == animal)[0]
+            tactos[idx] ={
+                ...tactos[idx],
+                ...data
+            } 
+            tactos[idx].expand = {animal:a}
+            tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
+            onChangeTactos()
+            await setTactosSQL(db,tactos)
+            
+            
+            Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+        }
+    }
+    async function editarTactoOnline() {
+        try{
+            let data = {
+               fecha:fecha +" 03:00:00" ,
+               observacion,
+               animal,
+               categoria,
+               prenada,
+               tipo,
+               nombreveterinario
+            }
+            await pb.collection('tactos').update(idtacto,data);
+            
+            //await pb.collection('animales').update(animal,{
+            //    prenada
+            //})
+            let idx = tactos.findIndex(t=>t.id==idtacto)
+            let a = animales.filter(an=>an.id == animal)[0]
+            tactos[idx] = {
+                ...tactos[idx],
+                ...data
+            }
+            tactos[idx].expand = {animal:a}
+            tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
+            onChangeTactos()
+            await setTactosSQL(db,tactos)
+            filterUpdate()
+            Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+        }
+        catch(err){
+            console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar el tacto","error")
+        }
+    }
+    async function editarTacto() {
+        if(coninternet.connected){
+            await editarTactoOnline()
+        }
+        else{
+            await editarTactoOffline()
+        }
+        nuevoTactoAnimal.close()
+    }
+    //Guardar
     async function guardarTactoOffline(){
         let idprov = " nuevo_tacto_" + generarIDAleatorio()
         let data = {
@@ -70,15 +246,10 @@
            tipo,
            cab:cabid,
            active:true,
-           id:idprov,
-           expand:{
-                animal: {
-                    caravana
-                }
-            }
+           id:idprov
         }
-        let nanimal = id.split("_").length>0
-        await addNewTactoSQL(db,data)
+        let nanimal = id.split("_").length>1
+        
         let comando = {
             tipo:"add",
             coleccion:"tactos",
@@ -90,7 +261,22 @@
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
-        prenadaori = prenada
+        data = {
+            ...data,
+            expand:{
+                animal: {
+                    id,
+                    caravana
+                }
+            }
+        }
+        tactos.push(tacto)
+        onChangeTactos()
+        await addNewTactoSQL(db,data)
+        nuevoTactoAnimal.close()
+        //prenadaori = prenada
+        Swal.fire("Éxito guardar",`Se pudo guardar el tacto`,"success")
+        
     }
     async function guardarTactoOnline(){
         try{
@@ -104,20 +290,33 @@
                cab:cabid,
                active:true
             }
-            const record = await pb.collection('tactos').create(data);
-            await guardarHistorial(pb,id)
-            prenadaori = prenada
-            await pb.collection('animales').update(id,{
-                prenada
-            })
-
+            let record = await pb.collection('tactos').create(data);
+            record = {
+                ...record,
+                expand:{
+                    animal:{
+                        id,caravana
+                    }
+                }
+            }
             tactos.push(record)
+            onChangeTactos()
+            await addNewTactoSQL(db,record)
+
+            //await guardarHistorial(pb,id)
+            //prenadaori = prenada
+            //await pb.collection('animales').update(id,{
+            //    prenada
+            //})
+            nuevoTactoAnimal.close()
+            Swal.fire("Éxito guardar",`Se pudo guardar el tacto`,"success")
         }
         catch(err){
             console.error(err)
-            
+            nuevoTactoAnimal.close()
+            Swal.fire("Error guardar",`No se pudo guardar el tacto`,"success")
         }
-        nuevoTactoAnimal.close()
+        
     }
     async function guardarTacto(){
         if(coninternet.connected){
@@ -155,10 +354,15 @@
         tactos = recordst
         
     }
-    
+    function onChangeTactos(){
+        tactosrows = tactos.filter(t=>t.animal == id)
+    }
     onMount(async ()=>{
         id = $page.params.slug
         prenada = prenadaori
+        
+        onChangeTactos()
+        
         //await getTactos()
     })
 
@@ -178,7 +382,7 @@
     </div>
 </div>
 <div class="w-full flex justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if tactos.length == 0}
+    {#if tactosrows.length == 0}
         <p class="mt-5 text-lg">No tiene tactos</p>
     {:else}
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
@@ -193,7 +397,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each tactos as t}
+                {#each tactosrows as t}
                     <tr onclick={()=>openNewModal(t.id) } class=" hover:bg-gray-200 dark:hover:bg-gray-900">
                         <td class="text-base">
                             {`${new Date(t.fecha).toLocaleDateString()}`}
@@ -221,7 +425,7 @@
         </table>
     </div>
     <div class="block w-full md:hidden justify-items-center mx-1">
-        {#each tactos as t}
+        {#each tactosrows as t}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openNewModal(t.id) }>
                     <div class="block p-4">

@@ -5,6 +5,7 @@
     import sexos from '$lib/stores/sexos';
     import AgregarAnimal from "../eventos/AgregarAnimal.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]
     //ESTE REPRESENTA EL MODAL DE NACIMIENTO EN INICIO
@@ -120,7 +121,11 @@
     {/if}
 {/if}
 <div class="form-control">
-    <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento confechanac={true}/>
+    <AgregarAnimal 
+        bind:agregaranimal bind:caravana 
+        bind:categoria bind:sexo bind:peso 
+        bind:fechanacimiento confechanac={true}
+    />
     
     <label for = "fechanacimiento" class="label">
         <span class={estilos.labelForm}>Fecha nacimiento</span>

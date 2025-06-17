@@ -103,8 +103,8 @@
                     }
                     
                     inseminaciones.push(datains)
-                    let nuevamadre = recordmadre.id.split("_").length>0
-                    let nuevopadre = recordspadre.items.length!=0?recordspadre.items[0].id.split("_").length>0:false
+                    let nuevamadre = recordmadre.id.split("_").length>1
+                    let nuevopadre = recordspadre.items.length!=0?recordspadre.items[0].id.split("_").length>1:false
                     let comando = {
                         tipo:"add",
                         coleccion:"inseminacion",

@@ -613,8 +613,8 @@
 
         }
         
-        let esnuevopadre = dataparicion.padre.split("_").length>0
-        let esnuevomadre = dataparicion.madre.split("_").length>0
+        let esnuevopadre = dataparicion.padre.split("_").length > 1
+        let esnuevomadre = dataparicion.madre.split("_").length > 1
         let camposprov = `${esnuevomadre && esnuevopadre?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
         //Comandos
         let comandonac = {
@@ -746,7 +746,7 @@
         //Sino tengo que crear un comando
         else{
             data.id = idprov
-            let esnuevoanimal = a.id.split("_").length>0
+            let esnuevoanimal = a.id.split("_").length > 1
             let comando = {
                 tipo:"add",
                 coleccion:"tratamiento",

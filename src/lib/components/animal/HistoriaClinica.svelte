@@ -86,77 +86,91 @@
     function getHistorialEventos(inseminaciones, pariciones, tactos, tratamientos, observaciones, pesajes) {
 
         if (inseminaciones.length != 0) {
-            historialeventos = historialeventos.concat(inseminaciones.map(i=>{
-                return{
-                    fecha:i.fechainseminacion,
-                    nombre:"Inseminación",
-                    info: i.observacion,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                inseminaciones.filter(i=>i.animal==id).map(i=>{
+                    return{
+                        fecha:i.fechainseminacion,
+                        nombre:"Inseminación",
+                        info: i.observacion,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
             //historialeventos.push(inseminaciones)
         }
         if (servicios.length != 0) {
-            historialeventos = historialeventos.concat(servicios.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Servicio",
-                    info: i.observacion,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                servicios.filter(s=>s.madre==id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Servicio",
+                        info: i.observacion,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
             //historialeventos.push(inseminaciones)
         }
         if (pariciones.length != 0) {
-            historialeventos = historialeventos.concat(pariciones.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Parición",
-                    info: i.observacion,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                pariciones.filter(p=>p.madre==id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Parición",
+                        info: i.observacion,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
             //historialeventos.push(pariciones)
         }
         if (tactos.length != 0) {
-            historialeventos = historialeventos.concat(tactos.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Tacto",
-                    info: getEstadoNombre(i.prenada),
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                tactos.filter(t=>t.animal == id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Tacto",
+                        info: getEstadoNombre(i.prenada),
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
         }
         if (tratamientos.length != 0) {
-            historialeventos = historialeventos.concat(tratamientos.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Tratamiento",
-                    info: i.expand.tipo.nombre,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                tratamientos.filter(t=>t.animal == id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Tratamiento",
+                        info: i.expand.tipo.nombre,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
         }
         if (observaciones.length != 0) {
-            historialeventos = historialeventos.concat(observaciones.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Observación",
-                    info: i.observacion,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                observaciones.filter(o=>o.animal == id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Observación",
+                        info: i.observacion,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
         }
         if (pesajes.length != 0) {
-            historialeventos = historialeventos.concat(pesajes.map(i=>{
-                return{
-                    fecha:i.fecha,
-                    nombre:"Pesaje",
-                    info: i.pesonuevo,
-                    caravana: historial[0].caravana
-                }
-            }))
+            historialeventos = historialeventos.concat(
+                pesajes.filter(p=>p.animal == id).map(i=>{
+                    return{
+                        fecha:i.fecha,
+                        nombre:"Pesaje",
+                        info: i.pesonuevo,
+                        caravana: historial[0].caravana
+                    }
+                })
+            )
         }
         historialeventos.sort((h1,h2)=>new Date(h1.fecha)< new Date(h2.fecha)?1:-1)
     }

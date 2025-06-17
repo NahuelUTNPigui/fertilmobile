@@ -247,8 +247,8 @@
                         servicios[sidx].fechahasta = dataser.fechahasta
                     }
                     await setServiciosSQL(db,servicios)
-                    let nuevamadre = dataser.madre.split("_").length>0
-                    let nuevopadre = dataser.padres.split("_").length>0
+                    let nuevamadre = dataser.madre.split("_").length > 1
+                    let nuevopadre = dataser.padres.split("_").length > 1
                     let comando= {
                         tipo:"update",
                         coleccion:"servicios",
@@ -290,8 +290,8 @@
                     inseminaciones[idx].observacion = data.observacion
                     inseminaciones[idx].categoria = data.categoria
                     await setInseminacionesSQL(db,inseminaciones)
-                    let nuevamadre = dataser.madre.split("_").length>0
-                    let nuevopadre = dataser.padres.split("_").length>0
+                    let nuevamadre = dataser.madre.split("_").length > 1
+                    let nuevopadre = dataser.padres.split("_").length > 1
                     let comando = {
                         tipo:"update",
                         coleccion:"inseminacion",

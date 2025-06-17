@@ -26,6 +26,7 @@
     } from "$lib/stores/sqlite/dbeventos"
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
+    import { loger } from "$lib/stores/logs/logs.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
 

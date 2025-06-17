@@ -18,6 +18,8 @@
         coninternet,
         comandos=$bindable([]),
         db,
+        usuarioid,
+        animales=$bindable([]),
         pariciones=$bindable([]),
         caravanamadre=$bindable(""),
         cabid,sexoanimal,prenada=$bindable(0)
@@ -28,13 +30,17 @@
     const today = new Date();
     const DESDE = new Date(today.getFullYear(), today.getMonth() - 1, 1);    
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    let usuarioid = $state("")
+    //let usuarioid = $state("")
     let buscar = $state("")
     let fechadesde = $state("")
     let fechahasta = $state("")
+    //id del animal
     let id = $state("")
     let cargado = $state(false)
-
+    let paricionesrows = $state([])
+    let padres = $state([])
+    let madres = $state([])
+    let listapadres = $state([])
     //Datos nacimiento
     let agregaranimal  = $state(false)
     let nacimiento = $state(null)
@@ -48,9 +54,6 @@
     let nombremadre = $state("")
     let nombrepadre = $state("")
     let fecha = $state("")
-    let padres = $state([])
-    let madres = $state([])
-    let listapadres = $state([])
     let idanimal = $state("")
     let observacion = $state("")
     //Validar 
@@ -77,9 +80,31 @@
         })
         pariciones = recordsn
     }
+    //Eliminar
+    async function eliminarParicionOffline() {
+        
+    }
+    async function eliminarParicionOnline() {
+        
+    }
+    async function eliminarParicion() {
+        
+    }
+    //EDitar
+    async function editarParicionOffline() {
+        
+    }
+    async function editarParicionOnline() {
+        
+    }
+    async function editarParicion() {
+        
+    }
+    //Guardar
     async function guardarParicionOnline() {
         if(agregaranimal){
-            let verificar = await verificarNivel(cab.id)
+            //let verificar = await verificarNivel(cab.id)
+            let verificar = true
             if(!verificar){
                 Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
                 return
@@ -95,28 +120,53 @@
                 observacion,
                 cab:cabid
             }
-            const recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            let recordparicion = await pb.collection('nacimientos').create(dataparicion);
+            recordparicion.caravana = ""
+            recordparicion.animalid = ""
+            recordparicion.expand ={
+                madre:{id:"",caravana:""},
+                padre:{id:"",caravana:""}
+            }
             if(agregaranimal){
                 let data = {
-                caravana,
-                active:true,
-                delete:false,
-                fechanacimiento:fecha +" 03:00:00",
-                sexo,
-                cab:cabid,
-                peso,
-                nacimiento:recordparicion.id
+                    caravana,
+                    active:true,
+                    delete:false,
+                    fechanacimiento:fecha +" 03:00:00",
+                    sexo,
+                    cab:cabid,
+                    peso,
+                    nacimiento:recordparicion.id
+                }
+
+                let recorda = await pb.collection('animales').create(data); 
+                recordparicion.caravana = caravana
+                recordparicion.animalid = recorda.id
             }
-            let recorda = await pb.collection('animales').create(data); 
+            else{
+
             }
-            
+            let m_idx = animales.findIndex(a=>a.id == dataparicion.madre)
+            if(m_idx != -1){
+                recordparicion.expand.madre.id=animales[m_idx].id
+                recordparicion.expand.madre.caravana=animales[m_idx].caravana
+            }
+            let p_idx = animales.findIndex(a=>a.id == dataparicion.padre)
+            if(p_idx != -1){
+                recordparicion.expand.padre.id=animales[p_idx].id
+                recordparicion.expand.padre.caravana=animales[p_idx].caravana
+            }
+            pariciones.push(recordparicion)
+            onChangePariciones()
+            await addNewNacimientoSQL(db,recordparicion)
             Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
             //Ver el tema de las fechas
             //prenada = 0
-            await getPariciones()
+            
         }
         catch(err){
             console.error(err)
+            Swal.fire("Error guardar","No se pudo guardar la paricion con exito","success")
         }
     }
     async function guardarParicionOfline() {
@@ -125,9 +175,9 @@
             let totalanimals = await getTotalSQL(db)
             let verificar = true
             
-            if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
-                verificar =  false
-            }
+            //if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
+            //    verificar =  false
+            //}
             if(!verificar){
                 Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,"error")
                 return {id:-1}
@@ -147,8 +197,11 @@
         if(agregaranimal){
             dataparicion.caravana = caravana
         }
-        await addNewNacimientoSQL(db,dataparicion)
-        pariciones.push(dataparicion)
+        else{
+            dataparicion.caravana = ""
+        }
+        
+        
         let comando = {
             tipo:"add",
             coleccion:"nacimientos",
@@ -158,8 +211,9 @@
             idprov,    
             camposprov:""
         }
-        comandos.push(comando)
         
+        comandos.push(comando)
+        dataparicion.animalid=""
         if(agregaranimal){
             let idanimal = "nuevo_animal_"+generarIDAleatorio()
             let data = {
@@ -182,39 +236,67 @@
                     idprov,    
                     camposprov:"nacimiento"
             }
+            dataparicion.animalid=idanimal
             comandos.push(comandoani)
         }
+        dataparicion.expand={
+            madre:{
+                id:"",
+                caravana:""
+            },
+            padre:{
+                id:"",
+                caravana:""
+            }
+        }
+        let m_idx = animales.findIndex(a=>a.id == dataparicion.madre)
+        if(m_idx != -1){
+            dataparicion.expand.madre.id=animales[m_idx].id
+            dataparicion.expand.madre.caravana=animales[m_idx].caravana
+        }
+        let p_idx = animales.findIndex(a=>a.id == dataparicion.padre)
+        if(p_idx != -1){
+            dataparicion.expand.padre.id=animales[p_idx].id
+            dataparicion.expand.padre.caravana=animales[p_idx].caravana
+        }
+        pariciones.push(dataparicion)
+        onChangePariciones()
+        await addNewNacimientoSQL(db,dataparicion)
         await setComandosSQL(db,comandos)
         Swal.fire("Éxito guardar","Se pudo guardar la paricion con exito","success")
 
     }
     async function guardarParicion(){
         if(coninternet.connected){
-            
             await guardarParicionOnline()
         }
         else{
-            
             await guardarParicionOfline()
         }
         nuevaParicion.close()
     }
+    function onChangePariciones(){
+        paricionesrows = pariciones.filter(p=>p.madre == id)
+    }
+    function onChange(campo){
+
+    }
     onMount(async ()=>{
-        let pb_json =  JSON.parse(localStorage.getItem('pocketbase_auth'))
-        usuarioid = pb_json.record.id
+        
         id = $page.params.slug
-        await getAnimales()
+        onChangePariciones()
         if(sexoanimal == "F" || sexoanimal == "H"){
-            let m = madres.filter(item=>item.id == id)[0]
+            let m = animales.filter(item=>item.id == id)[0]
             nombremadre = m.caravana
             madre = id
         }
-        else{
-            let p = padres.filter(item=>item.id == id)[0]
-            nombrepadre = p.caravana
-            padre = id
-        }
-        
+        padres = animales.filter(a=>a.active && a.cab == cabid && a.sexo == "M")
+        listapadres = padres.map(item=>{
+            return {
+                id:item.id,nombre:item.caravana
+            }
+        })
+        cargado = true
     })
     
     function getNombreMadre(){
@@ -225,29 +307,24 @@
         let p = padres.filter(item=>item.id == padre)[0]
         nombrepadre = p.caravana
     }
-    function openNewModal(id){
-        idnacimiento = id
+    function openNewModal(p_id){
+        idnacimiento = p_id
         caravana = ""
         sexo = ""
         fecha = ""
         observacion = ""
         peso=""
-        if(id==""){
-            if(sexoanimal == "M"){
-                madre = ""
-                nombremadre = ""
-            }
-            else{
-                padre = ""
-                nombrepadre = ""
-            }
+        if(idnacimiento==""){
+            padre = ""
+            nombrepadre = ""
         }
         else{
-            let i_par = pariciones.findIndex(p=>p.id==id)
+            let i_par = pariciones.findIndex(p=>p.id==p_id)
             padre = pariciones[i_par].padre
             nombrepadre =pariciones[i_par].nombrepadre
             fecha = new Date(pariciones[i_par].fecha).toISOString().split("T")[0]
             observacion = pariciones[i_par].observacion
+            caravana = pariciones[i_par].caravana
         }
         
         
@@ -269,7 +346,7 @@
     </div>
 </div>
 <div class="w-full flex justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if pariciones.length == 0}
+    {#if paricionesrows.length == 0}
         <p class="mt-5 text-lg">No hay pariciones</p>
     {:else}
         <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
@@ -304,7 +381,7 @@
             </table>
         </div>
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each pariciones as n}
+            {#each paricionesrows as n}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openNewModal(n.id)}>
                     <div class="block p-4">
@@ -357,8 +434,25 @@
         
         <div class="form-control">
             {#if idnacimiento == ""}
-            <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento = {fecha} confechanac={true}/>
-            
+                <AgregarAnimal 
+                    bind:agregaranimal bind:caravana 
+                    bind:categoria bind:sexo 
+                    bind:peso bind:fechanacimiento = {fecha} 
+                    confechanac={true}
+                />
+            {:else}
+                {#if idanimal != ""}
+                    <label for = "caravana" class="label">
+                        <span class="label-text text-base">Caravana</span>
+                    </label>
+                    <label class="input-group">
+                        <input id ="caravana" type="text"  
+                            class={`input input-bordered w-full ${estilos.bgdark2}`}
+                            value={caravana}
+                        />
+                        
+                    </label>
+                {/if}
             {/if}
             
             <label for = "fechanacimiento" class="label">

@@ -138,6 +138,45 @@
             return ""
         }
     }
+    //ELiminar
+    async function eliminarInseminacionOffline() {
+        
+    }
+    async function eliminarInseminacionOnline() {
+        
+    }
+    async function eliminarInseminacion() {
+        
+    }
+    async function eliminarServicioOffline() {
+        
+    }
+    async function eliminarServicioOnline() {
+        
+    }
+    async function eliminarServicio() {
+        
+    }
+    //EDitar
+    async function editarInseminacionOffline() {
+        
+    }
+    async function editarInseminacionOnline() {
+        
+    }
+    async function editarInseminacion() {
+        
+    }
+    async function editarServicioOffline() {
+        
+    }
+    async function editarServicioOnline() {
+        
+    }
+    async function editarServicio() {
+        
+    }
+    //Guardar
     async function guardarInseminacionOffline() {
         let idprov = "nuevo_ins_"+generarIDAleatorio()
         let data = {
@@ -153,9 +192,9 @@
             id:idprov
         }
         try{
-            inseminaciones.push(data)
-            let nmadre = data.animal.split("_").length>0
-            let npadre = data.padre.split("_").length>0
+            
+            let nmadre = data.animal.split("_").length>1
+            let npadre = data.padre.split("_").length>1
             let comando = {
                 tipo:"add",
                 coleccion:"inseminacion",
@@ -166,6 +205,16 @@
                 camposprov:`${(nmadre && npadre)?"animal,padre":nmadre?"animal":npadre?"padre":""}`
             }
             comandos.push(comando)
+            data = {
+                ...data,
+                expand:{
+                    animal:{
+                        id, caravana
+                    }
+                }
+            }
+            inseminaciones.push(data)
+            onChangeServicios()
             await setInseminacionesSQL(db,inseminaciones)
             await setComandosSQL(db,comandos)
             Swal.fire("Éxito inseminación","Se logró guardar la inseminación","success")
@@ -190,7 +239,18 @@
             observacion:observacion
         }
         try{
-            const record = await pb.collection('inseminacion').create(data);
+            let record = await pb.collection('inseminacion').create(data);
+            record = {
+                ...record,
+                expand:{
+                    animal:{
+                        id,caravana
+                    }
+                }
+            }
+            inseminaciones.push(record)
+            onChangeServicios()
+            await addnewInseminacionSQL(db,record)
             Swal.fire("Éxito inseminación","Se logró guardar la inseminación","success")
         }
         catch(err){
@@ -222,10 +282,22 @@
             cab:cabid
         }
         if(fechahastaserv != ""){
-            dataser.fechahasta = fechahastaserv + " 03:00:00"
+            data.fechahasta = fechahastaserv + " 03:00:00"
         }
         try{
-            const record = await pb.collection('servicios').create(data);
+            let record = await pb.collection('servicios').create(data);
+            record = {
+                ...record,
+                expand:{
+                    madre:{
+                        id,
+                        caravana
+                    }
+                }
+            }
+            servicios.push(record)
+            await addNewServicioSQL(record)
+            onChangeServicios()
             //Mis dudas con las fechas
             //prenadaori = 3
             //guardarHistorial(pb,id)
@@ -251,22 +323,33 @@
             id:idprov
         }
         if(fechahastaserv != ""){
-            dataser.fechahasta = fechahastaserv + " 03:00:00"
+            data.fechahasta = fechahastaserv + " 03:00:00"
         }
         try {
-            let nmadre = dataser.madre.split("_").length>0
-            let npadres = dataser.padres.split("_").length>0
+            let nmadre = data.madre.split("_").length>1
+            let npadres = data.padres.split("_").length>1
             let comando = {
                 tipo:"add",
                 coleccion:"servicios",
-                data:{...dataser},
+                data:{...data},
                 hora:Date.now(),
                 prioridad:3,
                 idprov,    
                 camposprov:`${(nmadre && npadres)?"madre,padres":nmadre?"madre":npadres?"padres":""}`
             }
-            servicios.push(dataser)
+            
             comandos.push(comando)
+            data = {
+                ...data,
+                expand:{
+                    madre:{
+                        id, caravana
+                    }
+                }
+            }
+            servicios.push(data)
+            await addNewServicioSQL(data)
+            onChangeServicios()
             Swal.fire("Éxito servicio","Se logró guardar el servicio","success")
         
         }
@@ -289,9 +372,8 @@
         else{
             await guardarInseminacion()
         }
-        await getServicios()
-        await getInseminaciones()
-        filas.sort((a1,a2)=>{
+        onChangeServicios()
+        serviciosrows.sort((a1,a2)=>{
             let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
             let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
             return f1.localeCompare(f2)
@@ -330,17 +412,24 @@
     function oninputIns(campo){
         fechaparto = addDays(fechainseminacion, 280).toISOString().split("T")[0]
     }
-    onMount(()=>{
-        serviciosrows = servicios
-        serviciosrows = serviciosrows.concat(inseminaciones)   
+    function onChangeServicios(){
+        serviciosrows = servicios.filter(s=>s.active && s.madre == id)
+        serviciosrows = serviciosrows.concat(inseminaciones.filter(i=>i.active && i.animal == id))   
         serviciosrows.sort((a1,a2)=>{
             let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
             let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
             return f1.localeCompare(f2)
         })
+    }
+    onMount(()=>{
+        id = $page.params.slug
+        onChangeServicios()
+        padres = animales.filter(a=>a.active && a.cab == cabid && a.sexo == "M")
+        listapadres = padres.map(p=>({id:p.id,nombre:p.caravana}))
+        cargado = true
     })
     //onMount(async ()=>{
-    //    id = $page.params.slug
+    
     //    await getAnimales()
     //    await getServicios()
     //    await getInseminaciones()

@@ -649,6 +649,18 @@ export async function updateLocalNacimientosSQL(db,pb,cabid) {
     await setUltimoNacimientosSQL(db)
     return nacimientos
 }
+export async function editarNacimientoSQL(db,nac,id) {
+    let nacs = await getNacimientosSQL(db)
+    let lista = nacs.lista
+    let n_idx = lista.findIndex(n=>n.id==id)
+    if(n_idx != -1){
+        lista[n_idx] = {
+            ...lista[n_idx],
+            ...nac
+        }
+        await setNacimientosSQL(db,lista)
+    }
+}
 export async function addNewNacimientoSQL(db,nac) {
     let nacs = await getNacimientosSQL(db)
     let lista = nacs.lista

@@ -9,13 +9,15 @@
         editarAnimalSQL
     } from "$lib/stores/sqlite/dbanimales"
     import {
-        addNewPesajeSQL
+        addNewPesajeSQL,
+        setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {guardarHistorial} from "$lib/historial/lib"
     import Swal from "sweetalert2";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
-    
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const HOY = new Date().toISOString().split("T")[0]
     const pb = new PocketBase(ruta);
@@ -26,7 +28,7 @@
         pesajes=$bindable([]),
         comandos=$bindable([])
     } = $props()
-
+    let pesajesrows = $state([])
     let id = $state("")
     //Pesajes
     let fecha = $state("")
@@ -61,16 +63,30 @@
         try{
             
             await guardarHistorial(pb,id)
-            await pb.collection("pesaje").create(data)
-            await pb.collection("animales").update(id,dataupdate)
+            let recordopesaje = await pb.collection("pesaje").create(data)
+            recordopesaje = {
+                ...recordopesaje,
+                expand:{
+                    animal:{
+                        id,
+                        caravana
+                    }
+                }
+                
 
-            await getPesajes()
-            
+            }
+            await addNewPesajeSQL(db,recordopesaje)
+            await pb.collection("animales").update(id,dataupdate)
+            pesajes.push(recordopesaje)
+            pesajesrows = pesajes.filter(p=>p.id == id)
             peso = pesonuevo
             Swal.fire("Éxito guardar","Se logró guardar el pesaje","success")        
             nuevoPesaje.close()
         }
         catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err,null,2))
+            }
             console.error(err)
             Swal.fire("Error guardar","No se logró guardar el pesaje","error")        
             nuevoPesaje.close()
@@ -94,36 +110,61 @@
         let dataupdate={
             peso:pesonuevo
         }
-        await editarAnimalSQL(db,id,dataupdate)
-        await addNewPesajeSQL(db,data)
-        let nanimal = slug.split("_").length>0
-        comando = {
-            tipo:"add",
-            coleccion:"pesaje",
-            data:{...data},
-            hora:Date.now(),
-            prioridad:2,
-            idprov,
-            camposprov:nanimal?"animal":""
-        }
-        comandos = [...comandos,comando]
-        if(!nanimal){
-            let comandoani = {
-                tipo:"update",
-                coleccion:"animal",
-                data:{...dataupdate},
+        try{
+            await editarAnimalSQL(db,id,dataupdate)
+        
+            
+            await addNewPesajeSQL(db,data)
+        
+            let nanimal = id.split("_").length > 1 
+        
+        
+        
+            let comando = {
+                tipo:"add",
+                coleccion:"pesaje",
+                data:{...data},
                 hora:Date.now(),
                 prioridad:2,
-                idprov:id,
-                camposprov:""
+                idprov,
+                camposprov:nanimal?"animal":""
             }
-            comandos = [...comandos,comandoani]
+        
+            comandos.push(comando) 
+        
+            if(!nanimal){
+                let comandoani = {
+                    tipo:"update",
+                    coleccion:"animal",
+                    data:{...dataupdate},
+                    hora:Date.now(),
+                    prioridad:2,
+                    idprov:id,
+                    camposprov:""
+                }
+        
+                comandos.push(comandoani)
+                
+        
+            }
+
+            await setComandosSQL(db,comandos)
+            pesajes.push(data)
+            pesajesrows = pesajes.filter(p=>p.animal==id)
+            peso = pesonuevo
+            
+            Swal.fire("Éxito guardar","Se logró guardar el pesaje","success")        
+            nuevoPesaje.close()
         }
-        await setComandosSQL(db,comandos)
-        pesajes.push(data)
-        peso = pesonuevo
-        Swal.fire("Éxito guardar","Se logró guardar el pesaje","success")        
-        nuevoPesaje.close()
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err,null,2))
+
+            }
+            Swal.fire("Error guardar","No se logró guardar el pesaje","error")        
+            nuevoPesaje.close()
+        }
+        
     }
     async function guardarPesaje(){
         if(coninternet.connected){
@@ -132,7 +173,132 @@
         else{
             await guardarPesajeOffline()
         }
-        
+    }
+    async function editarPesajeOnline() {
+        try{
+            let data = {
+                fecha:new Date(fechaedit).toISOString().split("T")[0]+" 03:00:00",
+                pesonuevo:pesonuevoedit
+            }
+            let idx_pesaje = pesajes.findIndex(p=>p.id==idpesaje)
+
+            await pb.collection("pesaje").update(idpesaje,data)
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            await setPesajesSQL(db,pesajes)
+            pesajesrows = pesajes.filter(p=>p.animal == id)
+            Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+        }   
+        catch(err){
+
+            console.error(err)
+            Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+        }
+        detallePesaje.close()
+    }
+    async function editarPesajeOffline() {
+        let data = {
+            fecha:new Date(fechaedit).toISOString().split("T")[0]+" 03:00:00",
+            pesonuevo:pesonuevoedit
+        }
+        try{
+            let idx_pesaje = pesajes.findIndex(p=>p.id == idpesaje)
+            pesajes[idx_pesaje].fecha = data.fecha
+            pesajes[idx_pesaje].pesonuevo = data.pesonuevo
+            pesajesrows = pesajes.filter(p=>p.animal == id)
+            await setPesajesSQL(db,pesajes)
+            let comando = {
+                tipo:"update",
+                coleccion:"pesaje",
+                data,
+                hora:Date.now(),
+                prioridad:2,
+                idprov:idpesaje,
+                camposprov:""
+            }
+            comandos.push(comando)
+            await setComandosSQL(db,comandos)
+            Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+        }  
+        catch(err){
+            console.error(err)
+            Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+        }
+    }
+    async function editarPesaje() {
+        if(coninternet.connected){
+            await editarPesajeOnline()
+        }
+        else{
+            await editarPesajeOffline()
+        }
+    }
+    function eliminarOnline() {
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
+                    pesajesrows = pesajes.filter(p=>p.animal == id)
+                    await pb.collection("pesaje").delete(idpesaje)
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
+            
+        })
+    }
+    function eliminarOffline(){
+        Swal.fire({
+            title: 'Eliminar pesajes',
+            text: '¿Seguro que deseas eliminar el pesaje?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Si',
+            cancelButtonText: 'No'
+        }).then(async result => {
+            if(result.value){
+                try{
+                    pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    await setPesajesSQL(db,pesajes)
+                    let comando = {
+                        tipo:"delete",
+                        coleccion:"pesaje",
+                        data:{},
+                        hora:Date.now(),
+                        prioridad:2,
+                        idprov:idpesaje,
+                        camposprov:""
+                    }
+                    comandos.push(comando)
+                    await setComandosSQL(db,comandos)
+                    pesajesrows = pesajes.filter(p=>p.animal == id) 
+                    detallePesaje.close()
+                }
+                catch(err){
+                    console.error(err)
+                    detallePesaje.close()
+                }
+            }
+        })
+    }
+    async function eliminarPesaje() {
+        if(coninternet.connected){
+            await eliminarOnline()
+        }
+        else{
+            await eliminarOffline()
+        }
     }
     function createChart(){
         ctx = canvas.getContext('2d');
@@ -157,15 +323,15 @@
         });
     }
     function procesarPesajes(){
-        if(pesajes.length != 0){
+        if(pesajesrows.length != 0){
             xs = []
             ys = []
-            xs.push(pesajes[0].expand.animal.created)
-            ys.push(pesajes[0].pesoanterior)
+            xs.push(pesajesrows[0].expand.animal.created)
+            ys.push(pesajesrows[0].pesoanterior)
             
-            for(let i = 0;i < pesajes.length;i++){
-                xs.push(pesajes[i].fecha)
-                ys.push(pesajes[i].pesonuevo)
+            for(let i = 0;i < pesajesrows.length;i++){
+                xs.push(pesajesrows[i].fecha)
+                ys.push(pesajesrows[i].pesonuevo)
                 
             }
             let list = [];
@@ -198,7 +364,6 @@
         
         
     }
-    
     function openNewModal(){
         malfecha = false
         malpeso = false
@@ -218,7 +383,6 @@
         detallePesaje.showModal()
     }
     async function eliminar(){
-        
         try{
             
             await pb.collection("pesaje").delete(idpesaje)
@@ -235,6 +399,7 @@
     }
     onMount(async ()=>{
         id = $page.params.slug
+        pesajesrows = pesajes.filter(p=>p.animal == id)
         procesarPesajes()
         //await getPesajes()
     })
@@ -308,7 +473,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each pesajes as p}
+                    {#each pesajesrows as p}
                     <tr onclick={()=>openDetalle(p.id)} class="hover:bg-gray-200 dark:hover:bg-gray-900">
                             <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(p.fecha).toLocaleDateString()}</td>
                             <td class="text-base mx-1 px-1">
@@ -323,7 +488,7 @@
             </table>
         </div>
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each pesajes as p}
+            {#each pesajesrows as p}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openDetalle(p.id)}>
                     <div class="block p-4">
@@ -492,13 +657,24 @@
                     </label>
                 </div>
                 <div class="mb-1 lg:mb-0">
-                    <label for = "caravana" class="label">
+                    <label for = "fechaedit" class="label">
                         <span class="label-text text-base">Fecha</span>
                     </label>
-                    <label for="caravana" 
+                    <label for="fechaedit" 
                         class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
                     >
-                        {fechaedit}
+                        <input id ="fecha" type="date"   
+                            class={`
+                                input input-bordered 
+                                w-full
+                                border border-gray-300 rounded-md
+                                focus:outline-none focus:ring-2 
+                                focus:ring-green-500 
+                                focus:border-green-500
+                                ${estilos.bgdark2}
+                            `} 
+                            bind:value={fechaedit}
+                        />
                     </label>
                 </div>
                 <div class="mb-1 lg:mb-0">
@@ -515,25 +691,32 @@
                     <label for = "pesonuevo" class="label">
                         <span class="label-text text-base">Peso nuevo(KG)</span>
                     </label>
-                    <label for="pesonuevo" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
-                    >
-                        {pesonuevoedit}
-                    </label>
+                   <input 
+                        id ="pesonuevo" 
+                        type="number"  
+                        
+                        class={`
+                            input 
+                            input-bordered 
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                            w-full
+                            ${estilos.bgdark2}
+                        `}
+                        bind:value={pesonuevoedit}
+                    />
                 </div>
             </div>
         </div>
         <div class="modal-action justify-start ">
-            
-                <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
-                <button class={`
-                    btn 
-                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                    ${estilos.btnsecondary}`} 
-                    onclick={()=>detallePesaje.close()}
-
-                >Cerrar</button>
-            
+            <button class="btn btn-success text-white"  onclick={editarPesaje} >Editar</button>
+            <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
+            <button class={`
+                btn 
+                bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
+                ${estilos.btnsecondary}`} 
+                onclick={()=>detallePesaje.close()}
+            >Cerrar</button>
         </div>
     </div>
 </dialog>
@@ -543,3 +726,4 @@
     height:400px;
  }
 </style>
+

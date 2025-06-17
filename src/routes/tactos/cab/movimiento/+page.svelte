@@ -389,7 +389,7 @@
                     }
                     datatacto.expand = animales[aidx]
                 }
-                let nanimal = aidx!=-1?animales[aidx].id.split("_").length>0:false
+                let nanimal = aidx!=-1?animales[aidx].id.split("_").length>1:false
                 let comando = {
                     tipo:"add",
                     coleccion:"tactos",

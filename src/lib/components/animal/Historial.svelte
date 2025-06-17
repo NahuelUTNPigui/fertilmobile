@@ -9,10 +9,9 @@
     import {capitalize} from "$lib/stringutil/lib"
     import { getEstadoNombre } from "../estadosutils/lib";
     let{
-
         historial=$bindable([]),
-        
     } = $props()
+    let historialrows = $state([])
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id = $state("")
@@ -24,15 +23,18 @@
         })
 
     }
-    
+    function onChangeHistorial(){
+        historialrows = historial.filter(h=>h.animal == id)
+    }
     onMount(async ()=>{
         id = $page.params.slug
+        onChangeHistorial()
         //await getHistorial()
     })
 </script>
 
 <div class="hidden w-full md:block justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if historial.length == 0}
+    {#if historialrows.length == 0}
         <p class="mt-5 text-lg">No recibio modificaciones</p>
     {:else}
         <table class="table table-lg " >
@@ -51,7 +53,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each historial as h}
+                {#each historialrows as h}
                     <tr>
                         <td class="text-base">
                             {`${new Date(h.created).toLocaleDateString()}`}
@@ -100,10 +102,10 @@
     {/if}
 </div>
 <div class="block w-full md:hidden justify-items-center mx-1 lg:w-3/4 overflow-x-auto">
-    {#if historial.length == 0}
+    {#if historialrows.length == 0}
         <p class="mt-5 text-lg">No recibio modificaciones</p>
     {:else}
-        {#each historial as h}
+        {#each historialrows as h}
         <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
             <div class="block p-4">
                 <div class="grid grid-cols-2 gap-y-2">

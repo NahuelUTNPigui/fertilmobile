@@ -35,10 +35,8 @@
         deleteAnimalSQL,
         editarAnimalSQL,
         getHistorialAnimalesSQL,
-        updateLocalHistorialAnimalesSQLUser,
-        updateLocalAnimalesSQLUser,
-        getAnimalesSQL
-
+        getAnimalesSQL,
+        updateLocalHistorialAnimalesSQLUser
     } from "$lib/stores/sqlite/dbanimales"
     import {        
         updateLocalNacimientosSQLUser,
@@ -63,12 +61,19 @@
         getPesajesSQL,
         getServiciosSQL,
         getInseminacionesSQL,
+        updateLocalTratsSQLUser,
+        getLotesRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser
 
-        updateLocalTratsSQLUser
+
 
     } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -76,6 +81,7 @@
     let caboff = $state({})
     let coninternet = $state({})
     let comandos = $state([])
+    let getlocal = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
     const pb = new PocketBase(ruta);
@@ -113,8 +119,21 @@
     let pariciones = $state([])
     let tipostrat = $state([])
     let historial = $state([])
+    //EVENTOS ANIMAL
+    let tactosanimal = $state([])
+    let observacionesanimal = $state([])
+    let tratamientosanimal = $state([])
+    let pesajesanimal = $state([])
+    let serviciosanimal = $state([])
+    let inseminacionesanimal = $state([])
+    let paricionesanimal = $state([])
+    let tipostratcab = $state([])
     //animales para mostrar 
     let animales = $state([])
+    let animalescab = $state([])
+    //Lotes y rodeos
+    let lotes = $state([])
+    let rodeos = $state([])
     
     async function  getPariciones(id){
         const recordpariciones =  await pb.collection('nacimientos').getFullList({
@@ -150,7 +169,7 @@
             camposprov:""
         }
         comandos.push(comando)
-        let esnuevo = slug.split("_").length > 0
+        let esnuevo = slug.split("_").length > 1
         if(!esnuevo){
             let c = await guardarHistorialOffline(db,slug,useroff.id)
             comandos.push(c)
@@ -328,7 +347,15 @@
         }
     }
     async function initPage(){
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -344,16 +371,29 @@
         let observacionestodos = await getObservacionesSQL(db)
         let tipostratodos = await getTiposTratSQL(db)
         let historialtodos = await getHistorialAnimalesSQL(db)
+        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         animales = resanimales.lista
-        pesajes = pesajestodos.lista.filter(p=>p.animal == slug)
-        tratamientos = tratstodos.lista.filter(t=>t.animal == slug)
-        observaciones = observacionestodos.lista.filter(o=>o.animal == slug)
-        servicios = servistodos.lista.filter(s=>s.madre  == slug)
-        inseminaciones = inseminacionestodos.lista.filter(i=>i.animal == slug)
-        tipostrat = tipostratodos.lista.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
-        pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
-        tactos = tactostodos.lista.filter(t=>t.animal == slug)
-        historial = historialtodos.lista.filter(h=>h.animal == slug)
+        pesajes = pesajestodos.lista
+        tratamientos = tratstodos.lista
+        observaciones = observacionestodos.lista
+        servicios = servistodos.lista
+        inseminaciones = inseminacionestodos.lista
+        tipostrat = tipostratodos.lista
+        pariciones = nacimientostodos.lista
+        tactos = tactostodos.lista
+        historial = historialtodos.lista
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
+        //propios del animal
+        //pesajesanimal = pesajestodos.lista.filter(p=>p.animal == slug)
+        //tratamientosanimal = tratstodos.lista.filter(t=>t.animal == slug)
+        //observacionesanimal = observacionestodos.lista.filter(o=>o.animal == slug)
+        //serviciosanimal = servistodos.lista.filter(s=>s.madre  == slug)
+        //inseminacionesanimal = inseminacionestodos.lista.filter(i=>i.animal == slug)
+        //tipostratcab = tipostratodos.lista.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
+        //paricionesanimal = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
+        //tactosanimal = tactostodos.lista.filter(t=>t.animal == slug)
+        //animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
 
     }
     async function updateLocalSQL() {
@@ -367,7 +407,8 @@
         let inseminacionestodos = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
         let observacionestodos = await updateLocalObservacionesSQLUser(db,pb,usuarioid)
         let tipostratodos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
-        let historialtodos = await updateLocalHistorialAnimalesSQL(db,pb,caboff.id) 
+        let historialtodos = await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid) 
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         pesajes = pesajestodos.filter(p=>p.animal == slug)
         tratamientos = tratstodos.filter(t=>t.animal == slug)
         observaciones = observacionestodos.filter(o=>o.animal == slug)
@@ -377,33 +418,11 @@
         pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
         tactos = tactostodos.filter(t=>t.animal == slug)
         historial = historialtodos.filter(h=>h.animal == slug)
+        lotes = lotesrodeos.lotes
+        rodeos = lotesrodeos.rodeos
 
     }
-    async function getDataSQL() {
-        db = await openDB()
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        let data = await getAnimalSQLByID(db,slug)
-        caravana = data.caravana
-        active = data.active
-        fechanacimiento = data.fechanacimiento.split(" ")[0]
-        nacimiento = ""
-        nacimientoobj = {}
-        if(data.nacimiento != ""){
-            nacimiento = data.nacimiento
-            nacimientoobj = data.expand.nacimiento
-        }
-        peso = data.peso
-        sexo = data.sexo
-        rodeo = data.rodeo
-        lote = data.lote
-        rp  = data.rp
-        categoria = data.categoria
-        prenada = data.prenada==1?0:data.prenada
-        if(data.fechafallecimiento != ""){
-            fechafall = data.fechafallecimiento.split(" ")[0]
-            motivobaja = data.motivobaja
-        }
+    async function getDataSQLOriginal() {
         let lastinter = await getInternetSQL(db)
         if (coninternet.connected){
             if(lastinter.internet == 0){
@@ -430,6 +449,42 @@
         }
         cargado = true
     }
+    async function getDataSQL() {
+        db = await openDB()
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        let data = await getAnimalSQLByID(db,slug)
+        caravana = data.caravana
+        active = data.active
+        fechanacimiento = data.fechanacimiento.split(" ")[0]
+        
+        peso = data.peso
+        sexo = data.sexo
+        rodeo = data.rodeo
+        lote = data.lote
+        rp  = data.rp
+        categoria = data.categoria
+        prenada = data.prenada==1?0:data.prenada
+        if(data.fechafallecimiento != ""){
+            fechafall = data.fechafallecimiento.split(" ")[0]
+            motivobaja = data.motivobaja
+        }
+        await getLocalSQL()
+        nacimiento = ""
+        nacimientoobj = {}
+        if(data.nacimiento != ""){
+            nacimiento = data.nacimiento
+            let n_idx = pariciones.findIndex(n=>n.id==nacimiento)
+            if(n_idx != -1){
+                nacimientoobj = pariciones[n_idx]
+                //if(modedebug){
+                //    loger.addTextLog(JSON.stringify(nacimientoobj,null,2))
+                //}
+            }
+            
+        }
+        cargado = true
+    }
     //Necesito una funcion que traiga toda la informacion del animal
     //Para mi es siempre get
     onMount(async ()=>{
@@ -438,8 +493,8 @@
         if(slug!=""){
             await getDataSQL()
             tab = "datos"
-                if(sexo.toLowerCase()=="h"){
-                    pestañas = [
+            if(sexo.toLowerCase()=="h"){
+                pestañas = [
                     {id:"datos",nombre:"Datos básicos"},
                     {id:"pesajes",nombre:"Pesajes"},
                     {id:"tratamientos",nombre:"Tratamientos"},
@@ -466,6 +521,14 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            
+            <span>
+                con internet: {coninternet.connected}
+            </span>
+        </div>
+    {/if}
     <div class="flex justify-center mt-1">
         <div class="w-full max-w-7xl px-4">
           <!-- Combo alineado al borde izquierdo de la card -->
@@ -478,6 +541,10 @@
             <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
                 <DatosBasicos {rp} {peso} {prenada} 
                     {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} 
+                    {lotes} {rodeos}
+                    {coninternet} {useroff} {caboff}
+                    {db} animales = {animales}
+                    bind:comandos
                     connacimiento={nacimiento != ""} nacimiento={nacimientoobj} 
                     fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}
                 />
@@ -508,7 +575,14 @@
         {:else if tab =="pariciones"}
             <!--Animales nacimientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
-                <Pariciones  {db} {useroff} {coninternet} bind:caravanamadre = {caravana} bind:animales bind:comandos bind:pariciones cabid={cab.id} sexoanimal = {sexo} bind:prenada={prenada}/>
+                <Pariciones  
+                    {db} {useroff} {coninternet} 
+                    bind:caravanamadre = {caravana} 
+                    bind:animales bind:comandos 
+                    bind:pariciones cabid={cab.id} 
+                    {usuarioid}
+                    sexoanimal = {sexo} bind:prenada={prenada}
+                />
             </CardAnimal>
         {:else if tab =="tactos"}
             <!--Tactos-->
