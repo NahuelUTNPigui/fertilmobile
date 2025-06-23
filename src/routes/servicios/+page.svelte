@@ -39,7 +39,7 @@
         
     } from "$lib/stores/sqlite/dbeventos"
     import {
-    addNewAnimalSQL,
+        addNewAnimalSQL,
         getAnimalesSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
@@ -169,8 +169,7 @@
                 let dataser = {
                     fechadesde : fechadesdeserv + " 03:00:00",
                     fechaparto: fechaparto + " 03:00:00",
-                    observacion: observacion,
-                    madre:madre,
+                    observacion,
                     padres:padreslist.join()
                 }
                 if(fechahastaserv != ""){
@@ -180,16 +179,15 @@
                 servicios[s_idx].fechadesde = dataser.fechadesde
                 servicios[s_idx].fechaparto = dataser.fechaparto
                 servicios[s_idx].observacion = dataser.observacion
-                servicios[s_idx].madre = dataser.madre
                 servicios[s_idx].padres = dataser.padres
                 await pb.collection("servicios").update(idserv,dataser)
                 await setServiciosSQL(db,servicios)
                 esservicio = false
-                onChangeServicios()
-                filterUpdate()
+                Swal.fire("Éxito editar","Se pudo editar el servicio con exito","success")
             }
             catch(err){
                 esservicio = false
+                Swal.fire("Error editar","No se pudo editar el servicio con exito","success")
                 console.error(err)
             }
         }
@@ -214,8 +212,7 @@
                 
                 await pb.collection('inseminacion').update(idserv, data);
                 await setInseminacionesSQL(db,inseminaciones)
-                onChangeInseminaciones()
-                filterUpdate()
+                
                 Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
                 esinseminacion = false
             }catch(err){
@@ -260,14 +257,15 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-                    filterUpdate()
+                    Swal.fire("Éxito editar","Se pudo editar el servicio con exito","success")
                 }
-                onChangeServicios()
+                
                 esservicio = false
-                filterUpdate()
+                
             }
             catch(err){
                 esservicio = false
+                Swal.fire("Error editar","No se pudo editar el servicio con exito","success")
                 console.error(err)
             }
         }
@@ -305,8 +303,7 @@
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
                 }
-                onChangeInseminaciones()
-                filterUpdate()
+                
                 Swal.fire("Éxito editar","Se pudo editar la inseminación con exito","success")
                 esinseminacion = false
             }catch(err){
@@ -323,6 +320,9 @@
         else{
             await editarOffline()
         }
+        onChangeInseminaciones()
+        onChangeServicios()
+        filterUpdate()
         
     }
     //Aca va el offline
@@ -342,8 +342,6 @@
                 }
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
-                
-                filterUpdate()
                 Swal.fire("Éxito eliminar","Se eliminó con éxito el servicio","success")
             }
             catch(err){
@@ -365,8 +363,6 @@
                 }
                 comandos.push(comando)
                 await setComandosSQL(db,comandos)
-                
-                filterUpdate()
                 Swal.fire("Éxito eliminar","Se eliminó con éxito la inseminación","success")
 
             }
@@ -378,9 +374,9 @@
     async function eliminarOnline(id,esInseminacion) {
         if(!esInseminacion){
             try{
+                
                 await pb.collection("servicios").update(id,{active:false})
-                await getServicios()
-                filterUpdate()
+                servicios = servicios.filter(s=>s.id != id)
                 Swal.fire("Éxito eliminar","Se eliminó con éxito el servicio","success")
             }
             catch(err){
@@ -390,8 +386,7 @@
         else{
             try{
                 await pb.collection("inseminacion").update(id,{active:false})
-                await getInseminaciones()
-                filterUpdate()
+                inseminaciones = inseminaciones.filter(s=>s.id != id)
                 Swal.fire("Éxito eliminar","Se eliminó con éxito la inseminación","success")
 
             }
@@ -407,7 +402,9 @@
         else{
             await eliminarOffline(id,esInseminacion)
         }
-        
+        onChangeInseminaciones()
+        onChangeServicios()
+        filterUpdate()
         
     }
     function cerrarModal(){
@@ -455,10 +452,10 @@
 
     }
     function onChangeInseminaciones(){
-        inseminacionescab = inseminaciones.filter(s=>s.cab == cab.id)
+        inseminacionescab = inseminaciones.filter(s=>s.cab == caboff.id)
     }
     function onChangeServicios(){
-        servicioscab = servicios.filter(s=>s.cab == cab.id)
+        servicioscab = servicios.filter(s=>s.cab == caboff.id)
     }
     function validarBoton(){
     }
@@ -578,16 +575,15 @@
         })
         cargado = true
         servicios = await updateLocalServiciosSQLUser(db,pb,usuarioid)
-        servicioscab = servicios.filter(s=>s.cab == caboff.id)
-        inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
-        inseminacionescab = inseminaciones.filter(i=>i.cab == caboff.id)
         
+        inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+        onChangeServicios()
+        onChangeInseminaciones()
         filterUpdate()
     }
     async function getLocalSQL() {
         
         let resanimales = await getAnimalesSQL(db)
-        
         let animales = resanimales.lista
         animales = animales.filter(a=>a.active  && a.cab == caboff.id)
         madres = animales.filter(a=>a.sexo == "H" || a.sexo == "F")
@@ -603,13 +599,14 @@
         let resservicios = await getServiciosSQL(db)
         
         servicios = resservicios.lista
-        servicioscab = servicios.filter(s=>s.cab == caboff.id)
+    
         let resinseminaciones = await getInseminacionesSQL(db)
-        
         inseminaciones = resinseminaciones.lista
-        inseminacionescab = inseminaciones.filter(i=>i.cab == caboff.id)
         
+        onChangeServicios()
+        onChangeInseminaciones()    
         filterUpdate()
+    
     }
     async function getDataSQL() {
         getlocal = true
@@ -645,14 +642,16 @@
             await setInternetSQL(db,0,Date.now())
         }
     }
+    
     onMount(async ()=>{
         await initPage()
         await getDataSQL()
     })
     //Para los ordenar
-    let ascendente = $state(true)
+    let ascendente = $state(false)
     let forma = $state("fecha")
     let selectforma = $state("fecha")
+    
     //Ordenar servicios
     function ordenarServiciosDescendente(p_forma){
         
@@ -664,14 +663,21 @@
         if(forma=="fecha"){
             
             serviciosrow.sort((a1,a2)=>{
-                let f1 = a1.fechadesde?a1.fechadesde:a1.fechainseminacion?a1.fechainseminacion:""
-                let f2 = a2.fechadesde?a2.fechadesde:a2.fechainseminacion?a2.fechainseminacion:""
-                return escalar * f1.localeCompare(f2)
+                let f1 = a1.fechadesde ? a1.fechadesde : a1.fechainseminacion?a1.fechainseminacion:""
+                let f2 = a2.fechadesde ? a2.fechadesde : a2.fechainseminacion?a2.fechainseminacion:""
+                let salida = new Date(f1)<new Date(f2)?-1:1
+                return escalar * salida
             })
         }
         else if(forma=="fechaparto"){
             
-            serviciosrow.sort((a1,a2)=>escalar * a1.fechaparto.localeCompare(a2.fechaparto))
+            serviciosrow.sort((a1,a2)=>{
+                let f1 = a1.fechaparto
+                let f2 = a2.fechaparto
+                let salida = new Date(f1)<new Date(f2)?-1:1
+                return escalar * salida
+                
+            })
         }
         else if(forma=="madre"){
             serviciosrow.sort((a1,a2)=>{
@@ -691,19 +697,19 @@
     }
     function ordenarServicios(p_forma){
         
-        if(p_forma == forma){
-            ascendente = !ascendente
-            
-        }
-        else{
-            ascendente = true
-        }
+        //if(p_forma == forma){
+        //    ascendente = !ascendente
+        //    
+        //}
+        //else{
+        //    ascendente = false
+        //}
         ordenarServiciosDescendente(p_forma)
     }
 </script>
 <Navbarr>
     {#if modedebug}
-    <div class="grid grid-cols-3">
+        <div class="grid grid-cols-3">
             <div>
                 <span>
                     {coninternet.connected?"COn internet":"sin internet"}
@@ -718,6 +724,9 @@
                 <span>
                     get local{getlocal}
                 </span>
+            </div>
+            <div class="">
+                <button class="btn" onclick={()=>ordenarServicios("fecha")}>Ordenar por fecha</button>
             </div>
         </div>
     {/if}
@@ -969,13 +978,13 @@
                                 }
                             </span>
                         </div>
-                        {#if s.fechadesde}
+                        {#if s.fechadesde && s.fechahasta.length>0}
                             <div class="flex items-start">
                                 <span >Fecha hasta:</span> 
                                 <span class="mx-1 font-semibold">
                                     {
-                                        s.fechadesde?new Date(s.fechadesde).toLocaleDateString():
-                                        s.fechainseminacion?new Date(s.fechainseminacion).toLocaleDateString():
+                                        s.fechahasta.length > 0?
+                                        new Date(s.fechahasta).toLocaleDateString():
                                         ""
                                     }
                                 </span>
@@ -984,7 +993,8 @@
                         <div class="flex items-start">
                             <span >Madre:</span> 
                             <span class="mx-1 font-semibold">
-                                {   s.fechadesde?
+                                {   
+                                    s.fechadesde?
                                     shorterWord(s.expand.madre.caravana):
                                     shorterWord(s.expand.animal.caravana)
                                 }
@@ -1038,9 +1048,8 @@
                         ${estilos.bgdark2}
                     `}
                     bind:value={madre}
-                    
+                    disabled
                 >
-                    
                     {#each madres as a}
                         <option value={a.id}>{a.caravana}</option>    
                     {/each}
@@ -1154,7 +1163,7 @@
         <h3 class="text-lg font-bold">Ver inseminación</h3>  
         <div class="form-control">
             <label for = "nombre" class="label">
-                <span class="label-text text-base">Caravana</span>
+                <span class="label-text text-base">Madre</span>
             </label>
             <label class="input-group ">
                 <select 
@@ -1167,8 +1176,8 @@
                     `}
                     bind:value={idanimal}
                     onchange={()=>oninput("ANIMAL")}
+                    disabled
                 >
-                    <option value="agregar">Agregar</option>
                     {#each madres as m}
                         <option value={m.id}>{m.caravana}</option>    
                     {/each}
@@ -1179,6 +1188,7 @@
                     </div>
                 {/if}
             </label>
+
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>

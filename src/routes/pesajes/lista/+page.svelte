@@ -10,6 +10,7 @@
     import estilos from '$lib/stores/estilos';
     import {shorterWord} from "$lib/stringutil/lib"
     import * as XLSX from "xlsx"
+    import { goto } from '$app/navigation';
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -22,7 +23,10 @@
         updateLocalPesajesSQLUser,
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
-    
+
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { loger } from '$lib/stores/logs/logs.svelte';
+
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     
     //ofline
@@ -32,7 +36,7 @@
     let caboff = $state({})
     let coninternet = $state({})
     let comandos = $state([])
-
+    let getlocal = $state(true)
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -88,8 +92,12 @@
         if(!isEmpty(fechahasta)){
             pesajesrows = pesajesrows.filter(p=>p.fecha<=fechahasta)
         }
-        //procesarPesajes()
+        
         procesarUltimosPesajes()
+    }
+    function actualizarDatos(){
+        onChangePesajes()
+        filterUpdate()
     }
     async function editarPesajeOffline() {
         let data = {
@@ -100,7 +108,7 @@
             let idx_pesaje = pesajes.findIndex(p=>p.id == idpesaje)
             pesajes[idx_pesaje].fecha = data.fecha
             pesajes[idx_pesaje].pesonuevo = data.pesonuevo
-            onchangePesajes()
+            
             await setPesajesSQL(db,pesajes)
             let comando = {
                 tipo:"update",
@@ -114,11 +122,14 @@
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+            actualizarDatos()
         }  
         catch(err){
             console.error(err)
             Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+            actualizarDatos()
         }
+        detallePesaje.close()
     }
     async function editarPesajeOnline() {
         try{
@@ -131,14 +142,16 @@
             await pb.collection("pesaje").update(idpesaje,data)
             pesajes[idx_pesaje].fecha = data.fecha
             pesajes[idx_pesaje].pesonuevo = data.pesonuevo
-            onchangePesajes()
+            
             await setPesajesSQL(db,pesajes)
-            filterUpdate()
+
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+            actualizarDatos()
         }   
         catch(err){
             console.error(err)
             Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+            actualizarDatos()
         }
         detallePesaje.close()
     }
@@ -149,9 +162,11 @@
         else{
             await editarPesajeOffline()
         }
-
+        onChangePesajes()
+        filterUpdate()
     }
     function eliminarOffline(){
+        detallePesaje.close()
         Swal.fire({
             title: 'Eliminar pesajes',
             text: '¿Seguro que deseas eliminar el pesaje?',
@@ -162,7 +177,9 @@
         }).then(async result => {
             if(result.value){
                 try{
+                    
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    
                     await setPesajesSQL(db,pesajes)
                     let comando = {
                         tipo:"delete",
@@ -175,18 +192,19 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-                    onChangePesajes()
-                    filterUpdate()
-                    detallePesaje.close()
+                    Swal.fire("Éxito eliminar pesaje","Se pudo eliminar el pesaje","success")
+                    actualizarDatos()
                 }
                 catch(err){
                     console.error(err)
-                    detallePesaje.close()
+                    Swal.fire("Error eliminar pesaje","No se pudo eliminar el pesaje","error")
+                    actualizarDatos()
                 }
             }
         })
     }
     function eliminarOnline() {
+        detallePesaje.close()
         Swal.fire({
             title: 'Eliminar pesajes',
             text: '¿Seguro que deseas eliminar el pesaje?',
@@ -197,16 +215,18 @@
         }).then(async result => {
             if(result.value){
                 try{
+                    
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    
                     await setPesajesSQL(db,pesajes)
                     await pb.collection("pesaje").delete(idpesaje)
-                    onChangePesajes()
-                    filterUpdate()
-                    detallePesaje.close()
+                    Swal.fire("Éxito eliminar pesaje","Se pudo eliminar el pesaje","success")
+                    actualizarDatos()
                 }
                 catch(err){
                     console.error(err)
-                    detallePesaje.close()
+                    Swal.fire("Error eliminar pesaje","No se pudo eliminar el pesaje","error")
+                    actualizarDatos()
                 }
             }
             
@@ -219,6 +239,8 @@
         else{
             await eliminarOffline()
         }
+        
+        
         
     }
     function openDetalle(id){
@@ -247,7 +269,6 @@
             let filaexcel = {
                 ANIMAL:f.expand.animal.caravana,
                 FECHA:new Date(f.fecha).toLocaleDateString(),
-                PESO_ANTERIO:f.pesoanterior,
                 PESO_NUEVO:f.pesonuevo
             }
             
@@ -273,23 +294,34 @@
         pesajesprocesados = []
         //tabla[animal] = { animal,pesajes:[{fecha,peso}]}
         let tablapesajes = {}
+        
         for(let i = 0;i<pesajesrows.length;i++){
             let p = pesajesrows[i]
-            let caravana = p.expand.animal.caravana
-            let fecha = p.fecha
-            let peso = p.pesonuevo
-            let id = p.id
-            if(tablapesajes[caravana]){
-                if(tablapesajes[caravana].pesajes.length < ultimos){
-                    tablapesajes[caravana].pesajes.push({fecha,peso,id})
+            try{
+                let caravana = p.expand.animal.caravana
+                let fecha = p.fecha
+                let peso = p.pesonuevo
+                let id = p.id
+                if(tablapesajes[caravana]){
+                    if(tablapesajes[caravana].pesajes.length < ultimos){
+                        tablapesajes[caravana].pesajes.push({fecha,peso,id})
+                    }
+                }
+                else{
+                    tablapesajes[caravana] = {
+                        animal:caravana,
+                        pesajes:[{fecha,peso,id}]
+                    }
                 }
             }
-            else{
-                tablapesajes[caravana] = {
-                    animal:caravana,
-                    pesajes:[{fecha,peso,id}]
+            catch(err){
+                
+                if(modedebug){
+                    loger.addTextLog("error fecha")
+                    loger.addTextLog(JSON.stringify(p,null,2))
                 }
             }
+            
         }
         
         for (const [key, value] of Object.entries(tablapesajes)) {
@@ -349,6 +381,8 @@
     function onChangePesajes(){
         
         pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
+        pesajescab.sort((p1,p2)=>new Date(p1.fecha)>new Date(p2.fecha)?-1:1)
+ 
     }
     async function updateLocalSQL(){
         
@@ -364,19 +398,27 @@
         filterUpdate()
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     } 
-    async function getDataSQL() {
-        db = await openDB()
+    async function updateGetLocalSQL(){
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
@@ -384,18 +426,24 @@
                 let antes = lastinter.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
+                    
                     await updateLocalSQL()
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
             await setInternetSQL(db,0,Date.now())
         }
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        await getLocalSQL()
+        
     }
     onMount(async ()=>{
         await initPage()
@@ -404,23 +452,49 @@
 </script>
 <Navbarr>
     {#if modedebug}
-    <div class="label">
-            pesajes - {pesajes.length}
-        </div>
-        <div class="label">
-            pesajescab - {pesajescab.length}
-        </div>
-        <div class="label">
-            pesajesrows - {pesajesrows.length}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                pesajes - {pesajes.length}
+            </div>
+            <div class="label">
+                pesajescab - {pesajescab.length}
+            </div>
+            <div class="label">
+                pesajesrows - {pesajesrows.length}
+            </div>
+            <span>
+                    con internet: {coninternet.connected}
+                </span>
+            <span>
+                get local: {getlocal}
+            </span>
         </div>
     {/if}
     <div class="grid grid-cols-1  lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
-            <h1 class="text-2xl col-span-2 lg:col-span-1">Historia pesajes - Últimos {ultimos}</h1>  
+            <button
+                onclick={()=>goto("/pesajes")}
+            >
+                        
+                <h2 class="hidden md:flex text-2xl mx-1 font-bold mb-2 text-left mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 mt-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Historia pesajes - Últimos {ultimos}
+                </h2>
+                <h2 class="md:hidden flex text-2xl mx-1 font-bold mb-2 text-left mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 mt-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Historia pesajes - Últimos {ultimos-2}
+                </h2>
+            </button>
+            
         </div>
-        <div class="flex col-span-2 gap-1 justify-end">
+        <div class="flex col-span-2 gap-1 justify-start lg:justify-end my-1">
             
             <div class="flex flex-row gap-2 ">
+                
                 <div>
                     <a class={`
                         btn 
@@ -446,17 +520,7 @@
                     
                 </button>
             </div>
-            <div>
-                <a class={`
-                    btn 
-                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                    ${estilos.btnsecondary}`} 
-                    href={"/pesajes"}
-
-                >
-                    <span  class="text-xl font-semibold ">Volver</span>
-                </a>
-            </div>
+            
         </div>
     </div>
     <div class="grid grid-cols-1 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12" >
@@ -575,6 +639,7 @@
             <tbody>
                 {#each pesajesprocesados as f}
                     <tr>
+                        
                         <td class="text-base mx-1 px-1">
                             {shorterWord(f.animal)}
                         </td>

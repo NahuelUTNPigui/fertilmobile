@@ -11,6 +11,7 @@
     import {shorterWord} from "$lib/stringutil/lib"
     import * as XLSX from "xlsx"
     import {isEmpty} from "$lib/stringutil/lib"
+    import { goto } from '$app/navigation';
     //ofline
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
@@ -23,6 +24,10 @@
         getPesajesSQL,
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { loger } from '$lib/stores/logs/logs.svelte';
+    import { ACTUALIZACION } from '$lib/stores/constantes';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //ofline
     let db = $state(null)
     let usuarioid = $state("")
@@ -30,7 +35,7 @@
     let caboff = $state({})
     let coninternet = $state({})
     let comandos = $state([])
-
+    let getlocal = $state(false)
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -78,9 +83,14 @@
         }
         
     }
+    function actualizarDatos(){
+        onChangePesajes()
+        filterUpdate()
+    }
     function onChangePesajes(){
         
         pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
+        pesajescab.sort((p1,p2)=>new Date(p1.fecha)>new Date(p2.fecha)?-1:1)
     }
     async function editarPesajeOffline() {
         let data = {
@@ -91,7 +101,7 @@
             let idx_pesaje = pesajes.findIndex(p=>pesajes)
             pesajes[idx_pesaje].fecha = data.fecha
             pesajes[idx_pesaje].pesonuevo = data.pesonuevo
-            onchangePesajes()
+            
             await setPesajesSQL(db,pesajes)
             let comando = {
                 tipo:"update",
@@ -103,11 +113,14 @@
                 camposprov:""
             }
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+            actualizarDatos()
         }  
         catch(err){
             console.error(err)
             Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+            actualizarDatos()
         }
+        detallePesaje.close()
     }
     async function editarPesajeOnline() {
         try{
@@ -120,15 +133,18 @@
             await pb.collection("pesaje").update(idpesaje,data)
             pesajes[idx_pesaje].fecha = data.fecha
             pesajes[idx_pesaje].pesonuevo = data.pesonuevo
-            onchangePesajes()
+            
             await setPesajesSQL(db,pesajes)
-            filterUpdate()
+            
             Swal.fire("Éxito editar pesaje","Se pudo editar el pesaje","success")
+            actualizarDatos()
         }   
         catch(err){
             console.error(err)
             Swal.fire("Error editar pesaje","No se pudo editar el pesaje","error")
+            actualizarDatos()
         }
+
         detallePesaje.close()
     }
     async function editarPesaje() {
@@ -139,9 +155,9 @@
             await editarPesajeOffline()
         }
 
-
     }
     async function eliminarOffline() {
+        detallePesaje.close()
         Swal.fire({
             title: 'Eliminar pesajes',
             text: '¿Seguro que deseas eliminar el pesaje?',
@@ -165,18 +181,20 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-                    onChangePesajes()
-                    filterUpdate()
-                    detallePesaje.close()
+                    Swal.fire("Éxito eliminar pesaje","Se pudo eliminar el pesaje","success")
+                    actualizarDatos()
+                    
                 }
                 catch(err){
                     console.error(err)
-                    detallePesaje.close()
+                    Swal.fire("Error eliminar pesaje","No se pudo eliminar el pesaje","error")
+                    actualizarDatos()
                 }
             }
         })
     }
     async function eliminarOnline() {
+        detallePesaje.close()
         Swal.fire({
             title: 'Eliminar pesajes',
             text: '¿Seguro que deseas eliminar el pesaje?',
@@ -190,13 +208,13 @@
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
                     await setPesajesSQL(db,pesajes)
                     await pb.collection("pesaje").delete(idpesaje)
-                    onChangePesajes()
-                    filterUpdate()
-                    detallePesaje.close()
+                    actualizarDatos()
+                    Swal.fire("Éxito eliminar pesaje","Se pudo eliminar el pesaje","success")
                 }
                 catch(err){
                     console.error(err)
-                    detallePesaje.close()
+                    Swal.fire("Error eliminar pesaje","No se pudo eliminar el pesaje","error")
+                    actualizarDatos()
                 }
             }
             
@@ -209,7 +227,7 @@
         else{
             await eliminarOffline()
         }
-        
+
     }
     function openDetalle(id){
         idpesaje = id
@@ -226,13 +244,21 @@
         filterUpdate()
     }
     async function getLocalSQL() {
+        getlocal = true
         let respesajes = await getPesajesSQL(db)
         pesajes = respesajes.lista
-        pesajescab  = pesajes.filter(p=>p.expand.animal.cab == caboff.id) 
-        filterUpdate()
+        actualizarDatos()
     }
     async function initPage(){
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -258,22 +284,38 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                pesajes - {pesajes.length}
+            </div>
+            <div class="label">
+                pesajescab - {pesajescab.length}
+            </div>
+            <div class="label">
+                pesajesrows - {pesajesrows.length}
+            </div>
+            <span>
+                con internet: {coninternet.connected}
+            </span>
+            <span>
+                get local: {getlocal}
+            </span>
+        </div>
+    {/if} 
     <div class="grid grid-cols-1  lg:grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
-            <h1 class="text-2xl col-span-2 lg:col-span-1">Pesajes</h1>  
-        </div>
-        <div class="flex col-span-2 gap-1 justify-end">
-            <div>
-                <a class={`
-                    btn 
-                    bg-transparent border rounded-lg focus:outline-none transition-colors duration-200
-                    ${estilos.btnsecondary}`} 
-                    href={pre+"/pesajes"}
-
-                >
-                    <span  class="text-xl font-semibold ">Volver</span>
-                </a>
-            </div>
+            <button
+                onclick={()=>goto("/pesajes")}
+            >   
+                <h2 class="flex text-2xl mx-1 font-bold mb-2 text-left mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 mt-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    Pesajes
+                </h2>  
+            </button>
+            
         </div>
     </div>
     <div class="grid grid-cols-1 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12" >
@@ -362,13 +404,7 @@
                         
                         class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
                     >
-                        Peso anterior
-                    </th>
-                    <th 
-                        
-                        class="text-base p-3 border-b dark:border-gray-600 hover:cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
-                    >
-                        Peso nuevo
+                        Pesaje
                     </th>
                 </tr>
             </thead>
@@ -386,12 +422,6 @@
                             class="text-base p-3 border-b dark:border-gray-600 "
                         >
                             {shorterWord(p.expand.animal.caravana)}
-                        </td>
-                        <td 
-                            
-                            class="text-base p-3 border-b dark:border-gray-600 "
-                        >
-                            {p.pesoanterior}
                         </td>
                         <td 
                             
@@ -423,14 +453,14 @@
                                 {`${p.expand.animal.caravana}`}
                             </span>
                         </div>
-                        <div class="flex items-start">
+                        <div class="hidden flex items-start">
                             <span >Peso anterior:</span> 
                             <span class="mx-1 font-semibold">
                                 {`${p.pesoanterior}`}
                             </span>
                         </div>
                         <div class="flex items-start">
-                            <span >Peso nuevo:</span> 
+                            <span >Pesaje:</span> 
                             <span class="mx-1 font-semibold">
                                 {`${p.pesonuevo}`}
                             </span>

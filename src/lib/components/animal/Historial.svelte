@@ -25,6 +25,9 @@
     }
     function onChangeHistorial(){
         historialrows = historial.filter(h=>h.animal == id)
+        historialrows.sort((h1,h2)=>
+            new Date(h1.fecha) > new Date(h2.fecha) ? -1 : 1
+        )
     }
     onMount(async ()=>{
         id = $page.params.slug

@@ -230,6 +230,14 @@
         tipotratamientos = records
         tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
     }
+    function actualizarDatos(){
+        onChangeTratamientos()
+        filterUpdate()
+    }
+    function onChangeTipos(){
+        tipotratamientos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
+        tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+    }
     function onChangeTratamientos(){
         tratamientoscab = tratamientos.filter(t=>t.cab == cab.id && t.active == true)   
     }
@@ -243,15 +251,15 @@
                 fecha:fecha +" 03:00:00",
                 id:idtratamiento
             }
-            let tidx = tratamientos.findIndex(t=>t.id==idtipotratamiento)
-            let tt_idx = tipotratamientos.findIndex(tipo=>t.id == tipo)
+            let tidx = tratamientos.findIndex(t=>t.id==idtratamiento)
+            let tt_idx = tipotratamientos.findIndex(tipo=>tipo.id == tipo)
             if(tidx != -1){
                 tratamientos[tidx].categoria = data.categoria
                 tratamientos[tidx].tipo = data.tipo
                 tratamientos[tidx].observacion = data.observacion
                 tratamientos[tidx].fecha = data.fecha
                 //Muy confuso pero basicamente si existe el tipo, fijarse si es nuevo, sino es falso tanto como viejo como inexistente
-                let ntipo = tips[0]?tips[0].split("_").length > 1:false
+                let ntipo = tipo?tipo.split("_").length > 1:false
                 let comando={
                     tipo:"update",
                     coleccion:"tratamientos",
@@ -261,7 +269,7 @@
                     idprov:idtratamiento,
                     camposprov:ntipo?"tipo":""
                 }
-                comando.push(comando)
+                comandos.push(comando)
                 await setComandosSQL(db,comandos)
 
                 if(tt_idx != -1){
@@ -269,10 +277,17 @@
                     tratamientos[t_idx].expand.tipo.nombre = tipotratamientos[tt_idx].nombre
                 }
                 await setTratsSQL(db,tratamientos)
-                
+                actualizarDatos()
+                Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
             }
-            onChangeTratamientos()
-            Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
+            else{
+                if(modedebug){
+                    loger.addTextLog("El idx es -1")
+                }
+            }
+            
+
+            
         }
         catch(err){
             console.error(err)
@@ -294,13 +309,13 @@
                 ...tratamientos[t_idx],
                 ...data,
             }
-            let tt_idx = tipotratamientos.findIndex(tipo=>t.id == tipo)
+            let tt_idx = tipotratamientos.findIndex(tipo=>tipo.id == tipo)
             if(tt_idx != -1){
                 tratamientos[t_idx].expand.tipo.id = tipo
                 tratamientos[t_idx].expand.tipo.nombre = tipotratamientos[tt_idx].nombre
             }
             await setTratsSQL(db,tratamientos)
-            onChangeTratamientos()
+            actualizarDatos()
             Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
         }
         catch(err){
@@ -332,18 +347,18 @@
                     
                     tratamientos = tratamientos.filter(t=>t.id != id)
                     await setTratsSQL(db,tratamientos)
-                    onChangeTratamientos()
+                    actualizarDatos()
                     let comando = {
                         tipo:"update",
                         coleccion:"tratamientos",
-                        data:{...dataparicion},
+                        data:{...data},
                         hora:Date.now(),
                         prioridad:2,
                         idprov:id,
                         camposprov:""
                     }
                     comandos.push(comando)
-                    await setComandosSQL(db.comandos)
+                    await setComandosSQL(db,comandos)
                     
                     Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
                 }
@@ -372,7 +387,7 @@
                     await pb.collection("tratamientos").update(id,data)
                     tratamientos = tratamientos.filter(t=>t.id != id)
                     await setTratsSQL(db,tratamientos)
-                    onChangeTratamientos()
+                    actualizarDatos()
                     Swal.fire("Éxito eliminar","Se pudo eliminar el tratamiento con exito","success")
                 }
                 catch(err){
@@ -425,7 +440,7 @@
                 
                 tipotratamientos.push(record)
                 tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
-                tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+                onChangeTipos()
                 await setTiposTratSQL(db,tipotratamientos)
                 
                 cerrarTipoModal()
@@ -436,7 +451,7 @@
             }
         }
         else{
-            await editarTipo()
+            await editarTipoOnline()
         }
     }
     async function guardarTipoOffline() {
@@ -449,7 +464,7 @@
             }
             data.id = idprov
             tipotratamientos.push(data)
-            
+            onChangeTipos()
             let comando = {
                 tipo:"add",
                 coleccion:"tipotrats",
@@ -462,13 +477,12 @@
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             await setTiposTratSQL(db,tipotratamientos)
+            cerrarTipoModal()
         }
         else{
             let data = {
                 nombre:nombretipotratamiento,
-                active : true,
-                cab:caboff.id,
-                id:idtipotratamiento
+
             }
             let comando = {
                 tipo:"update",
@@ -482,12 +496,16 @@
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             
-            let item = {...data}
-            tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
-            tipotratamientos.push(item)
-            tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
-            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+            let tt_idx = tipotratamientos.findIndex(tp=>tp.id==idtipotratamiento)   
+            tipotratamientos[tt_idx] = {
+                ...tipotratamientos[tt_idx],
+                ...data
+            }
+            
+            tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+            onChangeTipos()
             await setTiposTratSQL(db,tipotratamientos)
+            cerrarTipoModal()
         }
     }
     async function guardarTipo(){
@@ -498,13 +516,14 @@
             await guardarTipoOffline()
         }
     }
-    async function editarTipo(){
+
+    async function editarTipoOnline(){
         try{
             let data = {
                 nombre:nombretipotratamiento,
             }
             await pb.collection("tipotratamientos").update(idtipotratamiento,data)
-            let item = {...data,id:idtipotratamiento}
+            
             let tt_idx = tipotratamientos.findIndex(tp=>tp.id==idtipotratamiento)   
             tipotratamientos[tt_idx] = {
                 ...tipotratamientos[tt_idx],
@@ -512,7 +531,7 @@
             }
             
             tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
-            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+            onChangeTipos()
             await setTiposTratSQL(db,tipotratamientos)            
             cerrarTipoModal()
         }
@@ -530,8 +549,7 @@
             }
             await pb.collection("tipotratamientos").update(idtipotratamiento,data)
             tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
-            tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
-            tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
+            onChangeTipos()
             await setTiposTratSQL(db,tipotratamientos)
         }
         catch(err){
@@ -542,8 +560,9 @@
         idtipotratamiento = id
         
         tipotratamientos = tipotratamientos.filter(tp => tp.id != idtipotratamiento)
-        tipotratamientoscab = tipotratamientos.filter(tp=>(tp.cab == caboff.id || tp.generico == true) && tp.active)
         tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-11)
+        onChangeTipos()
+        
         let comando = {
             tipo:"delete",
             coleccion:"tipotrats",
@@ -668,20 +687,23 @@
         await setUltimoTratsSQL(db)
         await setUltimoAnimalesSQL(db   )
         tratamientos = await updateLocalTratsSQLUser(db,pb,usuarioid)
-        tratamientos = tratamientos.filter(t=>t.cab == caboff.id)
+        onChangeTratamientos()
         animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
         tipotratamientos = await updateLocalTiposTratSQLUser(db,pb,usuarioid)
-        tipotratamientos = tipotratamientos.filter(tt=>tt.generico || tt.cab==caboff.id)
+        onChangeTratamientos()
+        onChangeTipos()
         filterUpdate()
     }
     async function getLocalSQL() {
         let restratamientos = await getTratsSQL(db)
         tratamientos = restratamientos.lista
-        tratamientoscab = tratamientos.filter(t=>t.cab == caboff.id && t.active)
+        
         animales = await getAnimalesCabSQL(db,caboff.id)
         
         let restipos = await getTiposTratSQL(db)
-        tipotratamientos = restipos.lista.filter(tt=>tt.generico || tt.cab == caboff.id)
+        tipotratamientos = restipos.lista
+        onChangeTratamientos()
+        onChangeTipos()
         filterUpdate()
 
     }
@@ -1132,7 +1154,7 @@
                     bind:value={tipo}
                     onchange={()=>oninput("TIPO")}
                 >
-                    {#each tipotratamientos as t}
+                    {#each tipotratamientoscab as t}
                         <option value={t.id}>{t.nombre}</option>    
                     {/each}
                 </select>
@@ -1192,60 +1214,59 @@
                 <button class={`w-full btn flex btn-primary ${estilos.btntext}`} data-theme="forest" onclick={()=>nuevoTipo()}>
                     <span  class="text-xl">Nuevo tipo</span>
                 </button>
-                {#if addtipo}
-                <div class="grid grid-cols-3 gap-1">
-                    <div class="col-span-2">
-                        <label for = "nombre" class="label">
-                            <span class="label-text text-base">Nombre</span>
-                        </label>
-                        <label class="input-group">
-                            <input id ="nombre" type="text"  
-                                class={`
-                                    input input-bordered 
-                                    w-full
-                                    border border-gray-300 rounded-md
-                                    focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 
-                                    focus:border-green-500
-                                    ${estilos.bgdark2} 
-                                    
-                                `}
-                                bind:value={nombretipotratamiento}
-                                oninput={validarBotonTipo}
-                            />
-                        </label>
-                    </div>
-                    
-                    <div class="flex flex-row gap-1 mt-10">
-                        
-                        <button
-                            aria-label="guardar"
-                            class={`
-                                ${estilos.basico} ${estilos.chico} ${estilos.primario}
-                            `}
-                            onclick={guardarTipo}
-                            disabled='{!botontipo}'
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy" viewBox="0 0 16 16">
-                                <path d="M11 2H9v3h2z"/>
-                                <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
-                            </svg>
-                        </button>
-                        <button 
-                            aria-label="cerrar"
-                            class={`
-                                ${estilos.basico} ${estilos.chico} ${estilos.danger}
-                            `}
-                            onclick={cerrarTipoModal}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                
-                {/if}
+                    {#if addtipo}
+                        <div class="grid grid-cols-3 gap-1">
+                            <div class="col-span-2">
+                                <label for = "nombre" class="label">
+                                    <span class="label-text text-base">Nombre</span>
+                                </label>
+                                <label class="input-group">
+                                    <input id ="nombre" type="text"  
+                                        class={`
+                                            input input-bordered 
+                                            w-full
+                                            border border-gray-300 rounded-md
+                                            focus:outline-none focus:ring-2 
+                                            focus:ring-green-500 
+                                            focus:border-green-500
+                                            ${estilos.bgdark2} 
+                                            
+                                        `}
+                                        bind:value={nombretipotratamiento}
+                                        oninput={validarBotonTipo}
+                                    />
+                                </label>
+                            </div>
+                            
+                            <div class="flex flex-row gap-1 mt-10">
+                                
+                                <button
+                                    aria-label="guardar"
+                                    class={`
+                                        ${estilos.basico} ${estilos.chico} ${estilos.primario}
+                                    `}
+                                    onclick={guardarTipo}
+                                    disabled='{!botontipo}'
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy" viewBox="0 0 16 16">
+                                        <path d="M11 2H9v3h2z"/>
+                                        <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
+                                    </svg>
+                                </button>
+                                <button 
+                                    aria-label="cerrar"
+                                    class={`
+                                        ${estilos.basico} ${estilos.chico} ${estilos.danger}
+                                    `}
+                                    onclick={cerrarTipoModal}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="size-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    {/if}
                 
                     <table class="table table-lg w-full" >
                         <thead>
@@ -1255,7 +1276,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {#each tipotratamientos as tp}
+                            {#each tipotratamientoscab as tp}
                                 <tr>
                                     <td class="text-base">
                                         {tp.nombre}

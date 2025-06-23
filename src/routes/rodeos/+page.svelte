@@ -26,6 +26,7 @@
     } from "$lib/stores/sqlite/dbeventos"
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
@@ -36,6 +37,7 @@
     let caboff = $state({})
     let coninternet = $state({})
     let ultimo_rodeo = $state({})
+    let getlocal = $state(false)
     let comandos = $state([])
     //offline
     let ruta = import.meta.env.VITE_RUTA
@@ -105,10 +107,7 @@
             await setComandosSQL(db,comandos)
             rodeos.push(data)
             await setRodeosSQL(db,rodeos)
-            changeRodeo()
-            ordenar(rodeoscab)
             
-            filterUpdate()
             nombre = ""
             Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
 
@@ -130,8 +129,7 @@
             record.total = 0
             rodeos.push(record)
             await setRodeosSQL(db,rodeos)
-            changeRodeo()
-            ordenar(rodeoscab)
+            
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el rodeo","success")
             nombre = ""
@@ -157,6 +155,7 @@
         else{
             await guardarOffline()
         }
+        ordenar(rodeos)
         changeRodeo()
         filterUpdate()
         
@@ -171,9 +170,7 @@
     async function editarOffline(id) {
         try{
             let data = {
-                id,
                 nombre,
-                
             }
             let comando = {
                 tipo:"update",
@@ -186,13 +183,16 @@
             }
             comandos.push(comando)
             await setComandosSQL(db,comandos)
-            await updateRodeoSQL(db,id,data)
+            
             let idx = rodeos.findIndex(r=>r.id==idrodeo)
-            let total = rodeos[idx].total
-            rodeos[idx] = data
-            rodeos[idx].total = total
-            ordenar(rodeos)
-            filterUpdate()
+            
+            rodeos[idx] = {
+                ...rodeos[idx],
+                ...data
+            }
+            
+            await setRodeosSQL(db,rodeos)
+            
             Swal.fire("Éxito editar","Se pudo editar el rodeo","success")
         }
         catch(err){
@@ -207,13 +207,14 @@
             let data = {
                 nombre
             }
-            const record = await pb.collection('rodeos').update(idrodeo, data);
+            await pb.collection('rodeos').update(idrodeo, data);
             let idx = rodeos.findIndex(r=>r.id==idrodeo)
-            let total = rodeos[idx].total
-            rodeos[idx]=record
-            rodeos[idx].total = total
-            ordenar(rodeos)
-            filterUpdate()
+            rodeos[idx] = {
+                ...rodeos[idx],
+                ...data
+            }
+            await setRodeosSQL(db,rodeos)
+            
             Swal.fire("Éxito editar","Se pudo editar el rodeo","success")
         }
         catch(err){
@@ -223,15 +224,18 @@
         idrodeo = ""
         nombre = ""
     }
-    async function editar(id){
+    async function editar(){
         if(coninternet.connected){
-            await guardarOnline(id)
+            await editarOnline(idrodeo)
         }
         else{
-            await guardarOffline(id)
+            await editarOffline(idrodeo)
         }
+        
+        ordenar(rodeos)
         changeRodeo()
         filterUpdate()
+        
 
     }
     function eliminarOnline(id) {
@@ -244,17 +248,13 @@
             cancelButtonText: 'No'
         }).then(async result => {
             if(result.value){
-                idrodeo = id
                 try{
                     let data = {
                         active : false
                     }
-                    const record = await pb.collection('rodeos').update(idrodeo, data);
-                    rodeos = rodeos.filter(r=>r.id!=idrodeo)
+                    await pb.collection('rodeos').update(idrodeo, data);
+                    rodeos = rodeos.filter(r=>r.id!=id)
                     await setRodeosSQL(db,rodeos)
-                    ordenar(rodeos)
-                    changeRodeo()
-                    filterUpdate()
                     //ver como hago para actualizar la lista
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
                 }
@@ -277,7 +277,6 @@
             cancelButtonText: 'No'
         }).then(async result => {
             if(result.value){
-                idrodeo = id
                 try{
                     let data = {
                         active : false
@@ -293,15 +292,11 @@
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
-
-                    rodeos = rodeos.filter(r=>r.id!=idrodeo)
+                    rodeos = rodeos.filter(r=>r.id!=id)
                     await setRodeosSQL(db,rodeos)
-                    changeRodeo()
-                    ordenar(rodeos)
-
-                    filterUpdate()
                     
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
+                    
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el rodeo', 'error');
@@ -319,8 +314,10 @@
         else{
             eliminarOffline(id)
         }
+        ordenar(rodeos)
         changeRodeo()
         filterUpdate()
+        
     }
     function filterUpdate(){
         rodeosrows = rodeoscab
@@ -345,7 +342,15 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -354,15 +359,20 @@
         animales = await getAnimalesCabSQL(db,caboff.id)
         await setUltimoRodeosLotesSQL(db)
         rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
+        ordenar(rodeos)
         changeRodeo()
         filterUpdate()
+        
     }
     async function getLocalSQL() {
+        getlocal = true
         animales = await getAnimalesCabSQL(db,caboff.id)
         let resrodeos = await getRodeosSQL(db)
         rodeos = resrodeos.lista
+        ordenar(rodeos)
         changeRodeo()
         filterUpdate()
+        
     }
     async function getDataSQL() {
         db = await openDB()
@@ -424,14 +434,32 @@
 </script>
 <Navbarr>
     {#if modedebug}
-        <div class="label">
-            rodeos - {rodeos.length}
-        </div>
-        <div class="label">
-            rodeoscab - {rodeoscab.length}
-        </div>
-        <div class="label">
-            rodeosrows - {rodeosrows.length}
+        
+        <div class="grid grid-cols-3">
+            <div class="label">
+                rodeos - {rodeos.length}
+            </div>
+            <div class="label">
+                rodeoscab - {rodeoscab.length}
+            </div>
+            <div class="label">
+                rodeosrows - {rodeosrows.length}
+            </div>
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_rodeo.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
         </div>
     {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">

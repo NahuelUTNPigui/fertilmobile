@@ -48,6 +48,8 @@
     } from "$lib/stores/sqlite/dbanimales"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -56,8 +58,9 @@
     let coninternet = $state({})
     let ultimo_pesajes = $state({})
     let comandos = $state([])
-
+    let getlocal = $state(false)
     let ruta = import.meta.env.VITE_RUTA
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -288,10 +291,18 @@
                 p = {
                     ...p,
                     expand:{
-                        animal:{id:ps.id,caravana:ps.caravana}
+                        animal:{id:ps.id,caravana:ps.caravana,cab:caboff.id}
                     }
                 }
+                //if(modedebug){
+                //    loger.addTextLog(pesajes.length)
+                //    loger.addTextLog(JSON.stringify(p,null,2))
+                //    
+                //}
                 pesajes.push(p)
+                //if(modedebug){
+                //    loger.addTextLog(pesajes.length)
+                //}
 
             }
             catch(err){
@@ -319,6 +330,7 @@
         
         await setPesajesSQL(db,pesajes)
         await setAnimalesSQL(db,animales)
+
         filterUpdate()
         selectanimales = []
     }
@@ -341,13 +353,23 @@
                     id:idprov,
                     animal:ps.id
                 }
-                pesajes.push(data)
+                pesajes.push({
+                    ...data,
+                    expand:{
+                        animal:{
+                            caravana:ps.caravana,
+                            id:ps.id,
+                            cab:caboff.id
+                            
+                        }
+                    }
+                })
                 let aidx = animales.findIndex(a=>a.id==ps.id)
                 
                 if(aidx != -1){
                     animales[aidx].peso = ps.pesonuevo
                 }
-                let idanimal = aidx!=-1?animales[aidx]:""
+                let idanimal = ps.id
                 let nanimal = idanimal.split("_").length > 1
                 let comandopesaje = {
                     tipo:"add",
@@ -398,9 +420,6 @@
         }
         selectanimales =[]
         
-        await setPesajesSQL(db,pesajes)
-        await setAnimalesSQL(db,animales)
-        
         filterUpdate()
         
         selectanimales = []
@@ -419,12 +438,22 @@
         await getLotes()
     }
     async function initPage(){
-        coninternet = await Network.getStatus();
+
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     async function getLocalSQL(){
+        getlocal = true
         let resanimales = await getAnimalesSQL(db)
         let reslotes = await getLotesSQL(db)
         let resrodeos = await getRodeosSQL(db)
@@ -464,8 +493,9 @@
             else{
                 let ahora = Date.now()
                 let antes = ultimo_pesajes.ultimo
-                const cincoMinEnMs = 300000;
+                const cincoMinEnMs = ACTUALIZACION;
                 if((ahora - antes) >= cincoMinEnMs){
+                    
                     await updateLocalSQL()
                 }
                 else{
@@ -485,6 +515,19 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <span>
+                ultimo_pesajes: {ultimo_pesajes.ultimo}
+            </span>
+            <span>
+                con internet: {coninternet.connected}
+            </span>
+            <span>
+                get local: {getlocal}
+            </span>
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Pesajes </h1>

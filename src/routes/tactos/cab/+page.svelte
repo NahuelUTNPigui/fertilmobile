@@ -147,17 +147,6 @@
         }
     }
 
-    function openNewAnimal(){
-        if(permisos[4]){
-            caravana = ""
-            sexo = ""
-            peso = 0
-            botonhabilitadoAnimal = false
-            nuevoModal.showModal()
-        } else{
-            Swal.fire("Sin permisos","No tienes permisos para crear eventos","error")
-        }
-    }
 
     function openModalEdit(id){
         if(permisos[4]){
@@ -165,8 +154,10 @@
             malanimal = false
             malfecha = false
             idtacto = id
+            
             tacto = tactos.filter(t=>t.id==idtacto)[0]
             fecha = tacto.fecha.split(" ")[0]
+            caravana = tacto.expand.animal.caravana
             observacion = tacto.observacion
             animal = tacto.animal
             categoria = tacto.categoria
@@ -189,7 +180,6 @@
             cancelButtonText: 'No'
         }).then(async result => {
             if(result.value){
-                idtacto = id
                 let data = {
                     active:false
                 }
@@ -201,12 +191,15 @@
                     //deberia modificar la base de datos
                     filterUpdate()
                     Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
+                    nuevoModal.close()
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
+                    nuevoModal.close()
                 }
                 idtacto = ""
                 tacto = null
+                
             }
         })
     }
@@ -220,7 +213,6 @@
             cancelButtonText: 'No'
         }).then(async result => {
             if(result.value){
-                idtacto = id
                 let data = {
                     active:false
                 }
@@ -243,21 +235,23 @@
                     onChangeTactos()
                     filterUpdate()
                     Swal.fire('Tacto eliminado!', 'Se eliminó el tacto correctamente.', 'success');
+                    nuevoModal.close()
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
+                    nuevoModal.close()
                 }
                 idtacto = ""
                 tacto = null
             }
         })
     }
-    function eliminar(id){
+    function eliminar(){
         if(coninternet.connected){
-            eliminarOnline(id)
+            eliminarOnline()
         }
         else{
-            eliminarOffline(id)
+            eliminarOffline()
         }
     }
     function cerrar(){
@@ -328,11 +322,12 @@
     async function updateLocalSQL() {
         await setUltimoTactosSQL(db)
         await setUltimoAnimalesSQL(db)
+        
+        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        animales = animales.filter(a=>a.active && a.cab == caboff.id)
         tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
         
         onChangeTactos()
-        animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
-        animales = animales.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
     async function getLocalSQL() {
@@ -405,12 +400,8 @@
         await getDataSQL()
     })
     function onSelectAnimal(){
-        if(animal == "agregar"){
-            openNewAnimal()
-        } else {
-            let a = animales.filter(an=>an.id==animal)[0]
-            categoria = a.categoria
-        }
+        let a = animales.filter(an=>an.id==animal)[0]
+        categoria = a.categoria
     }
     function selectOption(opcion){
         prenada = opcion
@@ -427,7 +418,6 @@
                categoria,
                prenada,
                tipo,
-               nombreveterinario,
                id:idtacto
             }
             let nanimal = animal.split("_").length > 1
@@ -443,15 +433,16 @@
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             let idx = tactos.findIndex(t=>t.id==idtacto)
+            loger.addTextLog("idx: " +idx)
             let a = animales.filter(an=>an.id == animal)[0]
             tactos[idx] ={
                 ...tactos[idx],
                 ...data
-            } 
-            tactos[idx].expand = {animal:a}
+            }
             tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
-            onChangeTactos()
+            
             await setTactosSQL(db,tactos)
+            onChangeTactos()
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
         }
@@ -468,10 +459,9 @@
                animal,
                categoria,
                prenada,
-               tipo,
-               nombreveterinario
+               tipo
             }
-             await pb.collection('tactos').update(idtacto,data);
+            await pb.collection('tactos').update(idtacto,data);
             
             //await pb.collection('animales').update(animal,{
             //    prenada
@@ -482,10 +472,10 @@
                 ...tactos[idx],
                 ...data
             }
-            tactos[idx].expand = {animal:a}
             tactos.sort((t1,t2)=>new Date(t1.fecha)>new Date(t2.fecha)?-1:1)
-            onChangeTactos()
+            
             await setTactosSQL(db,tactos)
+            onChangeTactos()
             filterUpdate()
             Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
         }
@@ -499,7 +489,7 @@
             await editarOnline()
         }
         else{
-            await editarOffline
+            await editarOffline()
         }
         
     }
@@ -513,25 +503,9 @@
         }
     }
 
-    function validarBotonAnimal(){
-        botonhabilitadoAnimal = true
-        if(isEmpty(caravana)){
-            botonhabilitadoAnimal=false
-        }
-    }
 
     function oninput(inputName){
         validarBoton()
-        validarBotonAnimal()
-        if(inputName == "ANIMAL"){
-            if(isEmpty(animal)){
-                malanimal = true
-            }
-            else{
-                malanimal = false
-                onSelectAnimal()
-            }
-        }
 
         if(inputName == "FECHA"){
             if(isEmpty(fecha)){
@@ -542,14 +516,6 @@
             }
         }
 
-        if(inputName=="NOMBRE"){
-            if(isEmpty(caravana)){
-                malcaravana = true
-            }
-            else{
-                malcaravana = false
-            }
-        }
     }
     function capitalizeFirstLetter(word) {
         return word.charAt(0).toUpperCase() + word.slice(1);
@@ -847,85 +813,9 @@
             <label for = "animal" class="label">
                 <span class="label-text text-base">Animal</span>
             </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2}
-                    `}
-                    bind:value={animal}
-                    onchange={()=>oninput("ANIMAL")}
-                >
-                    <option value="agregar">Agregar</option>    
-                    {#each animales as a}
-                        <option value={a.id}>{a.caravana}</option>    
-                    {/each}
-                </select>
+            <label for = "animal" class="label">
+                <span class="label-text text-base">{caravana}</span>
             </label>
-            {#if animal == "agregar"}
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-                </form>
-                <label for = "nombre" class="label">
-                    <span class="label-text text-base">Caravana</span>
-                </label>
-                <label class="input-group">
-                    <input 
-                        id ="nombre" 
-                        type="text"  
-                        class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2} 
-                            ${malcaravana?"input-error":""}
-                        `}
-                        bind:value={caravana}
-                        oninput={()=>oninput("NOMBRE")}
-                    />
-                    <div class={`label ${malcaravana?"":"hidden"}`}>
-                        <span class="label-text-alt text-red-400">Error debe escribir la caravana del animal</span>
-                    </div>
-                </label>
-                <label for = "sexo" class="label">
-                    <span class="label-text text-base">Sexo</span>
-                </label>
-                <label class="input-group ">
-                    <select 
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `} bind:value={sexo}>
-                        {#each sexos as s}
-                            <option value={s.id}>{s.nombre}</option>    
-                        {/each}
-                      </select>
-                </label>
-                <label for = "peso" class="label">
-                    <span class="label-text text-base">Peso (KG)</span>
-                </label>
-                <label class="input-group">
-                    <input id ="peso" type="number"  
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={peso}
-                    />
-                </label>
-            {/if}
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>
@@ -969,7 +859,6 @@
                         ${estilos.bgdark2}
                     `} 
                     bind:value={fecha}
-                    onchange={()=>oninput("FECHA")}
                 />
                 {#if malfecha}
                     <div class="label">
@@ -997,25 +886,6 @@
                     {/each}
                   </select>
             </label>
-            <div class="hidden">
-            <label for = "vete" class="label">
-                <span class="label-text text-base">Veterinario</span>
-            </label>
-            <label class="input-group">
-                <input 
-                    id ="vete" 
-                    type="text"  
-                    class={`
-                        input input-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 focus:border-green-500
-                        ${estilos.bgdark2}
-                    `}
-                    bind:value={nombreveterinario}
-                />
-            </label>
-            </div>
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>                    
@@ -1042,7 +912,7 @@
               <!-- if there is a button, it will close the modal -->
               
               <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editarTacto} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar(idtacto)}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
               <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
               
             </form>

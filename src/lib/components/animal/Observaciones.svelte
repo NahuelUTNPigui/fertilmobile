@@ -248,7 +248,6 @@
                 }
                 
             }
-
             observaciones.push(record)
             
             await addNewObservacionSQL(db,record)

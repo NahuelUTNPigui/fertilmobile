@@ -1,4 +1,5 @@
 <script>
+    //Hay un error en alguna propiedad de los componentes
     import { goto } from "$app/navigation";
     import Navbarr from "$lib/components/Navbarr.svelte";
     import PocketBase from 'pocketbase'
@@ -41,23 +42,31 @@
         getLotesRodeosSQL,
         updateLocalLotesSQLUser,
         updateLocalRodeosSQLUser,
-        getUpdateLocalRodeosLotesSQLUser
+        getUpdateLocalRodeosLotesSQLUser,
+        setUltimoRodeosLotesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {
-    addNewAnimalSQL,
+        addNewAnimalSQL,
         getAnimalesSQL,
         setAnimalesSQL,    
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
-        updateLocalHistorialAnimalesSQLUser
+        updateLocalHistorialAnimalesSQLUser,
+        getUltimoAnimalesSQL,
+        setUltimoAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
     
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({})
+    let ultimo_animal = $state({})
+    let getlocal = $state(false)
     let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
 
@@ -292,6 +301,7 @@
             esservicio = false
             return
         }
+        
         selectanimales = []
         for (const [key, value ] of Object.entries(selecthashmap)) {
             
@@ -648,8 +658,19 @@
                     idprov,    
                     camposprov:`${(nmadre && npadres)?"madre,padres":nmadre?"madre":npadres?"padres":""}`
                 }
-                servicios.push(dataser)
                 comandos.push(comando)
+                dataser = {
+                    ...dataser,
+                    expand:{
+                        madre:{
+                            caravana:servicio.caravana,
+                            id:servicio.id
+                        }
+                        
+                    }
+                }
+                servicios.push(dataser)
+                
                 
             }   
             catch(err){
@@ -668,7 +689,6 @@
             let servicio = selectanimales[i]
             let i_error = serverrores.findIndex(pid=>pid==servicio.id)
             if(i_error == -1){
-                
                 delete selecthashmap[servicio.id]
             }
         }
@@ -751,7 +771,7 @@
                 id:idprov
             }
             try{
-                inseminaciones.push(data)
+                
                 let nmadre = data.animal.split("_").length > 1
                 let npadre = data.padre.split("_").length > 1
                 let comando = {
@@ -764,6 +784,17 @@
                     camposprov:`${(nmadre && npadre)?"animal,padre":nmadre?"animal":npadre?"padre":""}`
                 }
                 comandos.push(comando)
+                data = {
+                    ...data,
+                    expand:{
+                        animal:{
+                            id:inseminFacion.id,
+                            caravana:inseminacion.caravana
+
+                        }
+                    }
+                }
+                inseminaciones.push(data)
                 
                 
             }catch(err){
@@ -795,12 +826,12 @@
             }
             await guardarServicioOnline()
             selectanimales = []
-
             fechadesdeserv = ""
             fechahastaserv = ""
             padreslist = []
             padresserv = ""
             esservicio = false
+            observaciongeneral = ""
             servicioMasivo.close()
         }
         if(esinseminacion){
@@ -814,6 +845,8 @@
             fechaparto = ""
             pajuela = ""
             padre = ""
+            observaciongeneral = ""
+
             botonhabilitado = false
             malfecha = false
             malpadre = false
@@ -896,10 +929,18 @@
         await getLotes()
         cargado = true
     }
+    async function getServiciosInseminacionesSQL() {
+        let resservicios = await getServiciosSQL(db)
+        let resinseminaciones = await getInseminacionesSQL(db)
+        servicios = resservicios.lista  
+        inseminaciones = resinseminaciones.lista
+    }
     async function updateLocalSQL() {
-        servicios =  await updateLocalServiciosSQLUser(db,pb,usuarioid)
-        inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+        await setUltimoAnimalesSQL(db)
+        await setUltimoRodeosLotesSQL(db)
+        await getServiciosInseminacionesSQL()
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
@@ -914,16 +955,16 @@
                 nombre:item.caravana
             }
         })
+        filterUpdate()
     }
+    
     async function getLocalSQL() {
+        getlocal = true
         //let reslotes = await getLotesSQL(db)
         //let resrodeos = await getRodeosSQL(db)
-        let resservicios = await getServiciosSQL(db)
-        let resinseminaciones = await getInseminacionesSQL(db)
+        await getServiciosInseminacionesSQL()
         let lotesrodeos = await getLotesRodeosSQL(db)
         let resanimales = await getAnimalesSQL(db)
-        servicios = resservicios.lista  
-        inseminaciones = resinseminaciones.lista
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
         animales = resanimales.lista.filter(a=>a.active && a.cab == caboff.id)
@@ -944,15 +985,17 @@
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
+                let antes = ultimo_animal.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()
@@ -961,7 +1004,7 @@
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+            
             cargado = true
         }
         else{
@@ -971,7 +1014,15 @@
         }
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -983,6 +1034,31 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                <span>
+                    last internet: {ultimo_animal.ultimo}
+                </span>
+            </div>
+            <div class="label">
+                Distancia: {Date.now() - ultimo_animal.ultimo}
+            </div>
+            <div class="label">
+                Distancia min: {(Date.now() - ultimo_animal.ultimo) / 60000}
+            </div>
+            <div class="label">
+                <span>
+                    con internet: {coninternet.connected}
+                </span>
+            </div>
+            <div class="label">
+                <span>
+                    get local: {getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-1 lg:grid-cols-2 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
                 <button
@@ -1034,7 +1110,7 @@
             </div>
         </button>
         <div class="flex justify-between items-center px-1">
-            <h3 class=" text-md py-2">Animales seleccionados: {Object.keys(selecthashmap).length}</h3>
+            <h3 class=" text-md py-2">Animales seleccionados: {Object.keys(selecthashmap).length > 0}</h3>
         </div>
         {#if isOpenFilter}
         <div transition:slide class="grid grid-cols-1 lg:grid-cols-4  m-1 gap-2 w-11/12" >
@@ -1287,7 +1363,7 @@
                             ${estilos.bgdark2} 
                         `}
                         bind:value={fechadesdeserv}
-                        onchange={()=>input("DESDE")}
+                        oninput={()=>input("DESDE")}
                     />
                     {#if malfechadese}
                         <div class="label">
@@ -1342,6 +1418,7 @@
                 </label>
                 <label class="input-group ">
                     {#if cargadoanimales}
+
                         <MultipleToros toros={padres} bind:valor={padresserv} bind:listavalores={padreslist} />
                         {#if malpadre}
                             <div class="label">
@@ -1370,42 +1447,6 @@
                     oninput={inputObsGeneral}
                 />
             </div>
-            <div class="hidden w-full grid grid-cols-1 justify-items-start " >
-                <div class="flex overflow-x-auto">
-                    <table class="table table-lg w-full" >
-                        <thead>
-                            <tr>
-                                <th class="text-base ">Caravana</th>
-                            
-                                <th class="text-base ">Observación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {#each selectanimales as a,i}
-                            <tr>
-                                <td class="text-base">{a.caravana}</td>
-                                <td class="">
-                                    <input
-                                    bind:value={selectanimales[i].observacion}
-                                    class={`
-                                        px-1
-                                        h-12 border border-gray-300 
-                                        w-full
-                                        rounded-md
-                                        focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 
-                                        focus:border-green-500
-                                        ${estilos.bgdark2}
-                                    `}
-                                    />
-                                </td>
-                            </tr>
-                            {/each}
-                        </tbody>
-
-                    </table>
-                </div>
-            </div>
             <div class="block  justify-items-center mx-1">
                 {#each selectanimales as a,i}
                 <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
@@ -1413,7 +1454,7 @@
                         <div class="grid grid-cols-2 gap-y-2">
                             <div class="flex items-start col-span-2">
                                 <span >Caravana:</span> 
-                                <span class="font-semibold">
+                                <span class="mx-1 font-semibold">
                                   {a.caravana}
                                 </span>
                             </div>

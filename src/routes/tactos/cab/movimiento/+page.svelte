@@ -44,10 +44,14 @@
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
         getUpdateLocalAnimalesSQLUser,
-        getAnimalesCabSQL
+        getAnimalesCabSQL,
+    
 
     } from "$lib/stores/sqlite/dbanimales"
-
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
     let usuarioid = $state("")
@@ -55,7 +59,8 @@
     let caboff = $state({})
     let coninternet = $state({})
     let comandos = $state([])
-
+    let getlocal = $state(true)
+    let tactos = $state([])
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -65,9 +70,10 @@
     const HASTA = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     let caber = createCaber()
     let cab = caber.cab
-    let tactos = $state([])
+    
     //Datos animales
     let animales = $state([])
+    let animalescab = $state([])
     let animalesrows = $state([])
     //Filtros
     let buscar = $state("")
@@ -122,7 +128,7 @@
     }
     function filterUpdate(){
         
-        animalesrows = animales
+        animalesrows = animalescab
         if(buscar != ""){
             animalesrows = animalesrows.filter(a=>a.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
         }
@@ -352,13 +358,21 @@
         selecthashmap = {}
         selectanimales = []
     }
-    async function crearTactosOffline(params) {
+    function actualizarDatos(){
+        animales.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()>a2.caravana.toLocaleLowerCase()?1:-1)
+        onChangeAnimales()
+        filterUpdate()
+    }
+    function onChangeAnimales() { 
+        
+        animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
+    }
+    async function crearTactosOffline() {
         if(fecha == ""){
             Swal.fire("Error tactos","Debe seleccionar una fecha","error")
             return 
         }
-        let restactos = await getTactosSQL(db)
-        let tactos = restactos.lista
+        
         let errores = false
         let tactoerrores = []
         //inicio movimiento
@@ -439,8 +453,7 @@
         await setAnimalesSQL(db,animales)
         await setTactosSQL(db,tactos)
         await setComandosSQL(db,comandos)
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-        filterUpdate()
+        actualizarDatos()
         fecha = ""
         botonhabilitado = false
         malfecha = false
@@ -455,12 +468,14 @@
         selectanimales = []
     }
     async function crearTactosOnline() {
+        
         if(fecha == ""){
             Swal.fire("Error tactos","Debe seleccionar una fecha","error")
             return 
         }
         let errores = false
         let tactoerrores = []
+        
         for(let i = 0;i<selectanimales.length;i++){
             let tactoanimal = selectanimales[i]
             try{
@@ -480,10 +495,18 @@
                     active:true
                 }
                 
-                //await guardarHistorial(pb,selectanimales[i].id)
+                await guardarHistorial(pb,selectanimales[i].id)
                 let r = await pb.collection('animales').update(selectanimales[i].id, dataupdate);
                 //debo guardar el record en el sqlite    
                 let record = await pb.collection('tactos').create(datatacto);
+                let aidx = animales.findIndex(an=>an.id==tactoanimal.id)
+                if(aidx != -1){
+                    animales[aidx] = {
+                        ...animales[aidx],
+                        ...dataupdate
+                    }
+                    
+                }
                 record = {
                     ...record,
                     expand:{
@@ -501,19 +524,25 @@
                 tactoerrores.push(tactoanimal.id)
                 console.error(err)
                 errores = true
+                if(modedebug){
+                    loger.addTextError("Hubo un error en animal: " +tactoanimal.caravana)
+                }
             }
         }
         await setTactosSQL(db,tactos)
+        
         if(errores){
             Swal.fire("Error tactos","Hubo algun error en algun tacto","error")
         }
         else{
             Swal.fire("Éxito tactos","Se lograron registrar todos los tactos","success")
         }
+        
         //Prefiero guardarlos en animales
         //animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-        filterUpdate()
+        await setAnimalesSQL(db,animales)
+        actualizarDatos()
+        
         fecha = ""
         botonhabilitado = false
         malfecha = false
@@ -546,15 +575,18 @@
         await getRodeos()
         await getLotes()
     }
+
     async function getLocalSQL() {
+        getlocal = true
         let restactos = await getTactosSQL(db)
         tactos = restactos.lista
-        animales = await getAnimalesCabSQL(db,caboff.id)
+        let resanimales = await getAnimalesSQL(db)
+        animales = resanimales.lista
         let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-        filterUpdate()
+        
+        actualizarDatos()
 
     }
     async function updateLocalSQL() {
@@ -567,9 +599,8 @@
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
     }
-    async function getDataSQL() {
-        db = await openDB()
-        //Reviso el internet
+    async function getUpdateSQL() {
+       //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
@@ -593,10 +624,22 @@
         else{
             await getLocalSQL()
             await setInternetSQL(db,0,Date.now())
-        }
+        } 
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        await getLocalSQL()
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -607,6 +650,20 @@
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <button
@@ -1090,7 +1147,7 @@
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >
-                <button class="btn btn-success text-white" disabled={!botonhabilitado} onclick={crearBulkTactos} >Crear Tactos</button>
+                <button class="btn btn-success text-white" disabled={!botonhabilitado} onclick={crearTactos} >Crear Tactos</button>
                 <button class="btn btn-error text-white" >Cancelar</button>
             </form>
         </div>
