@@ -51,8 +51,16 @@ export async function updateLocalEstablecimientosSQL(db,pb,userid,cabid) {
         filter:`user='${userid}' && active=true`,
     });
     let establecimientos = records
-    let estableciento = establecimientos.filter((e) => e.id == cabid)
+    let establecimiento = establecimientos.filter((e) => e.id == cabid)
     await setEstablecimientosSQL(db,establecimientos)
-    await setEstablecimientoSQL(db,estableciento)
+    await setEstablecimientoSQL(db,establecimiento[0])
     return establecimientos
+}
+export async function setUltimoEstablecimientosSQL(db) {
+    await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 14`)
+}
+export async function getUltimoEstablecimientosSQL(db) {
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 14")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
 }

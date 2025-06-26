@@ -86,10 +86,12 @@
     await getNotis()
   })
   
-  function salir(){
+  async function salir(){
       pb.authStore.clear();
       usuario.set('')
       enabled.set("no")
+      await setDefaultCabOffline()
+      await setDefaultUserOffline()
       goto("/")
   }
   function editarUser(){

@@ -111,6 +111,7 @@
     })
     let cargados = $state(false)
     let caber = createCaber()
+    let cab = $state({})
     let animales = $state([])
     let animalescab = $state([])
     let listaanimales = $state([])
@@ -1400,6 +1401,7 @@
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
+        cab = caber.cab
     }
     async function getDataSQL() {
         db = await openDB()
@@ -1410,9 +1412,10 @@
         comandos = rescom.lista
         
         if (coninternet.connected){
+
                 //await flushComandosSQL(db,pb)
                 comandos = []
-                if(lastinter.internet == 0){   
+                if(cab.cambio || lastinter.internet == 0){   
                     
                     await updateLocalSQL(db)
                     await setInternetSQL(db,1,Date.now())
@@ -1435,23 +1438,24 @@
                     }
                 }
                 
-            }
-            else{
-                await getLocalSQL(db)
-                await setInternetSQL(db,0,Date.now())
-            }
+        }
+        else{
+            await getLocalSQL(db)
+            await setInternetSQL(db,0,Date.now())
+        }
            
 
     }
     onMount(async ()=>{
         await initPage()
+        
         if(caboff.exist){
             initNacimiento()
             initTacto()
             initTratamiento()
             initObservacion()
             initServicio()
-            
+
             await getDataSQL()
             
         }
@@ -1493,8 +1497,6 @@
             </span>
         </div>
     {/if}
-    
-    
     {#if caboff.exist}
         
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">

@@ -7,12 +7,11 @@ export async function getEsblecimientoSQL(db) {
 }
 //Esta aca el problema
 export async function setEstablecimientoSQL(db,establecimiento) {
-    let result = await db.query("select id,valores from Establecimiento where id=1")
-    
-    let fila = result.values[0]
-    let localestablecimiento = JSON.parse(fila.valores)
-    localestablecimiento = {...localestablecimiento,...establecimiento}
-    await db.run(`UPDATE Establecimiento SET valores = '${JSON.stringify(localestablecimiento)}' WHERE id = 1`)
+    //let result = await db.query("select id,valores from Establecimiento where id=1")
+    //let fila = result.values[0]
+    //let localestablecimiento = JSON.parse(fila.valores)
+    //localestablecimiento = {...localestablecimiento,...establecimiento}
+    await db.run(`UPDATE Establecimiento SET valores = '${JSON.stringify(establecimiento)}' WHERE id = 1`)
 }
 
 export async function updateLocalEstablecimientoSQL(db,pb,idcab) {

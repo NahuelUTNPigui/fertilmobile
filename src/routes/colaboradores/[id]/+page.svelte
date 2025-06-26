@@ -7,6 +7,7 @@
     import estilos from '$lib/stores/estilos';
     import Swal from 'sweetalert2';
     import { goto } from '$app/navigation';
+    import { createCaber } from '$lib/stores/cab.svelte';
     //offline
     import {openDB} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -17,6 +18,16 @@
     import {getColabSQL,setColabSQL,updateLocalColabSQL,getColabSQLByID,deleteColabSQL,setPermisoColabSQL} from '$lib/stores/sqlite/dbcolaboradores';
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { loger } from '$lib/stores/logs/logs.svelte';
+    import { ACTUALIZACION } from '$lib/stores/constantes';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let cab = $state({
+        exist:false,
+        nombre:"",
+        id:""
+    })
+    let caber = createCaber()
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -24,6 +35,8 @@
     let caboff = $state({})
     let coninternet = $state({})
     let establecimiento = $state({})
+    let getlocal = $state(false)
+    let ultimo_colabs = $state({})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -131,7 +144,15 @@
         await getPermisos()
     }
     async function initPage(){
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         //Esto no va andar, sera siempre userer y caber
         useroff = await getUserOffline()
         caboff = await getCabOffline()
@@ -141,6 +162,9 @@
     
     async function getLocalSQL() {
         let rescolab = await getColabSQLByID(db,id)
+        if(modedebug){
+            loger.addTextLog(JSON.stringify(rescolab,null,2))
+        }
         nombre = rescolab.expand.colab.nombre
         apellido = rescolab.expand.colab.apellido
         idpermiso = rescolab.permiso
@@ -160,8 +184,9 @@
         //en la pantalla de colaboradores
         await getLocalSQL()
         if (coninternet.connected){
-            await setInternetSQL(db,1,Date.now())
-            
+            if(lastinter.internet == 0){
+                await setInternetSQL(db,1,0)
+            }
         }
         else{
             
@@ -170,11 +195,27 @@
     }
     onMount(async ()=>{
         id = $page.params.id
+        await initPage()
+        await getDataSQL()
         
 
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="mx-9 mt-1">
         <div>
             <button aria-label="volver" class={`btn ${estilos.btnsecondary}`} onclick={volver}>

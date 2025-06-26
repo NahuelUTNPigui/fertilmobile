@@ -16,6 +16,9 @@
     import localidades from '$lib/stores/geo/localidades';
     import estilos from '$lib/stores/estilos';
     import { randomString } from '$lib/stringutil/lib';
+    import CardNuevo from '$lib/components/establecimiento/CardNuevo.svelte';
+    import CardExistente from '$lib/components/establecimiento/CardExistente.svelte';
+    
     //offline
     import {openDB} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -27,16 +30,25 @@
         updateLocalEstablecimientoSQL
 
     } from '$lib/stores/sqlite/dbestablecimiento';
-    import {updateLocalEstablecimientosSQL}  from '$lib/stores/sqlite/dballestablecimientos';
-    import {getCabOffline,setCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+
+    import {
+        getUltimoEstablecimientosSQL,
+        updateLocalEstablecimientosSQL,
+        setUltimoEstablecimientosSQL,
+        getEstablecimientosSQL,
+        getUpdateLocalEstablecimientosSQL,
+        setEstablecimientosSQL
+    }  from '$lib/stores/sqlite/dballestablecimientos';
+
+    import {getCabOffline,setCabNombreOffline,setCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getColabSQL,setColabSQL, updateLocalColabSQLUser} from '$lib/stores/sqlite/dbcolaboradores';
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import permisos from '$lib/stores/permisos';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { ACTUALIZACION } from '$lib/stores/constantes';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
-
-
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -45,6 +57,8 @@
     let coninternet = $state({})
     let establecimiento = $state({})
     let comandos = $state([])
+    let ultimo_establecimiento = $state({})
+    let getlocal = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
     const pb = new PocketBase(ruta);
@@ -59,7 +73,9 @@
     let per = createPer()
     let colabs = $state([])
     let modoedicion = $state(false)
+    let establecimientos = $state([])
     //Datos cabaña
+    let datosviejos = $state({})
     let nombre = $state("")
     let direccion = $state("")
     let contacto = $state("")
@@ -121,11 +137,18 @@
         Swal.fire("Error guardar","No se puede crear un colaborador sin internet","error")
     }
     async function guardarColabOnline(data){
+        
+        
+        
         let codigo = await codigoSinRepetir(pb)
+        
         try{
-            let nombredata = nombre.trim().split(" ").filter(w=>w !== "").join(".")
-            let apellidodata = apellido.trim().split(" ").filter(w=>w !== "").join(".")
+            let nombredata = data.nombre.trim().split(" ").filter(w=>w !== "").join(".")
+            
+            let apellidodata = data.apellido.trim().split(" ").filter(w=>w !== "").join(".")
+            
             let randomnumber = randomString(5,"n")
+            
             let userdata = {
                 "username": nombredata+"."+apellidodata+randomnumber,
                 email:data.email,
@@ -138,6 +161,7 @@
                 active:true
 
             }
+            
             const recorduser = await pb.collection('users').create(userdata);
             let colabdata={
                 nombre:data.nombre,
@@ -145,16 +169,19 @@
                 telefono:data.telefono,
                 user:recorduser.id
             }
+            alert("colabdata")
             const recordcolab = await pb.collection('colaboradores').create(colabdata);
             let estxcolabdata = {
                 colab:recordcolab.id,
                 cab:cab.id
             }
+            alert("recordcolab")
             const recordexc = await pb.collection('estxcolabs').create(estxcolabdata);
             let permisosdata={
                 estxcolab:recordexc.id,
                 permisos:""
             }
+            alert("recordexc")
             await pb.collection('permisos').create(permisosdata);
             let colabsql = {
                 id:recordexc.id,
@@ -171,12 +198,14 @@
                     }
                 }
             }
+            alert("permisos")
             colabs.push(colabsql)
             await setColabSQL(db,colabs)
-            
+            Swal.fire("Éxito guardar","Éxito guardar nuevo colaborador","success")
 
         }
         catch(err){
+            Swal.fire("Error guardar","Error guardar nuevo colaborador","error")
             console.error(err)
         }
     }
@@ -210,18 +239,14 @@
         try{
 
             const record = await pb.collection('cabs').create(data);
-            if(modedebug){
-                loger.addLog({
-                    time:Date.now(),
-                    text:JSON.stringify(data,null,2),
-                    
-                })
-            }
-            await setEstablecimientoSQL(db,data)
+
+            await setEstablecimientoSQL(db,record)
+            datosviejos = {...record}
             await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5")
+            establecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
             caber.setCab(nombre,record.id)
             per.setPer("0,1,2,3,4,5",usuarioid)
-            goto(pre+"/")
+            goto("/")
             Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
         }
         catch(err){
@@ -260,8 +285,23 @@
         };
         try{
             await setEstablecimientoSQL(db,pb,cab.id,data)
+            await setCabNombreOffline(nombre)   
+            let e_idx = establecimientos.findIndex(es=>es.id==caboff.id)
+            if(e_idx != -1){
+                establecimientos[e_idx] = {
+                    ...establecimientos[e_idx],
+                    ...data
+                }
+                await setEstablecimientosSQL(db,establecimientos)
+            }
+            datosviejos = {
+                ...datosviejos,
+                ...data
+            }
+            let establecimiento = {...datosviejos}
+            await setEstablecimientoSQL(db,establecimiento)
             Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
-            caber.setCab(nombre,cab.id)
+            caber.setCab(nombre,caboff.id)
         }
         catch(err){
             console.error(err)
@@ -282,11 +322,27 @@
             mail
         };
         try{
-            const record = await pb.collection('cabs').update(cab.id, data);
-            await setEstablecimientoSQL(db,data)
+            await pb.collection('cabs').update(cab.id, data);
+            
+            await setCabNombreOffline(nombre)
+            let e_idx = establecimientos.findIndex(es=>es.id==caboff.id)
+            if(e_idx != -1){
+                establecimientos[e_idx] = {
+                    ...establecimientos[e_idx],
+                    ...data
+                }
+                await setEstablecimientosSQL(db,establecimientos)
+            }
+            datosviejos = {
+                ...datosviejos,
+                ...data
+            }
+            let establecimiento = {...datosviejos}
+            await setEstablecimientoSQL(db,establecimiento)
+            let coff = await getCabOffline()
             
             Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
-            caber.setCab(nombre,cab.id)
+            caber.setCab(nombre,caboff.id)
             
         }
         catch(err){
@@ -417,20 +473,45 @@
            
         }
     }
+    function reestablercerCabaña(){
+        nombre = datosviejos.nombre
+        direccion = datosviejos.direccion
+        contacto = datosviejos.contacto
+        codigo = datosviejos.codigo
+        renspa = datosviejos.renspa
+        localidad = datosviejos.localidad
+        provincia = datosviejos.provincia
+        telefono = datosviejos.telefono
+        mail = datosviejos.mail  
+    }
     async function initPage(){
-        coninternet = await Network.getStatus();
-        //Esto no va andar, sera siempre userer y caber
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
+
+        
         useroff = await getUserOffline()
         caboff = await getCabOffline()
-
         db = await openDB()
         cab = caber.cab
         usuarioid = useroff.id
     }
     async function getLocalSQL(){
+        getlocal = true
         let rescolabs = await getColabSQL(db)
+        let resestablecimientos = await getEstablecimientosSQL(db)
+        establecimientos = resestablecimientos.lista
         colabs = rescolabs.lista.filter(colab => colab.cab == caboff.id)
         let res = await getEsblecimientoSQL(db)
+        datosviejos = {...res}
+
+        
         establecimiento = res
         nombre = res.nombre
         direccion = res.direccion
@@ -442,13 +523,13 @@
         telefono = res.telefono
         mail = res.mail    
         localidadesProv = localidades.filter(lo => lo.idProv == provincia)
-        
-  
     }
     async function updateLocalSQL(){
-        let resestablecimientos = await  updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
+        await setUltimoEstablecimientosSQL(db)
+        establecimientos = await  updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
         //let res = await getEsblecimientoSQL(db)
-        establecimiento = resestablecimientos.filter(est=>est.id ==caboff.id)[0]
+        establecimiento = establecimientos.filter(est=>est.id ==caboff.id)[0]
+        datosviejos = {...establecimiento}
         nombre = establecimiento.nombre
         direccion = establecimiento.direccion
         contacto = establecimiento.contacto
@@ -467,26 +548,27 @@
         
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
+        ultimo_establecimiento = await getUltimoEstablecimientosSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        
         if (coninternet.connected){
             if(lastinter.internet == 0){
+                await setInternetSQL(db,1,0) 
                 await updateLocalSQL()
-                await setInternetSQL(db,1,Date.now())
+                
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
+                let antes = ultimo_establecimiento.ultimo
+                const cincoMinEnMs = ACTUALIZACION;
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()
-                    await setInternetSQL(db,1,Date.now())
                 }
                 else{
                     await getLocalSQL()            
                 }
             }
-            
         }
         else{
             await getLocalSQL()
@@ -509,395 +591,62 @@
             provincia=""
             telefono=""
             mail=""
+            datosviejos = {
+                nombre,
+                direccion,
+                contacto,
+                renspa,
+                localidad,
+                provincia,
+                telefono,
+                mail
+            }
         }
-        
     })
  
 </script>
 <Navbarr>
-    
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_establecimiento.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     {#if cab.exist}
-        <CardBase titulo={`Bienvenido a ${nombre}`} cardsize="max-w-5xl">
-            <div class="space-y-6">
-                <div>
-                    <label for="RENSPA" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        RENSPA:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="renspa" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {renspa}
-                        </label>
-                    {:else}
-                        <label class="form-control">
-                            <input 
-                                type="text" 
-                                id="renspa"
-                                bind:value={renspa}
-                                
-                                required 
-                                class={`
-                                    w-full px-3 py-2 border rounded-md shadow-sm
-                                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                    transition duration-150 ease-in-out
-                                    border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                                `}
-                            />
-                            <div class="label">
-                                <span class="label-text-alt">Formato: 00.000.0.00000.00</span>
-                                
-                            </div>
-                        </label>
-                        
-                    {/if}
-                </div>
-                <div>
+        <CardExistente 
+            bind:nombre bind:renspa bind:direccion
+            bind:contacto bind:telefono bind:mail
+            bind:codigo bind:modoedicion bind:provincia
+            bind:localidad bind:colabs bind:localidadesProv
+            {provincias}
+            {guardarColab}
+            {mostrarcolab}
+            {asociado}
+            {desasociar}
+            cabid={caboff.id}
+            {cab}
+            {getNombreProvincia}
+            {getNombreLocalidad}
+            {getLocalidades}
+            {reestablercerCabaña}
+            {editarCabaña}
 
-                    <label for="nombre" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Nombre:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="nombre" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {nombre}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="nombre"
-                            bind:value={nombre} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="Provincia" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Provincia:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Provincia" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {getNombreProvincia(provincia)}
-                        </label>
-                    {:else}
-                        <label class="input-group ">
-                            <select 
-                                class={`
-                                    select select-bordered w-full
-                                    rounded-md
-                                    focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 
-                                    focus:border-green-500
-                                    
-                                    ${estilos.bgdark2}
-                                `}
-                                bind:value={provincia}
-                                onchange={()=>getLocalidades(provincia)}
-                            >
-                                    <option value="" class="rounded"></option>
-                                    {#each provincias as p}
-                                        <option value={p.id} class="rounded">{p.nombre}</option>
-                                    {/each}
-                            </select>
-                        </label>
-                    {/if}
-                </div>
-                <div>
-                    <label for="Localidad" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Localidad:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Provincia" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {getNombreLocalidad(localidad)}
-                        </label>
-                    {:else}
-                        <label class="input-group ">
-                            <select 
-                                class={`
-                                    select select-bordered w-full
-                                    rounded-md
-                                    focus:outline-none focus:ring-2 
-                                    focus:ring-green-500 
-                                    focus:border-green-500
-                                    
-                                    ${estilos.bgdark2}
-                                `}
-                                bind:value={localidad}
-                                
-                            >
-                                    <option value="" class="rounded"></option>
-                                    {#each localidadesProv as l}
-                                        <option value={l.nombre} class="rounded">{l.nombre}</option>
-                                    {/each}
-                            </select>
-                        </label>
-                    {/if}
-
-                </div>
-                <div>
-                    <label for="direccion" 
-                        class="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Dirección
-                    </label>
-                    {#if !modoedicion}
-                        <label for="direccion" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {direccion}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="direccion"
-                            disabled={!modoedicion}
-                            bind:value={direccion} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="contacto" 
-                        class="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Contacto
-                    </label>
-                    {#if !modoedicion}
-                        <label for="contacto" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {contacto}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="contacto"
-                            disabled={!modoedicion}
-                            bind:value={contacto} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                    
-                </div>
-                <div>
-                    <label for="Teléfono" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Teléfono:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Teléfono" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {telefono}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="telefono"
-                            
-                            bind:value={telefono} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="Correo" 
-                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        Correo:
-                    </label>
-                    {#if !modoedicion}
-                        <label for="Correo" 
-                            class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {mail}
-                        </label>
-                    {:else}
-                        <input 
-                            type="text" 
-                            id="mail"
-                            
-                            bind:value={mail} 
-                            required 
-                            class={`
-                                w-full px-3 py-2 border rounded-md shadow-sm
-                                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                                transition duration-150 ease-in-out
-                                ${
-                                modoedicion
-                                    ? 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        />
-                    {/if}
-                </div>
-                <div>
-                    <label for="codigo" 
-                        class="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Codigo de transferencia
-                    </label>
-                    <label for="codigo" 
-                            class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                        >
-                            {codigo}
-                        </label>
-                </div>
-            </div>
-            <div class="mt-8 flex justify-end">
-                {#if  !modoedicion}
-                    <button
-                        onclick={()=>modoedicion=true}
-                        class=" 
-                            btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md 
-                            text-white font-bold font-lg focus:outline-none 
-                            focus:ring-2 focus:ring-offset-2 focus:ring-green-500
-                        "
-                    >
-                        Editar establecimiento
-                    </button>    
-                {:else}
-                    <button 
-                        onclick={()=>modoedicion=false}
-                        class="
-                            btn btn-error 
-                            text-white 
-                            font-bold font-lg
-                        "
-                    >
-
-                        Cancelar
-                    </button>   
-                    <button
-
-                        onclick={async ()=>{modoedicion=false;await editarCabaña()}}
-                        class="btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-bold font-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                        >
-                        Guardar
-                    </button>    
-                {/if}
-                
-            </div>
-            <Colaboradores bind:colabs={colabs} {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cab.id} {cab}/>
-            <ListaColabs bind:colabs={colabs}/>
-        </CardBase>
+        />
     {:else}
-        <CardBase titulo="Registra tu establecimiento">
-            <div class="space-y-4">
-                
-                <div>
-                    <label for="nombre" 
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Nombre
-                    </label>
-                    <input 
-                        type="nombre" 
-                        id="nombre"
-                        
-                        bind:value={nombre} 
-                        required 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                    />
-                </div>
-                <div>
-                    <label for="direccion" 
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Dirección
-                    </label>
-                    <input 
-                        type="direccion" 
-                        id="direccion"
-                        
-                        bind:value={direccion} 
-                        required 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                    />
-                </div>
-                <div>
-                    <label for="contacto" 
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                    >
-                        Contacto
-                    </label>
-                    <input 
-                        type="contacto" 
-                        id="contacto"
-                        
-                        bind:value={contacto} 
-                        required 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                    />
-                </div>
-
-            </div>
-            <div class="mt-8 flex justify-end">
-                <button
-                    onclick={guardarCabaña}
-                    class="
-                        btn px-6 py-2 
-                        bg-green-600 hover:bg-green-700 
-                        rounded-md text-white font-bold text-lg 
-                        focus:outline-none focus:ring-2 
-                        focus:ring-offset-2 focus:ring-green-500
-                    "
-                >
-                  Guardar establecimiento
-                </button>
-            </div>
-        </CardBase>
+        <CardNuevo bind:nombre bind:direccion bind:contacto {guardarCabaña}></CardNuevo>
     {/if}
 </Navbarr>
 

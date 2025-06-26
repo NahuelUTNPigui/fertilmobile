@@ -15,6 +15,15 @@ export async function setCabOffline(id,nombre,exist,permisos) {
     let c = {id,nombre,exist,permisos}
     await Preferences.set({key:"cab",value:JSON.stringify(c)})
 }
+export async function setCabNombreOffline(nombre) {
+    let c = await getCabOffline()
+    c = {
+        ...c,
+        nombre
+    }
+    
+    await Preferences.set({key:"cab",value:JSON.stringify(c)})
+}
 export async function getCabOffline() {
     const c = await Preferences.get({ key: 'cab' });
     if(c.value){

@@ -7,7 +7,7 @@ let userdefault = {
     username:"",
     token:"",
     codigo: "", // nuevo campo
-    schemaVersion: CURRENT_SCHEMA_VERSION,
+    schemaVersion: 0,
     lastupdate:0,
     nivel:0
 }

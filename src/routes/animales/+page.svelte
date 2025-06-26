@@ -586,7 +586,6 @@
                 let ahora = Date.now()
                 let antes = ultimo_animal.ultimo
                 const cincoMinEnMs = ACTUALIZACION;
-                
                 if((ahora - antes) >= cincoMinEnMs){
                     await updateLocalSQL()        
                 }

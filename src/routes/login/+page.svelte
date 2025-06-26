@@ -1,6 +1,7 @@
 <script>
     //TENGO QUE MODIFCAR EL OFFLINE CAB
     import {enabled} from '$lib/stores/enabled'
+    import { setInternetSQL } from '$lib/stores/sqlite/dbinternet';
     import {setUserOffline} from '$lib/stores/capacitor/offlineuser'
     import {setCabOffline,setDefaultCabOffline} from '$lib/stores/capacitor/offlinecab'
     import {usuario} from '$lib/stores/usuario'
@@ -20,7 +21,7 @@
     let contra = $state('')
     let showpass = $state(false)
     let logooscuro = $state(true)
-    let coninternet = false
+    let coninternet = $state({})
     function isEmpty(str) {
         return (!str || str.length === 0 );
     }
@@ -34,7 +35,7 @@
         
     }
     async function ingresar(){
-        if(!coninternet){
+        if(!coninternet.connected){
             Swal.fire("Sin intenet","Para ingresar necesitas internet","info")
             return
         }
@@ -69,9 +70,10 @@
                     await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel,pa.record.codigo)
                     try{
                         const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
-                        caber.setCab(record.nombre,record.id)
+                        caber.setCab(record.nombre,record.id,true)
 
                         per.setPer("0,1,2,3,4,5",authData.record.id)
+                        
                         await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5")
                     }
                     catch(err){
@@ -85,7 +87,7 @@
                             await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos)
                             
                             per.setPer(recordper.permisos,authData.record.id)
-                            caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id)
+                            caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id,true)
                             
                         }
                         catch(err){
