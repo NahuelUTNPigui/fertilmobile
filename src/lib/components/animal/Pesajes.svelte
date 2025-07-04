@@ -72,8 +72,6 @@
                         caravana
                     }
                 }
-                
-
             }
             await addNewPesajeSQL(db,recordopesaje)
             await pb.collection("animales").update(id,dataupdate)
@@ -135,7 +133,7 @@
             if(!nanimal){
                 let comandoani = {
                     tipo:"update",
-                    coleccion:"animal",
+                    coleccion:"animales",
                     data:{...dataupdate},
                     hora:Date.now(),
                     prioridad:2,
@@ -161,6 +159,7 @@
                 loger.addTextError(JSON.stringify(err,null,2))
 
             }
+            console.error(err)
             Swal.fire("Error guardar","No se logró guardar el pesaje","error")        
             nuevoPesaje.close()
         }

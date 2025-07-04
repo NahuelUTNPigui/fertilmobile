@@ -69,13 +69,15 @@
     } from '$lib/stores/sqlite/dbanimales';
     //import {updateLocalEstablecimientoSQL} from '$lib/stores/sqlite/dbestablecimiento';
     import {updateLocalEstablecimientosSQL} from '$lib/stores/sqlite/dballestablecimientos';
-    import {updateLocalColabSQL} from '$lib/stores/sqlite/dbcolaboradores'; 
+    import {updateLocalColabSQL, updateLocalColabSQLUser} from '$lib/stores/sqlite/dbcolaboradores'; 
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {getTotalAnimales} from "$lib/stores/totaldata"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from '$lib/stores/logs/logs.svelte';
+
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     let ruta = import.meta.env.VITE_RUTA
@@ -87,7 +89,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     let lastinter = $state({})
     /*
@@ -669,7 +671,6 @@
         let idprov = "nuevo_nac_"+generarIDAleatorio() 
         //Los nombres de la funciones horribles
         //debo verificar si voy a guardar el animal
-        //let totalanimals = await getTotalSQL(db)
         let verificar = true
         
         //if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
@@ -898,7 +899,7 @@
                 data.id = idprov
                 let comando = {
                     tipo:"add",
-                    coleccion:"inseminaciones",
+                    coleccion:"inseminacion",
                     data:{...data},
                     hora:Date.now(),
                     prioridad:5,
@@ -1325,16 +1326,11 @@
     }
     async function updateLocalSQL(db) {
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
-        
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         //Debo traer los datos de la cabaña
         await updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
         let datauser = await updateLocalEventosSQLUser(db,pb,usuarioid)
-    
-        
-        
-        //await updateLocalColabSQL(db,pb,caboff.id)
-        
+        await updateLocalColabSQLUser(db,pb,usuarioid)
         let datatotal = await getTotalAnimales(pb)
         animales = animalesuser
         onChangeAnimales()
@@ -1388,16 +1384,16 @@
     async function initPage() {
         //
         //coninternet = await Network.getStatus();
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
-        
+        //if(modedebug){
+        //    coninternet = {connected:false} // await Network.getStatus();
+        //    if(!offliner.offline){
+        //        coninternet = await Network.getStatus();
+        //    }
+        //}
+        //else{
+        //    coninternet = await Network.getStatus();
+        //}
+        coninternet = await getInternet(modedebug,offliner.offline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -1407,13 +1403,22 @@
         db = await openDB()
         //Reviso el internet
         lastinter = await getInternetSQL(db)
-        
         let rescom = await getComandosSQL(db)
+
+        
         comandos = rescom.lista
         
         if (coninternet.connected){
-
-                //await flushComandosSQL(db,pb)
+                try{
+                    await flushComandosSQL(db,pb)
+                }
+                catch(err){
+                    if(modedebug){
+                        loger.addTextError(JSON.stringify(err),null,2)
+                        loger.addTextError("Error en flush comandos")
+                    }
+                }
+                
                 comandos = []
                 if(cab.cambio || lastinter.internet == 0){   
                     
@@ -1427,7 +1432,6 @@
                     const cincoMinEnMs = ACTUALIZACION;
                     
                     if((ahora - antes) >= cincoMinEnMs){
-                        //await flushComandosSQL(db)
                         comandos = []
                         await updateLocalSQL(db)
                         await setInternetSQL(db,1,ahora)
@@ -1465,8 +1469,16 @@
 <Navbarr>
     {#if modedebug}
         <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
-        <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+        <button 
+            onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} 
+            class="btn"
+        >
+                Cambiar conexion a {coninternet.connected?"sin internet":"con internet"}
+        </button>
         <div class="">
+            <span>
+                Colaborador: {caboff.colaborador}
+            </span>
             <span>
                 Animales user: {animales.length}
             </span>
@@ -1494,6 +1506,9 @@
             </span>
             <span>
                 Distancia min: {(Date.now() - lastinter.ultimo) / 60000}
+            </span>
+            <span>
+                Con internet: {coninternet.connected}
             </span>
         </div>
     {/if}

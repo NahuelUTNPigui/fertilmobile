@@ -1,6 +1,7 @@
 import { Preferences } from '@capacitor/preferences';
 let defaultcab = {
     exist:false,
+    colaborador:false,
     nombre:"",
     id:"",
     permisos:""
@@ -11,8 +12,8 @@ export async function setDefaultCabOffline() {
         value:JSON.stringify(defaultcab)
     })
 }
-export async function setCabOffline(id,nombre,exist,permisos) {
-    let c = {id,nombre,exist,permisos}
+export async function setCabOffline(id,nombre,exist,permisos,colaborador=false) {
+    let c = {id,nombre,exist,permisos,colaborador}
     await Preferences.set({key:"cab",value:JSON.stringify(c)})
 }
 export async function setCabNombreOffline(nombre) {

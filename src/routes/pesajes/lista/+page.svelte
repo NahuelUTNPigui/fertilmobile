@@ -19,7 +19,7 @@
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
         getPesajesSQL,
-        updateLocalPesajesSQL,
+        
         updateLocalPesajesSQLUser,
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
@@ -34,7 +34,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(true)
     let caber = createCaber()

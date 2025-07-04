@@ -59,7 +59,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_servicio = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
@@ -617,7 +617,7 @@
         ultimo_servicio = await getUltimoServiciosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
-            //await flushComandosSQL(db)
+            await flushComandosSQL(db,pb)
             //comandos = []
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)

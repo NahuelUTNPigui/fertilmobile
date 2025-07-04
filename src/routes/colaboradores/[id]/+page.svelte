@@ -21,6 +21,7 @@
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
     import { loger } from '$lib/stores/logs/logs.svelte';
     import { ACTUALIZACION } from '$lib/stores/constantes';
+    import { addNewAnimalSQL } from '$lib/stores/sqlite/dbanimales';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let cab = $state({
         exist:false,
@@ -33,7 +34,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let establecimiento = $state({})
     let getlocal = $state(false)
     let ultimo_colabs = $state({})
@@ -176,6 +177,10 @@
             }
         }
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos =[]
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -184,6 +189,7 @@
         //en la pantalla de colaboradores
         await getLocalSQL()
         if (coninternet.connected){
+            await updateComandos()
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
             }

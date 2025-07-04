@@ -7,7 +7,9 @@
     let options = [
         {id:1,nombre:"Todos"},
         {id:2,nombre:"Logs"},
-        {id:3,nombre:"Errores"}
+        {id:3,nombre:"Errores"},
+        {id:4,nombre:"Lineas"}
+
     ]
     function select(id){   
         show = id
@@ -18,12 +20,16 @@
     function limpiarErrores(){
         loger.cleanErrores()
     }
+    function limpiarLineas(){
+        loger.cleanErrores()
+    }
 </script>
 <div class="dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 h-full max-h-3/4">
     <h1 class="text-xl">Logs - {loger.loges.length}</h1>
     <h1 class="text-xl">Errores - {loger.errores.length}</h1>
+    <h1 class="text-xl">LIneas - {loger.lineas.length}</h1>
     
-    <div class="bg-transparent grid grid-cols-3 lg:grid-cols-4 max">
+    <div class="bg-transparent grid grid-cols-2 ">
         {#each options as op}
             
             <button id={op.id} onclick={()=>select(op.id)} 
@@ -57,6 +63,14 @@
             `}>
                 Limpiar Errores
         </button>
+        <button onclick={limpiarLineas} 
+            class={`
+                flex-1 m-1 py-2 px-2 rounded-lg font-medium text-sm transition-all duration-200 ease-in-out
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500
+
+            `}>
+                Limpiar linea
+        </button>
     </div>
     {#if show==1}
         {#each loger.loges as lo}
@@ -73,9 +87,18 @@
             </div>
             <br>
         {/each}
+        
     {:else if show==2}
         {#each loger.loges as lo}
             <div class="text-lime-500">
+                {lo.time}-
+                {lo.text}
+            </div>
+            <br>
+        {/each}
+    {:else if show==4}
+        {#each loger.lineas as lo}
+            <div >
                 {lo.time}-
                 {lo.text}
             </div>

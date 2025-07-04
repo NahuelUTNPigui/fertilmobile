@@ -1,10 +1,9 @@
 import { Network } from '@capacitor/network';
 
-export async function getInternet(modedebug,offliner) {
+export async function getInternet(modedebug,offline) {
     let coninternet = {connected:false} // await Network.getStatus();
     if(modedebug){
-        
-        if(!offliner.offline){
+        if(!offline){
             coninternet = await Network.getStatus();
         }
     }
@@ -12,4 +11,5 @@ export async function getInternet(modedebug,offliner) {
         coninternet = await Network.getStatus();
     }
     return coninternet
+    
 }

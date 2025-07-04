@@ -11,6 +11,8 @@
     
     import {createPer} from "$lib/stores/permisos.svelte"
     import { usuario } from "$lib/stores/usuario";
+    import { shorterWord } from "$lib/stringutil/lib";
+    import Asoc from "$lib/components/establecimientos/Asoc.svelte";
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -19,16 +21,42 @@
     import {setCabOffline,getCabOffline} from '$lib/stores/capacitor/offlinecab'
     import {getCabData} from "$lib/stores/cabsdata"
     import { updateLocalEventosSQL } from '$lib/stores/sqlite/dbeventos'
-    import {updateLocalAnimalesSQL,updateLocalHistorialAnimalesSQL} from '$lib/stores/sqlite/dbanimales'
+    import {addNewAnimalSQL, updateLocalAnimalesSQL} from '$lib/stores/sqlite/dbanimales'
+    import {
+        getUltimoEstablecimientosSQL,
+        updateLocalEstablecimientosSQL,
+        setUltimoEstablecimientosSQL,
+        getEstablecimientosSQL,
+        getUpdateLocalEstablecimientosSQL,
+        setEstablecimientosSQL
+    }  from '$lib/stores/sqlite/dballestablecimientos';
+    import {
+        getAnimalesSQL
+    } from "$lib/stores/sqlite/dbanimales"
+    import { 
+        setEstablecimientosAsociadosSQL,
+        getEstablecimientosAsociadosSQL,
+        addNewEstablecimientoAsosciaodSQL,
+        deleteEstablecimientosAsociadosSQL
+    } from "$lib/stores/sqlite/dbasociados";
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
+    let ultimo_establecimiento = $state({})
     let comandos = $state([])
+    let getlocal = $state(false)
+    // logica para los asociados
+    let sincronizadas = $state([])
     let ruta = import.meta.env.VITE_RUTA
+
     //pre
     const pb = new PocketBase(ruta);
     let establecimientos = $state([])
@@ -41,12 +69,11 @@
     async function irEstablecimientoColab(id){
         let per = createPer()
         let est = establecimientoscolab.filter(e=>e.id == id)[0]
-        
         caber.setCab(est.expand.cab.nombre,est.expand.cab.id)
-        await setCabOffline(est.expand.cab.id,est.expand.cab.nombre,true,"0,1,2,3,4,5")
-        await updateLocalAnimalesSQL(db,pb,est.expand.cab.id)
-        await updateLocalHistorialAnimalesSQL(db,pb,est.expand.cab.id)
-        await updateLocalEventosSQL(db,pb,est.expand.cab.id)
+        await setCabOffline(est.expand.cab.id,est.expand.cab.nombre,true,"0,1,2,3,4,5",true)
+        //await updateLocalAnimalesSQL(db,pb,est.expand.cab.id)
+        
+        //await updateLocalEventosSQL(db,pb,est.expand.cab.id)
         per.setPer("0,1,2,3,4,5",usuarioid)
         goto("/")
     }
@@ -54,10 +81,10 @@
         let per = createPer()
         let est = establecimientos.filter(e=>e.id == id)[0]
         caber.setCab(est.nombre,est.id)
-        await setCabOffline(est.id,est.nombre,true,"0,1,2,3,4,5")
-        await setInternetSQL(db,0,Date.now())
+        await setCabOffline(est.id,est.nombre,true,"0,1,2,3,4,5",false)
+        //await setInternetSQL(db,0,Date.now())
         //await updateLocalAnimalesSQL(db,pb,est.id)
-        //await updateLocalHistorialAnimalesSQL(db,pb,est.id)
+        
         //await updateLocalEventosSQL(db,pb,est.id)
         per.setPer("0,1,2,3,4,5",usuarioid)
         goto("/")
@@ -72,6 +99,10 @@
         })
         return record.totalItems
 
+    }
+    async function getTotalAnimalesSQL(cabid, animales) {
+        let animalescab = animales.filter(a=>a.cab==cabid && a.active)
+        return animalescab.length
     }
     async function eliminar(id){
         
@@ -107,7 +138,7 @@
         
         
     }
-    async function getEstablecimientosColab(params) {
+    async function getEstablecimientosColab() {
         const restxcolab = await pb.collection("estxcolabs").getFullList({
             filter : `colab.user = '${usuarioid}' && cab.active = true`,
             expand : "colab,cab"
@@ -140,31 +171,57 @@
         }
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id 
         cab = caber.cab
     }
-    async function getDataSQL() {
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        const records = await pb.collection("cabs").getFullList({
-            filter: `active = True && user = '${usuarioid}'` 
-
+    async function getLocalSQL(){
+        getlocal = true
+        //Aca se van a guardar todos los estableciemientos
+        //colaborador o no
+        let resestablecimientos = await getEstablecimientosSQL(db)
+        
+        establecimientos = resestablecimientos.lista.filter(e=>{
+            //Reviso que los establecimientos no sea colaborador
+            return sincronizadas.includes(s => s!=e.id)
         })
+        
+        establecimientoscolab = resestablecimientos.lista.filter(e=>{
+            //Reviso que los establecimientos si sean colaborador
+            return sincronizadas.includes(s => s==e.id)
+        })
+        let resanimales = await getAnimalesSQL(db)
+        let animales = resanimales.lista
+        for(let i = 0;i<establecimientos.length;i++){
+            totales.push(getTotalAnimalesSQL(establecimientos[i].id,animales))
+        }
+        for(let i = 0;i <establecimientoscolab.length;i++){
+            totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
+        }
+
+    }
+    async function getOnlineColabs() {
         const restxcolab = await pb.collection("estxcolabs").getFullList({
             filter : `colab.user = '${usuarioid}' && cab.active = true`,
             expand : "colab,cab"
 
         })
         establecimientoscolab = restxcolab
-        
-        establecimientos = records
-        
+    }
+    async function updateLocalSQL() {
+        let resestablecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
+        establecimientos = resestablecimientos.filter(e=>e.user == usuarioid)
+        await getOnlineColabs()
         for(let i = 0;i<establecimientos.length;i++){
             totales.push(await getTotalAnimales(establecimientos[i].id))
         }
@@ -172,12 +229,65 @@
             totalescolab.push(await getTotalAnimales(establecimientoscolab[i].expand.cab.id))
         }
     }
+    async function getDataSQL() {
+        //Reviso el internet
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        ultimo_establecimiento = await getUltimoEstablecimientosSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        let ressincronizadas = await getEstablecimientosAsociadosSQL(db)
+        sincronizadas = ressincronizadas.lista
+        if (coninternet.connected){
+            if(lastinter.internet == 0){
+                await setInternetSQL(db,1,0)
+                await updateLocalSQL()
+            }
+            else{
+                let ahora = Date.now()
+                let antes = ultimo_establecimiento.ultimo
+                const cincoMinEnMs = ACTUALIZACION;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()        
+                }
+                else{
+                    await getLocalSQL()
+                }
+            } 
+        }
+        else{
+            await setInternetSQL(db,0,Date.now())
+            await getLocalSQL()
+        }
+        //await updateLocalSQL()
+    }
+    async function agregarCab(idCab){
+        sincronizadas = await addNewEstablecimientoAsosciaodSQL(db,idCab)
+    }
+    async function quitarCab(idCab){
+        sincronizadas = await deleteEstablecimientosAsociadosSQL(db,idCab)
+    }
     onMount(async ()=>{
         await initPage()
         await getDataSQL()
     })
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local{getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="flex justify-center mt-1">
         <div class="w-full max-w-7xl px-4">
             <div class="grid grid-cols-3 mx-1  lg:mx-10 mt-2">
@@ -192,18 +302,24 @@
             </div>
         </div>
     </div>
-    <div class="grid grid-cols-1 gap-2">
+    <div class="grid grid-cols-1 gap-2 my-2">
 
         
         {#each establecimientos as e,i}
-            <div class="flex items-center justify-center">
+            <div class="flex items-center justify-center p-1">
                 <div 
                     class={`
                             bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 w-full 
                             max-w-5xl
                     `}
                 >
-                    <h1 class="text-2xl font-bold  mb-1 text-start p-2">{e.nombre}</h1>
+                    <h2 class="flex items-center text-2xl font-bold  mb-1 text-start p-2">
+                        {shorterWord(e.nombre)}
+                        <!--Sincronizada-->
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                    </h2>
                     <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
 
                         <span class="text-xl font-semibold text-start">Direccion:</span>
@@ -248,51 +364,23 @@
         
     </div>
     {#if establecimientoscolab.length != 0}
-    <div class="flex justify-center mt-1">
-        <div class="w-full max-w-7xl px-4">
-            <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-2">
-                <div>
-                    <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Establecimientos asociados</h1>
+        <div class="flex justify-center mt-1">
+            <div class="w-full max-w-7xl px-4">
+                <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-2">
+                    <div>
+                        <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Establecimientos asociados</h1>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     {/if}
-    <div class="grid grid-cols-1 gap-2">
+    <div class="grid grid-cols-1 gap-2 mb-2">
         {#if establecimientoscolab.length != 0}
-        {#each establecimientoscolab as e,i}
-        <div class="flex items-center justify-center">
-            <div 
-                class={`
-                        bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 w-full 
-                        max-w-5xl
-                `}
-            >
-                <h1 class="text-2xl font-bold  mb-1 text-start p-2">{e.expand.cab.nombre}</h1>
-                <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
-
-                    <span class="text-xl font-semibold text-start">Direccion:</span>
-
-                    <span class="text-xl font-medium text-end">{e.expand.cab.direccion}</span>
-                </div>
-                <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
-
-                    <span class="text-xl font-semibold text-start">Animales:</span>
-
-                    <span class="text-xl font-medium text-end">{totalescolab[i]}</span>
-                </div>
-                <div class="p-2">
-                    <button onclick={async ()=> await irEstablecimientoColab(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
-                        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                            stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
-                            <path d="M5 12h14M12 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div> 
-        {/each}
-    {/if}
+            {#each establecimientoscolab as e,i}
+                <Asoc {e} {i} {irEstablecimientoColab} {totalescolab} {agregarCab} {quitarCab} bind:sincronizadas></Asoc>
+                
+            {/each}
+        {/if}
     </div>
 
 </Navbarr>

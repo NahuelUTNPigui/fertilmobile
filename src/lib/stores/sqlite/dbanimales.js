@@ -1,3 +1,6 @@
+import { getEstablecimientosAsociadosSQL } from "./dbasociados"
+import { getCabOffline } from "../capacitor/offlinecab"
+
 //Encima creo que aca va el animalesacto
 //Aca estaria la logica de traer animales
 export async function getAnimalesSQL(db){
@@ -71,7 +74,27 @@ export async function updateLocalAnimalesSQLUser(db,pb,userid) {
         expand:"rodeo,lote,nacimiento,cab"
     })
     let animales = recordsa
+    //---- Asociados
+
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
     
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        const animal_colab = await pb.collection("animales").getFullList({
+            filter:`delete=false && cab='${asociados[i]}'`,
+            expand:"rodeo,lote,nacimiento,cab",
+            
+        })
+        animales = animales.concat(animal_colab)
+    }
+    //---fin
     await setAnimalesSQL(db,animales)
     await setUltimoAnimalesSQL(db)
     return animales
@@ -133,6 +156,26 @@ export async function updateLocalHistorialAnimalesSQLUser(db,pb,userid) {
         expand:"rodeo,lote,nacimiento,animal"
     })
     let historial = recordsa
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        let records_asociados = await pb.collection("historialanimales").getFullList({
+            filter:`active=true && delete=false && animal.cab='${asociados[i]}'`,
+            expand:"rodeo,lote,nacimiento,animal"
+        })
+        historial = historial.concat(records_asociados)
+    }
+
+    //Fin Asociados
     await setHistorialAnimalesSQL(db,historial)
     await setUltimoHistorialAnimalesSQL(db)
     return historial

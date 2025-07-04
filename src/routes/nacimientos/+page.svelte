@@ -22,7 +22,6 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
         getNacimientosSQL,
-        updateLocalNacimientosSQL,
         getUltimoNacimientosSQL,
         setNacimientosSQL,
         addNewNacimientoSQL,
@@ -50,7 +49,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_nacimiento = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
@@ -851,6 +850,10 @@
     function onChangeAnimal(){
         animalescab = animales.filter(a=>a.cab == caboff.id) 
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -859,8 +862,7 @@
         ultimo_nacimiento = await getUltimoNacimientosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
-            //await flushComandosSQL(db)
-            comandos = []
+            await updateComandos()
             if(lastinter.internet == 0){
 
                 await setInternetSQL(db,1,0)

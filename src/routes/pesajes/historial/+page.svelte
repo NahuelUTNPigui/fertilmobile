@@ -33,7 +33,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(false)
     let caber = createCaber()

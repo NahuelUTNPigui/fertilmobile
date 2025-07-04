@@ -1,3 +1,6 @@
+import { loger } from "../logs/logs.svelte"
+let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+
 export async function getComandosSQL(db) {
     let rowcommand = await db.query("select id,lista from Comandos where id = 1")
     
@@ -150,6 +153,7 @@ async function addComando(pb,c,tablaids) {
     
 }
 async function modComando(pb,c,tablaids) {
+    
     let id = c.idprov
     // Aca veo si editor un registro local y por ende necesito revisar el id asignado
     if(id.split("_").length > 1){
@@ -158,9 +162,11 @@ async function modComando(pb,c,tablaids) {
     //Campos deberia tener el nombre del atributo
     let campos = c.camposprov.split(",")
     let coleccion = c.coleccion
+    
     if (coleccion != "users"){
         let data = processData(c.data,campos,coleccion,tablaids)
         delete data.id
+        
         await pb.collection(coleccion).update(id,data)
     }
     else{
@@ -180,15 +186,23 @@ async function delComando(pb,c,tablaids) {
 }
 //Si pongo aca el historial?
 export async function flushComandosSQL(db,pb) {
+    //NO LO ELIMIINES
     let rescoms = await getComandosSQL(db)
+    //NO LO ELIMINES
+    
     let listacomandos = []
+    
     // Aca guardo los id de los nuevos registros con su id en la base de datos
     let tablaids = {}
+    
     // Aca paso los comandos a un array,
     // La prioridad no sirve porque estan conectados
     for(let i = 0;i<rescoms.lista.length;i++){
+        
         let c = rescoms.lista[i]
+        
         listacomandos.push(c)
+        
     }
     
     //No puedo usar batchs porquequiero los id
@@ -196,23 +210,51 @@ export async function flushComandosSQL(db,pb) {
         let c = listacomandos[i]
         
         let id = c.idprov
+        
         let accion = c.tipo
+        
         if(accion=="add"){
-            let datanuevo = await addComando(pb,c,tablaids)
-            
-
-            tablaids[id] = datanuevo.id
+            try{
+                
+                let datanuevo = await addComando(pb,c,tablaids)
+                tablaids[id] = datanuevo.id
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError("Error guardar")
+                    loger.addTextError(JSON.stringify(c,null,2))
+                }
+            }
             
         }
         else if(accion=="update"){
-            await modComando(pb,c,tablaids)
+            try{
+                
+                await modComando(pb,c,tablaids)
+                tablaids[id] = datanuevo.id
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError("Error modificar")
+                    loger.addTextError(JSON.stringify(c,null,2))
+                }
+            }
         }
         else if(accion=="delete"){
-            await delComando(pb,c,tablaids)
+            
+            try{
+                await delComando(pb,c,tablaids)
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError("Error eliminar")
+                    loger.addTextError(JSON.stringify(c,null,2))
+                }
+            }
         }
     }
-
     await setComandosSQL(db,[])
     
 }
+
 

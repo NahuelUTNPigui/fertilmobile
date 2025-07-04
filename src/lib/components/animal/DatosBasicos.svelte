@@ -13,7 +13,7 @@
     import RadioButton from "$lib/components/RadioButton.svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
     import { getPermisosList } from "$lib/permisosutil/lib";
-    import { guardarHistorial } from "$lib/historial/lib";
+    import { guardarHistorial, guardarHistorialOffline } from "$lib/historial/lib";
     import PredictSelect from "../PredictSelect.svelte";
     import {shorterWord} from "$lib/stringutil/lib"
     //ofline
@@ -25,8 +25,8 @@
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
         addNewNacimientoSQL,
-
-        editarNacimientoSQL
+        editarNacimientoSQL,
+        
 
     } from "$lib/stores/sqlite/dbeventos";
     import {
@@ -41,7 +41,7 @@
     let usuarioid = $state("")
     //let useroff = $state({})
     //let caboff = $state({})
-    //let coninternet = $state({})
+    //let coninternet = $state({connected:false})
     //let comandos = $state([])
     let {
         caravana,
@@ -500,6 +500,7 @@
             categoria,
             rp
         }
+        let comandohis = await guardarHistorialOffline(db,id,usuarioid)
         await editarAnimalSQL(db,id,data)
         let nuevolote = lote.split("_").length > 1
         let nuevorodeo = rodeo.split("_").length > 1
@@ -512,9 +513,9 @@
             prioridad:2,
             idprov:id,
             camposprov
-            
         }
         comandos.push(comando)
+        comandos.push(comandohis)
         //deo guardar el historial
         await setComandosSQL(db,comandos) 
         modoedicion = false
@@ -569,22 +570,6 @@
         cargadoanimales = true
         
     }
-    async function updateLocalSQL(){
-        lotes = await updateLocalLotesSQL(db,pb,caboff.id)
-        rodeos = await updateLocalRodeosSQL(db,pb,caboff.id)
-        animales = await updateLocalAnimalesSQL(db,pb,caboff.id)
-        processAnimales()
-
-    }
-    async function getLocalSQL1() {
-        let reslotes = await getLotesSQL(db)
-        lotes = reslotes.lista
-        let resrodeo = await getRodeosSQL(db)
-        rodeos = resrodeo.lista
-        let resanimales = await getAnimalesSQL(db)
-        animales = resanimales.lista 
-        processAnimales()
-    }
     async function getLocalSQL() {
         
         id = $page.params.slug
@@ -611,37 +596,6 @@
         //    loger.addTextLogArray(listamadres)
         //    loger.addTextLogArray(listapadres)
         //}
-    }
-    async function getUpdateDataSQL() {
-        db = await openDB()
-        id = $page.params.slug
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        if (coninternet.connected){
-            //await flushComandosSQL(db)
-            //comandos = []
-            if(lastinter.internet == 0){
-                await updateLocalSQL()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
-        }
-        else{
-            await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
-        }
     }
     async function getDataSQL() {
         await getLocalSQL()

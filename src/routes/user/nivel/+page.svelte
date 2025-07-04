@@ -10,7 +10,7 @@
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""

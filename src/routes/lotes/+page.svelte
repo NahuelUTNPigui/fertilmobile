@@ -17,7 +17,6 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
         getLotesSQL,
-        updateLocalLotesSQL,
         updateLocalLotesSQLUser,
         addnewLoteSQL,
         updateLoteSQL,
@@ -29,7 +28,8 @@
     } from "$lib/stores/sqlite/dbeventos"
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { ACTUALIZACION } from "$lib/stores/constantes";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     //offline
@@ -37,10 +37,11 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_rodeo = $state({})
     let comandos = $state([])
     let animales = $state([])
+    let getlocal = $state(false)
 
     let ruta = import.meta.env.VITE_RUTA
     //pre
@@ -341,7 +342,15 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -351,6 +360,7 @@
         
     }
     async function getLocalSQL() {
+        getlocal = true
         await getAnimales()
         let reslotes = await getLotesSQL(db)
         lotes = reslotes.lista
@@ -364,6 +374,10 @@
         onChangeLote()
         filterUpdate()
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -373,8 +387,7 @@
         ultimo_rodeo = await getUltimoRodeosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
-            //await flushComandosSQL(db)
-            //comandos = []
+            await updateComandos()
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
                 await updateLocalSQL()
@@ -423,6 +436,35 @@
     }
 </script>
 <Navbarr>
+    {#if modedebug}
+        
+        <div class="grid grid-cols-3">
+            <div class="label">
+                lotes - {lotes.length}
+            </div>
+            <div class="label">
+                lotescab - {lotescab.length}
+            </div>
+            <div class="label">
+                lotesrows - {lotesrows.length}
+            </div>
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_rodeo.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local {getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Lote</h1>

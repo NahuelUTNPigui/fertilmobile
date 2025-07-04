@@ -1,3 +1,5 @@
+import { getEstablecimientosAsociadosSQL } from "./dbasociados"
+import { getCabOffline } from "../capacitor/offlinecab"
 export async function getColabSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 15")
     let fila = lista_json.values[0]
@@ -40,6 +42,27 @@ export async function updateLocalColabSQLUser(db,pb,userid){
         filter:`cab.user='${userid}'`
     });
     let colabs = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        let records_asoc = await pb.collection('estxcolabspermisos').getFullList({
+            expand:"colab,cab",
+            filter:`cab='${asociados[i]}'`
+        });
+        colabs = colabs.concat(records_asoc)
+    }
+
+    //Fin Asociados
+    
     await setColabSQL(db,colabs)
     return colabs
 }

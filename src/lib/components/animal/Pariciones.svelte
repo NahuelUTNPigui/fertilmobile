@@ -12,7 +12,7 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {addNewNacimientoSQL} from '$lib/stores/sqlite/dbeventos';
-    import {getAnimalesSQL} from '$lib/stores/sqlite/dbanimales';
+    import {getAnimalesSQL,addNewAnimalSQL} from '$lib/stores/sqlite/dbanimales';
     let {
         useroff,
         coninternet,
@@ -142,9 +142,14 @@
                 let recorda = await pb.collection('animales').create(data); 
                 recordparicion.caravana = caravana
                 recordparicion.animalid = recorda.id
-            }
-            else{
-
+                recorda = {
+                    ...recorda,
+                    expand:{
+                        lote:{id:"",nombre:""},
+                        rodeo:{id:"",nombre:""}
+                    }
+                }
+                await addNewAnimalSQL(db,recorda)
             }
             let m_idx = animales.findIndex(a=>a.id == dataparicion.madre)
             if(m_idx != -1){
@@ -172,7 +177,7 @@
     async function guardarParicionOfline() {
         let idprov = "nuevo_nac_"+generarIDAleatorio() 
         if(agregaranimal){
-            let totalanimals = await getTotalSQL(db)
+            //let totalanimals = await getTotalSQL(db)
             let verificar = true
             
             //if(useroff.nivel != -1 && totalanimals >= useroff.nivel){
@@ -230,13 +235,21 @@
             let comandoani = {
                     tipo:"add",
                     coleccion:"animales",
-                    data:{...dataanimal},
+                    data:{...data},
                     hora:Date.now(),
                     prioridad:3,
                     idprov,    
                     camposprov:"nacimiento"
             }
             dataparicion.animalid=idanimal
+            data = {
+                ...data,
+                expand:{
+                    lote:{id:"",nombre:""},
+                    rodeo:{id:"",nombre:""}
+                }
+            }
+            await addNewAnimalSQL(db,data)
             comandos.push(comandoani)
         }
         dataparicion.expand={
@@ -278,7 +291,7 @@
     function onChangePariciones(){
         paricionesrows = pariciones.filter(p=>p.madre == id)
     }
-    function onChange(campo){
+    function onchange(campo){
 
     }
     onMount(async ()=>{

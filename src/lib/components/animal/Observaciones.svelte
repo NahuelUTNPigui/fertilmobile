@@ -281,7 +281,7 @@
             data:{...data},
             hora:Date.now(),
             prioridad:0,
-            idprov:slug,
+            idprov:id,
             camposprov:nanimal?"animal":""
         }
         comandos.push(comando)

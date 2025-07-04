@@ -35,7 +35,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_rodeo = $state({})
     let getlocal = $state(false)
     let comandos = $state([])
@@ -374,6 +374,10 @@
         filterUpdate()
         
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -382,8 +386,7 @@
         ultimo_rodeo = await getUltimoRodeosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
-            //await flushComandosSQL(db)
-            //comandos = []
+            await updateComandos()
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
                 await updateLocalSQL()

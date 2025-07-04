@@ -23,14 +23,13 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos'; 
     import {
         getLotesSQL,
-        updateLocalLotesSQL,
         updateLocalLotesSQLUser,
         getRodeosSQL,
         updateLocalRodeosSQL,
         updateLocalRodeosSQLUser,
         getPesajesSQL,
         setPesajesSQL,
-        updateLocalPesajesSQL,
+        
         updateLocalPesajesSQLUser,
         setUltimoPesajesSQL,
         getUltimoPesajeSQL,
@@ -55,7 +54,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_pesajes = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
@@ -478,6 +477,10 @@
         rodeos = rodeos.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -486,6 +489,7 @@
         ultimo_pesajes = await getUltimoPesajeSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
+            await updateComandos()
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
                 await updateLocalSQL()

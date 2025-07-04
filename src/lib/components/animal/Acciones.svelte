@@ -18,7 +18,7 @@
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let nombredel = $state("")
     let nombretrans = $state("")
     let buscar = $state("")

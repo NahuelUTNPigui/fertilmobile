@@ -16,10 +16,12 @@ export async function addNewEstablecimientoAsosciaodSQL(db,id){
     let lista = establecimientos.lista
     lista.push(id)
     await setEstablecimientosAsociadosSQL(db, lista)
+    return lista
 }
 export async function deleteEstablecimientosAsociadosSQL(db, id) {
     let establecimientos = await getEstablecimientosAsociadosSQL(db)
     let lista = establecimientos.lista
     lista = lista.filter(e_id => e_id != id)
     await setEstablecimientosAsociadosSQL(db, lista)
+    return lista
 }

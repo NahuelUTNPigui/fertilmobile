@@ -37,14 +37,11 @@
         getAnimalesCabSQL,
         getUltimoAnimalesSQL,
         setUltimoAnimalesSQL
-        
-        
     } from "$lib/stores/sqlite/dbanimales"
 
     import {
         getLotesSQL,
         getRodeosSQL,
-        updateLocalLotesSQL,
         updateLocalRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser,
         setUltimoRodeosLotesSQL,
@@ -67,7 +64,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_animal = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
@@ -282,8 +279,7 @@
             idprov,    
             camposprov:conparicion?"nacimiento":""
         }
-        comandos.push(comando)
-        animales.push(data)
+        comandos.push(comandoani)
         await setAnimalesSQL(db,animales);
         if(fechanacimiento){
             let datapesaje = {
@@ -293,7 +289,7 @@
                 pesonuevo:peso,
                 id:idpes
             }
-            let comandoani = {
+            let comandope = {
                 tipo:"add",
                 coleccion:"pesajes",
                 data:{...datapesaje},
@@ -302,7 +298,7 @@
                 idprov,    
                 camposprov:"animal"
             }
-            comandos.push(comando)
+            comandos.push(comandope)
             await addNewPesajeSQL(db,datapesaje);
         }
         await setComandosSQL(db,comandos)
@@ -575,12 +571,11 @@
         comandos = rescom.lista
         
         if (coninternet.connected){
+            await flushComandosSQL(db,pb)
             if(lastinter.internet == 0){
                 //Para que cuando vaya al inicio se actualice si o si
                 await setInternetSQL(db,1,0)
-
                 await updateLocalSQL()
-                
             }
             else{
                 let ahora = Date.now()
@@ -752,7 +747,7 @@
 </script>
 <Navbarr>
     {#if modedebug}
-        <div class="grid grid-cols-3">
+        <div class="grid grid-cols-2">
             <div class="label">
                 animales - {animales.length}
             </div>

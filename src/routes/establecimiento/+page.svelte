@@ -54,7 +54,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let establecimiento = $state({})
     let comandos = $state([])
     let ultimo_establecimiento = $state({})
@@ -169,19 +169,19 @@
                 telefono:data.telefono,
                 user:recorduser.id
             }
-            alert("colabdata")
+            
             const recordcolab = await pb.collection('colaboradores').create(colabdata);
             let estxcolabdata = {
                 colab:recordcolab.id,
                 cab:cab.id
             }
-            alert("recordcolab")
+            
             const recordexc = await pb.collection('estxcolabs').create(estxcolabdata);
             let permisosdata={
                 estxcolab:recordexc.id,
                 permisos:""
             }
-            alert("recordexc")
+            
             await pb.collection('permisos').create(permisosdata);
             let colabsql = {
                 id:recordexc.id,
@@ -198,7 +198,7 @@
                     }
                 }
             }
-            alert("permisos")
+            
             colabs.push(colabsql)
             await setColabSQL(db,colabs)
             Swal.fire("Éxito guardar","Éxito guardar nuevo colaborador","success")
@@ -494,8 +494,6 @@
         else{
             coninternet = await Network.getStatus();
         }
-
-        
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         db = await openDB()
@@ -631,18 +629,12 @@
             bind:contacto bind:telefono bind:mail
             bind:codigo bind:modoedicion bind:provincia
             bind:localidad bind:colabs bind:localidadesProv
-            {provincias}
-            {guardarColab}
-            {mostrarcolab}
-            {asociado}
-            {desasociar}
-            cabid={caboff.id}
-            {cab}
-            {getNombreProvincia}
-            {getNombreLocalidad}
-            {getLocalidades}
-            {reestablercerCabaña}
-            {editarCabaña}
+            bind:coninternet bind:db
+            {provincias} {guardarColab} {mostrarcolab}
+            {asociado} {desasociar} cabid={caboff.id}
+            {cab} {getNombreProvincia} 
+            {getNombreLocalidad} {getLocalidades} 
+            {reestablercerCabaña} {editarCabaña}
 
         />
     {:else}

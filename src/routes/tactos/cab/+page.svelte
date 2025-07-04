@@ -31,7 +31,7 @@
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {
         updateLocalTactosSQLUser,
-        updateLocalTactosSQL,
+        
         setTactosSQL,
         getTactosSQL,
         setUltimoTactosSQL,
@@ -48,7 +48,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let ultimo_tacto = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
@@ -370,6 +370,7 @@
         ultimo_tacto = await getUltimoTactosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
+            await flushComandosSQL(db,pb)
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
                 await updateLocalSQL()

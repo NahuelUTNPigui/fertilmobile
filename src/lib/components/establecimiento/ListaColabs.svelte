@@ -2,7 +2,11 @@
     import estilos from "$lib/stores/estilos";
     import {isEmpty} from "$lib/stringutil/lib"
     import { goto } from "$app/navigation";
-    let {colabs = $bindable()} = $props()
+    import { getCabOffline } from "$lib/stores/capacitor/offlinecab";
+    let {
+        colabs = $bindable([]),
+        cabid
+    } = $props()
     //pre
     function getColab(id){
         goto("/colaboradores/"+id)
@@ -18,7 +22,7 @@
 
         </thead>
         <tbody>
-            {#each colabs as c}
+            {#each colabs.filter(col=>col.cab == cabid) as c}
                 <tr class="hover:bg-gray-200 dark:hover:bg-gray-900" onclick={()=>getColab(c.id)}>
                     <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10 border-b">{c.expand.colab.nombre}</td>
                     <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10 border-b">{c.expand.colab.apellido}</td>

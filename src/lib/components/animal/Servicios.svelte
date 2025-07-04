@@ -12,6 +12,7 @@
     import Swal from 'sweetalert2'
     import { setComandosSQL } from "$lib/stores/sqlite/dbcomandos";
     import {getAnimalesSQL} from '$lib/stores/sqlite/dbanimales';
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
         addnewInseminacionSQL,
         addNewServicioSQL
@@ -215,7 +216,8 @@
             }
             inseminaciones.push(data)
             onChangeServicios()
-            await setInseminacionesSQL(db,inseminaciones)
+            await addnewInseminacionSQL(db,data)
+            
             await setComandosSQL(db,comandos)
             Swal.fire("Éxito inseminación","Se logró guardar la inseminación","success")
         }
@@ -296,7 +298,7 @@
                 }
             }
             servicios.push(record)
-            await addNewServicioSQL(record)
+            await addNewServicioSQL(db,record)
             onChangeServicios()
             //Mis dudas con las fechas
             //prenadaori = 3
@@ -347,8 +349,10 @@
                     }
                 }
             }
+
             servicios.push(data)
-            await addNewServicioSQL(data)
+            await addNewServicioSQL(db,data)
+            await setComandosSQL(db,comandos)
             onChangeServicios()
             Swal.fire("Éxito servicio","Se logró guardar el servicio","success")
         
@@ -545,7 +549,7 @@
                                     </span>
                                 </div>
                             {/if}
-                            <div class="flex items-start">
+                            <div class="col-span-2 flex items-start">
                                 <span >
                                     {   s.fechadesde?
                                         "Padres":

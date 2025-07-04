@@ -1,6 +1,7 @@
 
 let loges = $state([]);
 let errores = $state([]);
+let lineas = $state([])
 function getShallowCopy(arr, count = 3) {
     return arr.slice(0, count);
 }
@@ -10,6 +11,9 @@ export const loger = {
     },
     get errores() {
         return errores;
+    },
+    get lineas() {
+        return lineas;
     },
     addLog: (item) => {
         loges = [...loges, item]; // reactividad
@@ -27,10 +31,23 @@ export const loger = {
         
         errores = [...errores,{time:Date.now(),text}]
     },
+    addTextLinea: (text) => {
+        
+        lineas = [...lineas,{time:Date.now(),text}]
+    },
+    addLineaNumber:(numero,modedebug)=>{
+        if(modedebug){
+            lineas = [...lineas,{time:Date.now(),text:""+numero}]
+        }
+        
+    },
     cleanLog: () => {
         loges = [];
     },
     cleanErrores: () => {
         errores = [];
+    },
+    cleanLineas: () => {
+        lineas = [];
     },
 };

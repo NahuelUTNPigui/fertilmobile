@@ -15,9 +15,9 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         rodeo:a.rodeo,
         categoria:a.categoria,
         prenada:a.prenada,
-        rp:record.rp,
-        raza:record.raza,
-        color:record.color,
+        rp:a.rp,
+        raza:a.raza,
+        color:a.color,
     }
     let comando = {
         tipo:"add",
@@ -28,6 +28,7 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         idprov:historialanimales,
         camposprov:""
     }
+    return comando
 }
 //Debo guardar el historial en la lista de historiales
 export async function guardarHistorial(pb,idanimal){

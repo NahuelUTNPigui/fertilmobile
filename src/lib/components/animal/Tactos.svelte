@@ -11,6 +11,7 @@
     import RadioButton from "../RadioButton.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import Swal from "sweetalert2";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
         addNewTactoSQL,
@@ -103,7 +104,6 @@
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
                 }
                 idtacto = ""
-                tacto = null
             }
         })
     }
@@ -134,7 +134,6 @@
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el tacto', 'error');
                 }
                 idtacto = ""
-                tacto = null
             }
         })
     }
@@ -253,7 +252,7 @@
         let comando = {
             tipo:"add",
             coleccion:"tactos",
-            data:{...datatacto},
+            data:{...data},
             hora:Date.now(),
             prioridad:3,
             idprov,
@@ -270,7 +269,7 @@
                 }
             }
         }
-        tactos.push(tacto)
+        tactos.push(data)
         onChangeTactos()
         await addNewTactoSQL(db,data)
         nuevoTactoAnimal.close()

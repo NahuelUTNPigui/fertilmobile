@@ -35,7 +35,6 @@
         getLotesSQL,
         getUpdateLocalRodeosLotesSQLUser,
         getLotesRodeosSQL,
-        updateLocalLotesSQL,
         updateLocalRodeosSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {
@@ -57,7 +56,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(true)
     let tactos = $state([])

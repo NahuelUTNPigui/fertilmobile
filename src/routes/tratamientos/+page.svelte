@@ -56,7 +56,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let getlocal = $state(false)
     let ultimo_tratamientos = $state({})
     let comandos = $state([])
@@ -715,7 +715,7 @@
         ultimo_tratamientos = await getUltimoTratsSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
-            //await flushComandosSQL(db)
+            await flushComandosSQL(db,pb)
             //comandos = []
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)

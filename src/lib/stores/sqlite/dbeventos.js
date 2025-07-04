@@ -1,5 +1,8 @@
 import { loger } from "../logs/logs.svelte"
+import { getEstablecimientosAsociadosSQL } from "./dbasociados"
+import { getCabOffline } from "../capacitor/offlinecab"
 
+//Eficientizar update
 export async function updateLocalEventosSQLUser(db,pb,userid) {
 
     let pesajes = await updateLocalPesajesSQLUser(db,pb,userid)
@@ -208,6 +211,27 @@ export async function updateLocalPesajesSQLUser(db,pb,userid) {
         filter:`animal.cab.user = '${userid}'`
     });
     let pesajes = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        let records_asoc = await pb.collection('pesaje').getFullList({
+            sort: '-fecha',
+            expand:"animal,animal.cab",
+            filter:`animal.cab = '${asociados[i]}'`
+        });
+        pesajes = pesajes.concat(records_asoc)
+    }
+
+    //Fin Asociados
     await setPesajesSQL(db,pesajes)
     await setUltimoPesajesSQL(db)
     return pesajes
@@ -237,7 +261,32 @@ export async function updateLocalTactosSQLUser(db,pb,userid) {
         //El animal en el futuro puede tener un cab diferente
         expand:"animal,cab"
     });
+
     let tactos = recordst
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let records_asoc = await pb.collection('tactos').getFullList({
+            filter:`cab='${asociados[i]}' && active=true`,
+            sort: '-fecha',
+            //El cab es donde se hace el tacto
+            //El animal en el futuro puede tener un cab diferente
+            expand:"animal,cab"
+        });
+        tactos = tactos.concat(records_asoc)
+    }
+
+    //Fin Asociados
     await setTactosSQL(db,tactos)
     await setUltimoTactosSQL(db)
     return tactos
@@ -279,6 +328,28 @@ export async function updateLocalServiciosSQLUser(db,pb,userid) {
         expand:"madre,cab"
     });
     let servicios = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let record_asoc = await pb.collection('servicios').getFullList({
+            sort: '-fechadesde ',
+            filter :`cab = '${asociados[i]}' && active = true`,
+            expand:"madre,cab"
+        });
+        servicios = servicios.concat(record_asoc)
+    }
+
+    //Fin Asociados
     await setServiciosSQL(db,servicios)
     await setUltimoServiciosSQL(db)
     return servicios
@@ -319,6 +390,27 @@ export async function updateLocalInseminacionesSQLUser(db,pb,userid) {
         expand:"animal,cab"
     });
     let inseminaciones = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let record_asoc = await pb.collection('inseminacion').getFullList({
+            sort: '-fechainseminacion ',
+            filter :`cab = '${asociados[i]}' && active = true`,
+            expand:"animal,cab"
+        });
+    }
+
+    //Fin Asociados
     await setInseminacionesSQL(db,inseminaciones)
     await setUltimoInseminacionesSQL(db)
     return inseminaciones
@@ -354,6 +446,28 @@ export async function updateLocalObservacionesSQLUser(db,pb,userid) {
         sort: '-fecha' 
     })
     let observaciones = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let record_asoc = await pb.collection('observaciones').getFullList({
+            filter:`active=true && cab='${asociados[i]}'`,
+            expand:"animal,cab",
+            sort: '-fecha' 
+        })
+        observaciones = observaciones.concat(record_asoc)
+    }
+
+    //Fin Asociados
     await setObservacionesSQL(db,observaciones)
     await setUltimoObservacionesSQL(db)
     return observaciones
@@ -395,6 +509,28 @@ export async function updateLocalLotesSQLUser(db,pb,userid) {
         expand:"cab"
     });
     let lotes = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let records_asoc = await pb.collection('lotes').getFullList({
+            filter:`active = true && cab='${asociados[i]}'`,
+            sort: 'nombre',
+            expand:"cab"
+        });
+        lotes = lotes.concat(records_asoc)
+    }
+
+    //Fin Asociados
     await setLotesSQL(db,lotes)
     await setUltimoLotesSQL(db)
     return lotes
@@ -456,7 +592,30 @@ export async function updateLocalRodeosSQLUser(db,pb,userid) {
         sort: 'nombre',
         expand:"cab"
     });
-    let rodeos = records 
+    let rodeos = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let records_asoc = await pb.collection('rodeos').getFullList({ 
+            filter:`active = true && cab='${asociados[i]}'`,
+            sort: 'nombre',
+            expand:"cab"
+        });
+        rodeos = rodeos.concat(records_asoc)
+
+    }
+
+    //Fin Asociados
     await setRodeosSQL(db,rodeos)
     await setUltimoRodeosSQL(db)   
     return rodeos
@@ -547,6 +706,28 @@ export async function updateLocalTiposTratSQLUser(db,pb,userid) {
         expand:"cab"
     });
     tipotratamientos = tipotratamientos.concat(records)
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let records_asoc = await pb.collection('tipotratamientos').getFullList({
+            filter : `(cab='${asociados[i]}') && active = true`,
+            sort: '-created',
+            expand:"cab"
+        });
+        tipotratamientos = tipotratamientos.concat(records_asoc)
+    }
+
+    //Fin Asociados
     await setTiposTratSQL(db,tipotratamientos)  
     await setUltimoTiposTratSQL(db)
     return tipotratamientos
@@ -581,7 +762,29 @@ export async function updateLocalTratsSQLUser(db,pb,userid) {
         expand:"animal,tipo,cab",
         sort: '-created',
     });
-    let tratamientos = records 
+    let tratamientos = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let records_asoc = await pb.collection('tratamientos').getFullList({
+            filter : `cab='${asociados[i]}' && active = true`,
+            expand:"animal,tipo,cab",
+            sort: '-created',
+        });
+        tratamientos = tratamientos.concat(records_asoc)
+    }
+
+    //Fin Asociados
     await setTratsSQL(db,tratamientos)
     await setUltimoTratsSQL(db)
     return tratamientos
@@ -633,6 +836,28 @@ export async function updateLocalNacimientosSQLUser(db,pb,userid) {
         expand:"madre,padre,cab"
     })
     let nacimientos = recordsn
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+        
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+
+    for(let i = 0;i<asociados.length;i++){
+        //asociados[i]
+        let recordsn_asoc = await pb.collection("nacimientosall").getFullList({
+            filter:`cab='${asociados[i]}'`,
+            sort:"-fecha",
+            expand:"madre,padre,cab"
+        })
+        nacimientos = nacimientos.concat(recordsn_asoc)
+    }
+
+    //Fin Asociados
     await setNacimientosSQL(db,nacimientos)
     await setUltimoNacimientosSQL(db)
     return nacimientos

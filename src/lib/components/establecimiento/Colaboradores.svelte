@@ -4,19 +4,28 @@
     import {isEmpty} from "$lib/stringutil/lib"
     import { randomString } from "$lib/stringutil/lib";
     import Swal from "sweetalert2";
+
     import { slide } from 'svelte/transition';
     import tiponoti from '$lib/stores/tiponoti';
     import {verificarNivelColab} from "$lib/permisosutil/lib"
     import PocketBase from 'pocketbase'
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import { onMount } from "svelte";
+    import { setColabSQL } from "$lib/stores/sqlite/dbcolaboradores";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let {
-        colabs = $bindable(),
+        colabs = $bindable([]),
+        coninternet = $bindable({}),
         mostrarcolab,
         guardarColab,
         desasociar,
-        asociado
+        asociado,
+        cabid,
+        db
+        
     } = $props();
     let titulo = $state("Colaboradores")
     
@@ -39,12 +48,14 @@
     let correoasociar = $state("")
     let malcorreo = $state(false)
     let codigoasociar = $state("")
-    async function asociar() {
+
+    async function asociarOnline() {
         if(correoasociar==""){
             malcorreo = true
             return
         }
-        let verificar = await verificarNivelColab(cabid)
+        //let verificar = await verificarNivelColab(cabid)
+        let verificar = true
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más colaboradores`,"error")
             return
@@ -62,9 +73,12 @@
         let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         
         let origenusuarioid =  pb_json.record.id
+
+        // El usuario encontrado
         let userid = resultList.items[0].id
         let nombre = resultList.items[0].nombre
         let apellido = resultList.items[0].apellido
+        
         if(userid == origenusuarioid){
             Swal.fire("Error colaborador","No puedes asociarte al establecimiento","error")
             return
@@ -91,20 +105,37 @@
                     cab:cabid,
                     colab:colabid
                 }
-                const recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+                let recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
                 //Debo crear los permisos para el colaborador
                 let datapermisos = {
                     estxcolab:recordestxcolab.id,
                     permisos:""
                 }
                 const recordpermisos = await pb.collection('permisos').create(datapermisos);
+                recordestxcolab = {
+                    ...recordestxcolab,
+                    permisos:"",
+                    expand:{
+                        colab:{
+                            id:userid,
+                            nombre,
+                            apellido
+                        },
+                        cab:{
+                            id:cabid
+                        }
+                    }
+
+                }
+                colabs.push(recordestxcolab)
+                await setColabSQL(db,colabs)
                 Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
-                const records = await pb.collection('estxcolabs').getFullList({
-                    expand:"colab",
-                    filter:`cab='${cab.id}'`,
-                    sort:"colab.apellido"
-                });
-                colabs = records
+                //const records = await pb.collection('estxcolabs').getFullList({
+                //    expand:"colab",
+                //    filter:`cab='${cabid}'`,
+                //    sort:"colab.apellido"
+                //});
+                //colabs = records
 
             }
             catch(err){
@@ -131,20 +162,32 @@
                     cab:cabid,
                     colab:record.id
                 }
-                const recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+                let recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
                 //Debo crear los permisos para el colaborador
                 let datapermisos = {
                     estxcolab:recordestxcolab.id,
                     permisos:""
                 }
                 const recordpermisos = await pb.collection('permisos').create(datapermisos);
+                recordestxcolab = {
+                    ...recordestxcolab,
+                    permisos:"",
+                    expand:{
+                        colab:{
+                            id:userid,
+                            nombre,
+                            apellido
+                        },
+                        cab:{
+                            id:cabid
+                        }
+                    }
+
+                }
+                colabs.push(recordestxcolab)
+                await setColabSQL(db,colabs)
                 Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
-                const records = await pb.collection('estxcolabs').getFullList({
-                    expand:"colab",
-                    filter:`cab='${cab.id}'`,
-                    sort:"colab.apellido"
-                });
-                colabs = records
+                
             }   
             catch(err){
                 console.error(err)
@@ -167,8 +210,20 @@
         }
         catch(err){
             console.error(err)
+            if(modedebug){
+                alert("Erro not")
+                loger.addTextError(JSON.stringify(err,null,2))
+            }
         }
 
+    }
+    async function asociar() {
+        if(coninternet.connected){
+            await asociarOnline()
+        }        
+        else{
+            Swal.fire("Error asociar","No se puede asociar sin internet","error")
+        }
     }
     function openAsociar(){
         mostrarasociacion = true
@@ -278,6 +333,11 @@
             }
         })
     }
+    onMount(()=>{
+        if(modedebug){
+            loger.addTextLog(JSON.stringify(colabs.filter(c=>c.cab == cabid)))
+        }
+    })
 </script>
 <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">{titulo}</h1>
 <div class="grid grid-cols-3 lg:grid-cols-4 gap-2">

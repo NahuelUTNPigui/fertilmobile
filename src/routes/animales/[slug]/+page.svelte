@@ -40,16 +40,15 @@
     } from "$lib/stores/sqlite/dbanimales"
     import {        
         updateLocalNacimientosSQLUser,
-        updateLocalTactosSQL,
+        
         updateLocalTactosSQLUser,
-        updateLocalTipoTratsSQL,
         updateLocalTiposTratSQLUser,
         updateLocalTratsSQL,
         updateLocalObservaciones,
         updateLocalObservacionesSQLUser,
         updateLocalServiciosSQL,
         updateLocalServiciosSQLUser,
-        updateLocalPesajesSQL,
+        
         updateLocalPesajesSQLUser,
         updateLocalInseminacionesSQL,
         updateLocalInseminacionesSQLUser,
@@ -79,7 +78,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(false)
     let ruta = import.meta.env.VITE_RUTA
@@ -406,7 +405,7 @@
         let servistodos = await updateLocalServiciosSQLUser(db,pb,usuarioid)
         let inseminacionestodos = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
         let observacionestodos = await updateLocalObservacionesSQLUser(db,pb,usuarioid)
-        let tipostratodos = await updateLocalTipoTratsSQL(db,pb,caboff.id)
+        let tipostratodos = await updateLocalTiposTratSQLUser(db,pb,usuarioid)
         let historialtodos = await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid) 
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         pesajes = pesajestodos.filter(p=>p.animal == slug)

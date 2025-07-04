@@ -29,7 +29,6 @@
         getLotesSQL,
         getRodeosSQL,
         setLotesSQL,
-        updateLocalLotesSQL,
         updateLocalRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser,
         getLotesRodeosSQL,
@@ -53,7 +52,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -766,6 +765,10 @@
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -773,6 +776,7 @@
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
+            await updateComandos()
             if(lastinter.internet == 0){
                 await setInternetSQL(db,1,Date.now())
                 await updateLocalSQL()

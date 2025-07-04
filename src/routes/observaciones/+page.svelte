@@ -68,7 +68,7 @@
     let usuarioid = $state("");
     let useroff = $state({});
     let caboff = $state({});
-    let coninternet = $state({});
+    let coninternet = $state({connected:false});
     let ultimo_observaciones = $state({});
     let getlocal = $state(false)
     let comandos = $state([]);
@@ -670,6 +670,10 @@
         changeAnimales();
         filterUpdate();
     }
+    async function updateComandos() {
+        await flushComandosSQL(db,pb)
+        comandos = []
+    }
     async function getDataSQL() {
         db = await openDB();
         //Reviso el internet
@@ -679,7 +683,7 @@
         comandos = rescom.lista;
         
         if (coninternet.connected) {
-            
+            await updateComandos()
             if (lastinter.internet == 0) {
                 if(modedebug){
                     loger.addLog({

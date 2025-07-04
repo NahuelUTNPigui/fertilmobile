@@ -21,7 +21,7 @@
     let usuarioid = $state("")
     let useroff = $state({})
     
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     let comandos = $state([])
     
     let ruta = import.meta.env.VITE_RUTA

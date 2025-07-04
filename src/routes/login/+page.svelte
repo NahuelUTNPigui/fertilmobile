@@ -21,7 +21,7 @@
     let contra = $state('')
     let showpass = $state(false)
     let logooscuro = $state(true)
-    let coninternet = $state({})
+    let coninternet = $state({connected:false})
     function isEmpty(str) {
         return (!str || str.length === 0 );
     }
@@ -74,7 +74,7 @@
 
                         per.setPer("0,1,2,3,4,5",authData.record.id)
                         
-                        await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5")
+                        await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5",false)
                     }
                     catch(err){
                         try{
@@ -84,7 +84,7 @@
                             })
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
                             //Debo establecer el nivel que tiene el dueño de la cabaña y cuantos animales puede tener
-                            await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos)
+                            await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos,true)
                             
                             per.setPer(recordper.permisos,authData.record.id)
                             caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id,true)
