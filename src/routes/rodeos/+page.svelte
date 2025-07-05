@@ -257,6 +257,9 @@
                     await setRodeosSQL(db,rodeos)
                     //ver como hago para actualizar la lista
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
+                    ordenar(rodeos)
+                    changeRodeo()
+                    filterUpdate()
                 }
                 catch(e){
                     Swal.fire('Acción cancelada', 'No se pudo eliminar el rodeo', 'error');
@@ -294,7 +297,9 @@
                     await setComandosSQL(db,comandos)
                     rodeos = rodeos.filter(r=>r.id!=id)
                     await setRodeosSQL(db,rodeos)
-                    
+                    ordenar(rodeos)
+                    changeRodeo()
+                    filterUpdate()
                     Swal.fire('Rodeo eliminado!', 'Se eliminó el rodeo correctamente.', 'success');
                     
                 }
@@ -314,9 +319,7 @@
         else{
             eliminarOffline(id)
         }
-        ordenar(rodeos)
-        changeRodeo()
-        filterUpdate()
+        
         
     }
     function filterUpdate(){

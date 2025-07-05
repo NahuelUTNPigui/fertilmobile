@@ -204,7 +204,7 @@ export async function flushComandosSQL(db,pb) {
         listacomandos.push(c)
         
     }
-    
+    //Capaz que haya que ordenar por hora
     //No puedo usar batchs porquequiero los id
     for(let i = 0;i<listacomandos.length;i++){
         let c = listacomandos[i]

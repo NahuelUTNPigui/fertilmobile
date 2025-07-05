@@ -467,7 +467,7 @@
             onChangeTipos()
             let comando = {
                 tipo:"add",
-                coleccion:"tipotrats",
+                coleccion:"tipotratamientos",
                 data:{...data},
                 hora:Date.now(),
                 prioridad:1,
@@ -486,11 +486,11 @@
             }
             let comando = {
                 tipo:"update",
-                coleccion:"tipotrats",
+                coleccion:"tipotratamientos",
                 data:{...data},
                 hora:Date.now(),
                 prioridad:1,
-                idtipotratamiento,
+                idprov:idtipotratamiento,
                 camposprov:""
             }
             comandos.push(comando)
@@ -564,12 +564,12 @@
         onChangeTipos()
         
         let comando = {
-            tipo:"delete",
-            coleccion:"tipotrats",
-            data:{},
+            tipo:"update",
+            coleccion:"tipotratamientos",
+            data:{active:false},
             hora:Date.now(),
             prioridad:1,
-            idtipotratamiento,
+            idprov:idtipotratamiento,
             camposprov:""
         }
         comandos.push(comando)

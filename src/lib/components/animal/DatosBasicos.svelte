@@ -18,6 +18,7 @@
     import {shorterWord} from "$lib/stringutil/lib"
     //ofline
     //Creo que no harai falta
+    import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -302,13 +303,14 @@
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
             connacimiento = true
             nacimiento = recordparicion
+            idnacimiento = recordparicion.id
         }
         catch(err){
             console.error(err)
             Swal.fire("Error guardar","No se pudo guardar el nacimiento","error")
         }
     }
-    async function guardarNaciminentoOffline() {
+    async function guardarNacimientoOffline() {
         let idprov = "nuevo_nac_"+generarIDAleatorio()
         let nuevomadre = madre.split("_")[0]=="nuevo"
         let nuevopadre = padre.split("_")[0]=="nuevo"
@@ -319,7 +321,8 @@
             nombremadre,
             nombrepadre,
             observacion,
-            cab:caboff.id
+            cab:caboff.id,
+            id:idprov
         }
         
         //Comandos
@@ -332,16 +335,34 @@
             idprov,    
             camposprov:nuevomadre && nuevopadre?"madre,padre":nuevomadre?"madre":nuevopadre?"padre":""        
         }
+        let dataani = {
+            nacimiento:idprov,
+            fechanacimiento:fecha + " 03:00:00",
+        }
+        let comandoani = {
+            tipo:"update",
+            coleccion:"animales",
+            data:{...dataani},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov:"nacimientos"        
+        }
+        await guardarHistorialOffline(db,id,usuarioid)
+        await editarAnimalSQL(db,id,dataani)
+        //Es importante respetar el orden
         comandos.push(comandonac)
+        comandos.push(comandoani)
         await setComandosSQL(db,comandos)
         dataparicion = {
             animalid:id,
             caravana:caravana,
             ...dataparicion
         }
+        idnacimiento = idprov
         await addNewNacimientoSQL(db,dataparicion)
         connacimiento = true
-        nacimiento = recordparicion
+        nacimiento = dataparicion
         Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
     }
     async function guardarNacimiento() {
@@ -349,7 +370,7 @@
             await guardarNacimientoOnline()
         }
         else{
-            await guardarNaciminentoOffline()
+            await guardarNacimientoOffline()
         }
     }
     async function editarNacimientoOffline() {
@@ -359,7 +380,8 @@
             fecha:fecha + " 03:00:00",
             nombremadre,
             nombrepadre,
-            observacion
+            observacion,
+
         }  
         let nuevomadre = madre.split("_")[0]=="nuevo"
         let nuevopadre = padre.split("_")[0]=="nuevo"
@@ -370,17 +392,33 @@
             data:{...dataparicion},
             hora:Date.now(),
             prioridad:2,
-            idprov,    
+            idprov:idnacimiento,    
             camposprov:nuevomadre && nuevopadre?"madre,padre":nuevomadre?"madre":nuevopadre?"padre":""        
         }
+        let dataani = {
+            
+            fechanacimiento:fecha + " 03:00:00",
+        }
+        let comandoani = {
+            tipo:"update",
+            coleccion:"animales",
+            data:{...dataani},
+            hora:Date.now(),
+            prioridad:2,
+            idprov,    
+            camposprov:"nacimientos"        
+        }
+        await guardarHistorialOffline(db,id,usuarioid)
+        await editarAnimalSQL(db,id,dataani)
         comandos.push(comandonac)
+        comandos.push(comandoani)
         await setComandosSQL(db,comandos)
         dataparicion = {
             animalid:id,
             caravana:caravana,
             ...dataparicion
         }
-        await editarNacimientoSQL(db,dataparicion,id)
+        await editarNacimientoSQL(db,dataparicion,idnacimiento)
         Swal.fire("Éxito editar","Se pudo editar el nacimiento","success")
     }
     async function editarNacimientoOnline() {
@@ -414,7 +452,7 @@
                 animalid:id,
                 caravana:caravana,
             }
-            await editarNacimientoSQL(db,recordparicion,id)
+            await editarNacimientoSQL(db,recordparicion,idnacimiento)
             await pb.collection("historialanimales").create(datahistorial)
             Swal.fire("Éxito editar","Se pudo editar el nacimiento","success")
         }

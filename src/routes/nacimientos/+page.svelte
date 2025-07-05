@@ -194,6 +194,7 @@
                 idprov,    
                 camposprov:`${(esnuevomadre && esnuevopadre)?"madre,padre":esnuevomadre?"madre":esnuevopadre?"padre":""}`
             }
+            //Agrego el nacimiento
             comandos.push(comando)
             
             if(agregaranimal){
@@ -224,10 +225,11 @@
                     idprov,    
                     camposprov:`nacimiento${(nlote&nrodeo)?",lote,rodeo":nlote?",lote":nrodeo?",rodeo":""}`
                 }
+                //Agrego el aniaml
                 comandos.push(comandoani)
                 animales.push(dataanimal)
                 onChangeAnimal()
-                
+                filterUpdate()
                 await setAnimalesSQL(db,animales)
 
             }
@@ -249,6 +251,8 @@
                 }
             }
             nacimientos.push(dataparicion)
+            onChangeNacimiento()
+            filterUpdate()
             await setNacimientosSQL(db,nacimientos)
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
         }
@@ -317,6 +321,7 @@
                 futuroanimal.caravana = recorda.caravana
                 animales.push(recorda)
                 onChangeAnimal()
+                filterUpdate()
                 await setAnimalesSQL(db,animales)
             }
             recordparicion = {
@@ -336,7 +341,8 @@
                 }
             }
             nacimientos.push(recordparicion)
-
+            onChangeNacimiento()
+            filterUpdate()
             await setNacimientosSQL(db,nacimientos)
             Swal.fire("Éxito guardar","Se pudo guardar el nacimiento con exito","success")
         }
@@ -352,8 +358,6 @@
         else{
             await guardarOffline()
         }
-        onChangeNacimiento()
-        filterUpdate()
     }
     async function editarOnline() {
         let ms = madres.filter(ma=>ma.id==madre)
@@ -574,6 +578,8 @@
         
     }
     function filterUpdate(){
+        
+        nacimientoscab.sort((n1,n2)=>new Date(n1.fecha)>new Date(n2.fecha)?-1:1)
         nacimientosrow = nacimientoscab
         totalNacimientosEncontrados = nacimientosrow.length
         if(buscar != ""){
@@ -653,7 +659,7 @@
         nuevoModal.showModal()
 
     }
-    function eliminarOnline(id){
+    function eliminarOnline(){
         Swal.fire({
             title: 'Eliminar nacimiento',
             text: '¿Seguro que deseas eliminar el nacimiento?',
@@ -663,8 +669,6 @@
             cancelButtonText: 'No'
         }).then(async result => {
             if(result.value){
-                idnacimiento = id
-                
                 try{
                     await pb.collection('nacimientos').delete(idnacimiento);
                     nacimientos = nacimientos.filter(n=>n.id!=idnacimiento)
@@ -684,6 +688,7 @@
                             }
                         }
                     }
+                    onChangeNacimiento()
                     filterUpdate()
                     Swal.fire('Nacimiento eliminado!', 'Se eliminó el nacimiento correctamente.', 'success');
                 }
@@ -696,7 +701,7 @@
             }
         })
     }
-    function eliminarOffline(id){
+    function eliminarOffline(){
         Swal.fire({
             title: 'Eliminar nacimiento',
             text: '¿Seguro que deseas eliminar el nacimiento?',
@@ -705,38 +710,44 @@
             confirmButtonText: 'Si',
             cancelButtonText: 'No'
         }).then(async result => {
+           
+            
             if(result.value){
-                idnacimiento = id
+            
                 try{
+            
                     let comando = {
                         tipo:"delete",
                         coleccion:"nacimientos",
                         data:{},
                         hora:Date.now(),
                         prioridad:0,
-                        idprov:id,    
+                        idprov:idnacimiento,    
                         camposprov:""
                     }
-                    comandos.push(comando)
                     
+                    comandos.push(comando)
                     nacimientos = nacimientos.filter(n=>n.id!=idnacimiento)
                     await setNacimientosSQL(db,nacimientos)
+                    onChangeNacimiento()
                     filterUpdate()
                     if(idanimal != ""){
-                        let esnuevonacimiento= idnacimiento.split("_").length > 1
-                        let comandoani = {
-                            tipo:"update",
-                            coleccion:"animales",
-                            data:{...datanimal},
-                            hora:Date.now(),
-                            prioridad:0,
-                            idprov:idanimal,    
-                            camposprov:`${esnuevonacimiento ?"nacimiento":""}`
-                        }
-                        comandos.push(comandoani)
+                        
                         let a_idx = animales.findIndex(a=>a.id == idanimal)
                         if(a_idx != -1){
                             animales[a_idx].nacimiento = ""
+                            let dataanimal = animales[a_idx]
+                            let esnuevonacimiento= idnacimiento.split("_").length > 1
+                            let comandoani = {
+                                tipo:"update",
+                                coleccion:"animales",
+                                data:{...dataanimal},
+                                hora:Date.now(),
+                                prioridad:0,
+                                idprov:idanimal,    
+                                camposprov:`${esnuevonacimiento ?"nacimiento":""}`
+                            }
+                            comandos.push(comandoani)
                             await setAnimalesSQL(db,animales)
                         }
                         else{
@@ -760,15 +771,13 @@
             }
         })
     }
-    function eliminar(id){
+    function eliminar(){
         if(coninternet.connected){
-            eliminarOnline(id)
+            eliminarOnline()
         }
         else{
-            eliminarOffline(id)
+            eliminarOffline()
         }
-        onChangeNacimiento()
-        filterUpdate()
     }
     async function onMountOriginal(){
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
@@ -1281,7 +1290,7 @@
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
                 {:else}
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar(idnacimiento)}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={()=>eliminar()}>Eliminar</button>
               {/if}
               <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
               

@@ -40,14 +40,22 @@
         getAnimalesSQL,
         setUltimoAnimalesSQL,
         updateLocalAnimalesSQL,
+        getUltimoAnimalesSQL,
         getUpdateLocalAnimalesSQLUser
     } from "$lib/stores/sqlite/dbanimales";
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
+    let ultimo_animal = $state({})
+    let getlocal = $state(false)
+
     let coninternet = $state({connected:false})
     let comandos = $state([])
     
@@ -430,7 +438,7 @@
                 }
                 let comando = {
                     tipo:"add",
-                    coleccion:"tratamiento",
+                    coleccion:"tratamientos",
                     data:{...datatratamiento},
                     hora:Date.now(),
                     prioridad:5,
@@ -474,13 +482,21 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
     }
     async function updateLocalSQL() {
-        
+        await setInternetSQL(db,1,Date.now())
         animales = await getUpdateLocalAnimalesSQLUser(db,pb,usuarioid,caboff.id)
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         lotes = lotesrodeos.lotes
@@ -490,6 +506,7 @@
         filterUpdate()
     }
     async function getLocalSQL() {
+        getlocal = true
         let resanimales = await getAnimalesSQL(db)
         let reslotes = await getLotesSQL(db)
         let resrodeos = await getRodeosSQL(db)
@@ -507,6 +524,7 @@
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
@@ -520,13 +538,14 @@
                     let antes = lastinter.ultimo
                     const cincoMinEnMs = 300000;
                     if((ahora - antes) >= cincoMinEnMs){
+                        
                         await updateLocalSQL()
                     }
                     else{
                         await getLocalSQL()            
                     }
             }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -543,7 +562,25 @@
 
 </script>
 <Navbarr>
-    <button onclick={()=>setArbitrarioInternet(coninternet.connected?false:true)} class="btn hidden">Cambiar conexion {coninternet.connected?"COn internet":"sin internet"}</button>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                <span>
+                    last internet: {ultimo_animal.ultimo}
+                </span>
+            </div>
+            <div class="label">
+                <span>
+                    con internet: {coninternet.connected}
+                </span>
+            </div>
+            <div class="label">
+                <span>
+                    get local: {getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-2 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <button

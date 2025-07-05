@@ -267,6 +267,9 @@
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
                     await setLotesSQL(db,lotes)
+                    onChangeLote()
+                    ordenar(lotes)
+                    filterUpdate()
                     Swal.fire('Lote eliminado!', 'Se eliminó el lote correctamente.', 'success');
                 }
                 catch(e){

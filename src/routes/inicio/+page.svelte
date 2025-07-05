@@ -751,7 +751,7 @@
             let esnuevoanimal = a.id.split("_").length > 1
             let comando = {
                 tipo:"add",
-                coleccion:"tratamiento",
+                coleccion:"tratamientos",
                 data:{...data},
                 hora:Date.now(),
                 prioridad:5,
@@ -778,6 +778,7 @@
         if(agregaranimal){
             
             await guardarTratAnimal(idprov)
+             
         }
         //Animal existente
         else{
@@ -841,7 +842,7 @@
                     
                     await addNewTrataSQL(db,data)
                     
-                    Swal.fire("Éxito guardar","Se pudo guardar el tacto","success")
+                    Swal.fire("Éxito guardar","Se pudo guardar el tratamiento","success")
                 }
                 catch(err){
                     console.error(err)
@@ -873,6 +874,7 @@
             padre:inseminacion.padreins,//Si es nuevo padre
             pajuela:inseminacion.pajuelains,
             categoria:a.categoria,
+            observacion:inseminacion.observacion
         }
         if(coninternet.connected){
             try{
@@ -977,7 +979,7 @@
                 data.id = idprov
                 let comando = {
                     tipo:"add",
-                    coleccion:"tratamiento",
+                    coleccion:"inseminacion",
                     data:{...data},
                     hora:Date.now(),
                     prioridad:5,
@@ -1553,7 +1555,7 @@
                     onclick={openNewModalNacimiento}
                     >
                         <Nacimiento></Nacimiento>
-                        Nuevo nacimiento
+                        Nueva parición
                     </button> 
                 </div>
                 <div>

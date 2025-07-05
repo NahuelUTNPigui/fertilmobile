@@ -252,6 +252,35 @@
             await addNewNacimientoSQL(db,dataparicion)
             comandos.push(comandonac)
         }
+        let esnuevolote = lote.split("_").length > 1
+        let esnuevorodeo = rodeo.split("_").length > 1
+        let esnuevonac = conparicion
+        let camposprov = ""
+        let vacio = true
+        if(esnuevonac){
+            vacio = false
+            camposprov = "nacimientos"
+        }
+        if(esnuevolote){
+            
+            if(vacio){
+                camposprov = "lote"
+            }
+            else{
+                camposprov += ",lote"
+            }
+            vacio = false
+        }
+        if(esnuevorodeo){
+            
+            if(vacio){
+                camposprov = "rodeo"
+            }
+            else{
+                camposprov += ",rodeo"
+            }
+            
+        }
         let data = {
             caravana,
             active:true,
@@ -277,7 +306,7 @@
             hora:Date.now(),
             prioridad:3,
             idprov,    
-            camposprov:conparicion?"nacimiento":""
+            camposprov
         }
         comandos.push(comandoani)
         await setAnimalesSQL(db,animales);

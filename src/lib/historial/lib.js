@@ -1,7 +1,36 @@
 import { getAnimalSQLByID } from "$lib/stores/sqlite/dbanimales"
+import { generarIDAleatorio } from "$lib/stringutil/lib"
 //dEbo guardar
 export async function guardarHistorialOffline(db,idanimal,user) {
     let a = await getAnimalSQLByID(db,idanimal)
+    let esnuevolote = a.lote.split("_").length > 1
+    let esnuevorodeo = a.rodeo.split("_").length > 1
+    let camposprov = ""
+    let vacio = true
+    if(esnuevonac){
+        vacio = false
+        camposprov = "nacimientos"
+    }
+    if(esnuevolote){
+        
+        if(vacio){
+            camposprov = "lote"
+        }
+        else{
+            camposprov += ",lote"
+        }
+        vacio = false
+    }
+    if(esnuevorodeo){
+        
+        if(vacio){
+            camposprov = "rodeo"
+        }
+        else{
+            camposprov += ",rodeo"
+        }
+        
+    }
     let histo = {
         animal:idanimal,
         caravana:a.caravana,
@@ -25,8 +54,8 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         data:{...histo},
         hora:Date.now(),
         prioridad:0,
-        idprov:historialanimales,
-        camposprov:""
+        idprov:"nuevo_histo_"+generarIDAleatorio(),
+        camposprov
     }
     return comando
 }
