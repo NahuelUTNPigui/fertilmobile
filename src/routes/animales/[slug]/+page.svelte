@@ -176,8 +176,6 @@
         await setComandosSQL(db,comandos)
         await editarAnimalSQL(db,slug,data)
         Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
-        
-
         goto("/animales") 
     }
     async function darBajaOnline(fechafallecimiento,motivo){
@@ -192,6 +190,7 @@
             };
             await guardarHistorial(pb,slug)
             const record = await pb.collection('animales').update(slug, data);  
+            await editarAnimalSQL(db,slug,data)
             Swal.fire("Éxito dar de baja","Se pudo dar de baja al animal","success")
             goto("/animales")  
         }
@@ -199,12 +198,14 @@
             Swal.fire("Error dar de baja","No se pudo dar de baja al animal","error")
         }
     }
+    //Esta funcion sirve para desactivar la vaca pero no eliminarla
+    //Capaz no se le pueden realizar acciones
     async function darBaja(fechafallecimiento,motivo){
         if(coninternet.connected){
-            darBajaOnline(fechafallecimiento,motivo)
+            await darBajaOnline(fechafallecimiento,motivo)
         }
         else{
-            darBajaOffline(fechafallecimiento,motivo)
+            await darBajaOffline(fechafallecimiento,motivo)
         }
         
         
@@ -242,6 +243,7 @@
             };
 
             const record = await pb.collection('animales').update(slug, data);  
+            await editarAnimalSQL(db,slug,data)
             Swal.fire("Éxito eliminar","Se pudo eliminar al animal","success")
             goto("/animales")  
         }
@@ -275,7 +277,7 @@
             }
             
             const record = await pb.collection('animales').update(slug, data);
-
+            await editarAnimalSQL(db,slug,data)
             let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
         
             let origenusuarioid =  pb_json.record.id
@@ -287,7 +289,15 @@
                 destino:resultcab.items[0].user,
                 leido:false
             }
-            await pb.collection('notificaciones').create(datatrans);
+            try{
+                await pb.collection('notificaciones').create(datatrans);
+            }
+            catch(err){
+                if (modedebug){
+                    loger.addTextError("Error en enviar la notificacion")
+                }  
+            }
+            
             
             goto("/animales")
             Swal.fire("Éxito transferencia","Se pudo transferir al animal","success")
@@ -395,6 +405,7 @@
         //animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
 
     }
+    // Me hace ruido nunca se usa
     async function updateLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
         animales = resanimales.lista
@@ -553,7 +564,7 @@
                     bind:fechafallecimiento  = {fechafall}
                     bind:motivo = {motivobaja}
                     bajar={async (fechafallecimiento,motivo)=>await darBaja(fechafallecimiento,motivo)}
-                    eliminar={eliminar}
+                    {eliminar}
                     transferir={async (codigo)=>await transferir(codigo)}
                 />
         {:else if tab =="pesajes"}

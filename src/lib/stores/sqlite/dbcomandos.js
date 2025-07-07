@@ -231,7 +231,7 @@ export async function flushComandosSQL(db,pb) {
             try{
                 
                 await modComando(pb,c,tablaids)
-                tablaids[id] = datanuevo.id
+                
             }
             catch(err){
                 if(modedebug){

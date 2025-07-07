@@ -8,7 +8,7 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import categorias from "$lib/stores/categorias";
     import sexos from "$lib/stores/sexos";
-    import {guardarHistorial} from "$lib/historial/lib"
+    import {guardarHistorial, guardarHistorialOffline} from "$lib/historial/lib"
     import {createPer} from "$lib/stores/permisos.svelte"
     import { getPermisosList } from '$lib/permisosutil/lib';
     import motivos from '$lib/stores/motivos';
@@ -32,10 +32,9 @@
         updateLocalRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser,
         getLotesRodeosSQL,
-        
         getTratsSQL,
         setTratsSQL,
-        
+        setUltimoRodeosLotesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import{
         addNewAnimalSQL,
@@ -44,15 +43,25 @@
         updateLocalAnimalesSQL,
         getUpdateLocalAnimalesSQLUser,
         updateLocalAnimalesSQLUser,
+        getUltimoAnimalesSQL,
+        setUltimoAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales"
+    import Modalmove from "$lib/components/movimientos/Modalmove.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { ACTUALIZACION } from "$lib/stores/constantes";
+    import Listamove from "$lib/components/movimientos/Listamove.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
 
-     //offline
-     let db = $state(null)
+    //offline
+    let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({connected:false})
+    let ultimo_animal = $state({})
+    let getlocal = $state(false)
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -63,11 +72,13 @@
     let cab = caber.cab
     let per = createPer()
     let userpermisos = getPermisosList(per.per.permisos)
-
+    //movimientos
+    let listaanimales = $state([])
     //boton
     let textoboton = $state("Mover")
     //Datos animales
     let animales = $state([])
+    let animalescab = $state([]) 
     let animalesrows = $state([])
     //Filtros
     let buscar = $state("")
@@ -134,7 +145,7 @@
     }
     function filterUpdate(){
         
-        animalesrows = animales
+        animalesrows = animalescab
         if(buscar != ""){
             animalesrows = animalesrows.filter(a=>a.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()))
         }
@@ -256,12 +267,102 @@
         animalesrows = animales
     }
     function openNewModal(){
+        listaanimales = []
         if(userpermisos[3]){
-            nuevoModal.showModal()   
+            
+            for (const [key, value ] of Object.entries(selecthashmap)) {
+                if(value != null){
+                    listaanimales.push(value)
+                }
+            }
+            if(listaanimales.length==0){
+                Swal.fire("Error movimiento","No hay animales seleccionados","error")
+                nuevorodeo = ""
+                nuevolote = ""
+                nuevacategoria = ""
+                
+            }
+            else{
+                nuevoModal.showModal()   
+            }
+            
         }
         else{
             Swal.fire("Error movimiento","No tienes permisos para hacer movimientos","error")
         }
+        
+    }
+    async function moverAnimalOffline(a,data) {
+        
+
+        let nlote =  data.lote?data.lote.split("_").length>1:false
+        let nrodeo =  data.rodeo?data.rodeo.split("_").length>1:false
+        loger.addTextLog(JSON.stringify(data,null,2))
+        
+        let comando = {
+            tipo:"update",
+            coleccion:"animales",
+            data:{...data},
+            hora:Date.now(),
+            prioridad:3,
+            idprov:a.id,
+            camposprov:`${nlote?"lote":nrodeo?"rodeo":""}`
+        }
+        comandos.push(comando)
+        
+        let esnuevolote = a.lote.split("_").length > 1
+        let esnuevorodeo = a.rodeo.split("_").length > 1
+        let camposprov = ""
+        let vacio = true
+        
+        if(esnuevolote){
+            if(vacio){
+                camposprov = "lote"
+            }
+            else{
+                camposprov += ",lote"
+            }
+            vacio = false
+        }
+        
+        if(esnuevorodeo){
+            if(vacio){
+                camposprov = "rodeo"
+            }
+            else{
+                camposprov += ",rodeo"
+            }
+        }
+        
+        let histo = {
+            animal:a.id,
+            caravana:a.caravana,
+            user:usuarioid,
+            active:true,
+            delete:false,
+            fechanacimiento:a.fechanacimiento,
+            sexo:a.sexo,
+            peso:a.peso,
+            lote:a.lote,
+            rodeo:a.rodeo,
+            categoria:a.categoria,
+            prenada:a.prenada,
+            rp:a.rp,
+            raza:a.raza,
+            color:a.color,
+        }
+        
+        let comandohis = {
+            tipo:"add",
+            coleccion:"historialanimales",
+            data:{...histo},
+            hora:Date.now(),
+            prioridad:0,
+            idprov:"nuevo_histo_"+generarIDAleatorio(),
+            camposprov
+        }
+        
+        comandos.push(comandohis)
         
     }
     async function moverOffline() {
@@ -272,42 +373,21 @@
             nuevacategoria = ""
             return
         }
-        let lista = []
-        for (const [key, value ] of Object.entries(selecthashmap)) {
-            if(value != null){
-                lista.push(value)
-            }
-        }
-        if(lista.length==0){
-            Swal.fire("Error movimiento","No hay animales seleccionados","error")
-            nuevorodeo = ""
-            nuevolote = ""
-            nuevacategoria = ""
-            return
-        }
+        let errores = false
+        let conerrores = []
         let data = {}
         let nombrelote = ""
         let nombrerodeo = ""
         if(selectcategoria){
-            data.categoria = nuevacategoria
-            
+            data.categoria = nuevacategoria   
         }
         if(selectlote){
             data.lote = nuevolote
-            nombrelote = lotes.filter(l =>l.id==nuevolote)[0]
+            nombrelote = lotes.filter(l =>l.id==nuevolote)[0].nombre
         }
         if(selectrodeo){
             data.rodeo = nuevorodeo
-            nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0]
-        }
-        let trats = []
-        if(selecttratamiento){
-            let restratamientos = await getTratsSQL(db)
-            trats = restratamientos.lista
-            data.fecha = fecha + " 03:00:00"
-            data.tipo = tipotratamiento
-            data.active = true
-            data.cab = caboff.id
+            nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0].nombre
         }
         if(selectbaja){
             data.active = false
@@ -316,67 +396,63 @@
         }
         if(selecttransfer){
             Swal.fire("Error movimiento","Sin internet no se pueden hacer movimientos","error")
+            return 
         }
         //inicio movimiento
-        for(let i = 0;i<lista.length;i++){
-            let a = lista[i]
-            if(!selecttratamiento){
-                let datacambio={
-                    ...data
+        for(let i = 0;i<listaanimales.length;i++){
+            let a = listaanimales[i]
+            let a_idx = animales.findIndex(an=>an.id == a.id)
+            animales[a_idx] = {
+                ...animales[a_idx],
+                ...data
+            }
+            if(selectlote){
+                if(animales[a_idx].expand){
+                    animales[a_idx].expand.lote={
+                        id:nuevolote,
+                        nombre:nombrelote
+                    }
                 }
-                let aidx= animales.findIndex(an=>an.id==a.id)
-                if(aidx != -1){
-                    animales[aidx] = {
-                        ...animales[aidx],
-                        ...datacambio
+                else{
+                    animales[a_idx].expand = {}
+                    animales[a_idx].expand.lote={
+                        id:nuevolote,
+                        nombre:nombrelote
                     }
-                    let nlote =  data.lote?data.lote.split("_").length>0:false
-                    let nrodeo =  data.rodeo?data.rodeo.split("_").length>0:false
-                    let comando = {
-                        tipo:"update",
-                        coleccion:"animales",
-                        data:{...datacambio},
-                        hora:Date.now(),
-                        prioridad:3,
-                        idprov:a.id,
-                        camposprov:`${nlote?"lote":nrodeo?"rodeo":""}`
-                    }
-                    comandos.push(comando)
                 }
             }
-            else{
-                let idprov = "nuevo_trat_"+generarIDAleatorio()
-                let datatratamiento = {
-                    ...data,
-                    animal:a.id,
-                    categoria:a.categoria,
-                    id:idprov
+            if(selectrodeo){
+                if(animales[a_idx].expand){
+                    animales[a_idx].expand.rodeo={
+                        id:nuevorodeo,
+                        nombre:nombrerodeo
+                    }
                 }
-                trats.push(datatratamiento)
-                let nanimal = a.id.split("_").length>0
-                let ntipo = data.tipo.split("_").length>0
-                let comando = {
-                    tipo:"add",
-                    coleccion:"tratamientos",
-                    data:{...datatratamiento},
-                    hora:Date.now(),
-                    prioridad:3,
-                    idprov:a.id,
-                    camposprov:`${(nanimal && ntipo)?"animal,tipo":nanimal?"animal":ntipo?"tipo":""}`
-
+                else{
+                    animales[a_idx].expand = {}
+                    animales[a_idx].expand.rodeo={
+                        id:nuevorodeo,
+                        nombre:nombrerodeo
+                    }
                 }
-                comandos.push(comando)
-
+            }
+            try {
+                
+                //loger.addTextLinea("Guadar offline: "+a.caravana)
+                await moverAnimalOffline(a,data)
+                
+            }
+            catch(err){
+                conerrores.push(a.id)
+                errores = true
+                if(modedebug){
+                    loger.addTextError(a.caravana)
+                }
             }
         }
-        if(!selecttratamiento){
-            await setAnimalesSQL(db,animales)
-            await setComandosSQL(db,comandos)
-        }
-        else{
-            await setTratsSQL(db,trats)
-            await setComandosSQL(db,comandos)
-        }
+        await setAnimalesSQL(db,animales)
+        await setComandosSQL(db,comandos)
+        
         //fin del metodo
         algunos = false
         todos = false
@@ -396,13 +472,18 @@
         motivo = ""
         codigo = ""
         habilitarboton = false
-        
-        await setAnimalesSQL(animales)
+        for(let i = 0;i<listaanimales.length;i++){
+            let error_idx = conerrores.findIndex(pid=>pid==listaanimales[i].id)
+            if(error_idx == -1){
+                delete selecthashmap[listaanimales[i].id] 
+            }
+            
+        }
 
+        onChangeAnimales()
         filterUpdate()
     }
-    
-    async function moverOnline() {
+    async function moverOnlineBulk(){
         if(ninguno){
             Swal.fire("Error movimiento","No hay animales seleccionados","error")
             nuevorodeo = ""
@@ -424,7 +505,7 @@
             return
         }
 
-        
+        let conerrores = []
         let data = {}
         let nombrelote = ""
         let nombrerodeo = ""
@@ -439,12 +520,6 @@
         if(selectrodeo){
             data.rodeo = nuevorodeo
             nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0]
-        }
-        if(selecttratamiento){
-            data.fecha = fecha + " 03:00:00"
-            data.tipo = tipotratamiento
-            data.active = true
-            data.cab = cab.id
         }
         if(selectbaja){
             data.active = false
@@ -557,7 +632,178 @@
         habilitarboton = false
         
         //COrregir este getanimales
-        await getAnimales()
+        onChangeAnimales()
+        filterUpdate()
+    }
+    async function moverAnimalOnline(a,data) {
+        //await pb.collection("animales").update(a.id,datacambio)
+        await guardarHistorial(pb,a.id)
+        await pb.collection("animales").update(a.id,data)
+        
+        //Aca viene la parte del historial pero seria esta la logia
+    }
+    async function moverOnline() {
+        if(ninguno){
+            Swal.fire("Error movimiento","No hay animales seleccionados","error")
+            nuevorodeo = ""
+            nuevolote = ""
+            nuevacategoria = ""
+            return
+        }
+        let data = {}
+        let nombrelote = ""
+        let nombrerodeo = ""
+        if(selectcategoria){
+            data.categoria = nuevacategoria
+        }
+        if(selectlote){
+            data.lote = nuevolote
+            nombrelote = lotes.filter(l =>l.id==nuevolote)[0].nombre
+        }
+        if(selectrodeo){
+            data.rodeo = nuevorodeo
+            nombrerodeo = rodeos.filter(r =>r.id==nuevorodeo)[0].nombre
+        }
+        if(selectbaja){
+            data.active = false
+            data.motivobaja = motivo
+            data.fechafallecimiento = fechabaja + " 03:00:00" 
+        }
+        if(selecttransfer){
+            const resultList = await pb.collection('cabs').getList(1, 1, {
+                filter: `active = true && renspa = '${codigo}'`,
+            });
+            if(resultList.items.length == 0){
+                malcodigo = true
+                if(modedebug){
+                    loger.addTextError("error cabana: "+resultList.items.length)
+                }
+                if(modedebug){
+                    loger.addTextLog(JSON.stringify(resultList.items[0]))
+                }
+                return
+            }
+            data.cab = resultList.items[0].id
+            if(modedebug){
+                loger.addTextLog("cabana: "+data.cab)
+            }
+            data.lote = ""
+            data.rodeo = ""
+            
+            try{
+                let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
+        
+                let origenusuarioid =  pb_json.record.id
+                let datanoti = {
+                    texto:`Se transfirieron ${lista.length} animales`,
+                    titulo:`Transferencia de ${lista.length} animales`,
+                    tipo:tiponoti[1].id,
+                    origen:origenusuarioid,
+                    destino:resultList.items[0].user,
+                    leido:false
+                }
+                const record = await pb.collection('notificaciones').create(datanoti);
+
+            }
+            catch(err){
+                console.error(err)
+            }
+        }
+        let errores = false
+        let conerrores = []
+        //Seria idea el bulk aca
+        for(let i = 0;i<listaanimales.length;i++){
+            let a = listaanimales[i]
+            let a_idx = animales.findIndex(an=>an.id == a.id)
+            animales[a_idx] = {
+                ...animales[a_idx],
+                ...data
+            }
+            if(selectlote){
+                if(animales[a_idx].expand){
+                    animales[a_idx].expand.lote={
+                        id:nuevolote,
+                        nombre:nombrelote
+                    }
+                }
+                else{
+                    animales[a_idx].expand = {}
+                    animales[a_idx].expand.lote={
+                        id:nuevolote,
+                        nombre:nombrelote
+                    }
+                }
+            }
+            if(selectrodeo){
+                if(animales[a_idx].expand){
+                    animales[a_idx].expand.rodeo={
+                        id:nuevorodeo,
+                        nombre:nombrerodeo
+                    }
+                }
+                else{
+                    animales[a_idx].expand = {}
+                    animales[a_idx].expand.rodeo={
+                        id:nuevorodeo,
+                        nombre:nombrerodeo
+                    }
+                }
+            }
+            if(selecttransfer){
+                if(animales[a_idx].expand){
+                    animales[a_idx].expand.rodeo={
+                        id:"",
+                        nombre:""
+                    }
+
+                    animales[a_idx].expand.lote={
+                        id:"",
+                        nombre:""
+                    }
+                }
+            }
+            try{
+                //loger.addTextLinea("Guadar online: "+a.caravana)
+                await  moverAnimalOnline(a,data)
+            }
+            catch(err){
+                conerrores.push(a.id)
+                errores = true
+                if(modedebug){
+                    loger.addTextError(a.caravana)
+                }
+            }
+            
+            
+        }
+        for(let i = 0;i<listaanimales.length;i++){
+            let error_idx = conerrores.findIndex(pid=>pid==listaanimales[i].id)
+            if(error_idx == -1){
+                delete selecthashmap[listaanimales[i].id] 
+            }
+            
+        }
+            
+        algunos = false
+        todos = false
+        ninguno = true
+        selectcategoria = true
+        selectlote = false
+        selectrodeo = false
+        selecttratamiento = false
+        selectbaja = false
+        selecttransfer
+        nuevacategoria = ""
+        nuevolote = ""
+        nuevorodeo = ""
+        fecha = ""
+        tipotratamiento = ""
+        fechabaja = ""
+        motivo = ""
+        codigo = ""
+        habilitarboton = false
+        
+        onChangeAnimales()
         filterUpdate()
     }
     async function mover(){
@@ -746,47 +992,55 @@
         await getLotes()
         
     }
+    function onChangeAnimales() {
+        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)           
+        
+    }
     async function updateLocalSQL() {
+        await setUltimoRodeosLotesSQL(db)
+        await setUltimoAnimalesSQL(db)
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
-        animales = animales.filter(a=>a.active && a.cab == caboff.id)
+        
         let lotesrodeos  = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        onChangeAnimales()
         filterUpdate()
     }
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
         let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
-        animales = resanimales.lista.filter(a=>a.active  && a.cab == caboff.id)
+        animales = resanimales.lista
         
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
+        onChangeAnimales()
         filterUpdate()
     }
     async function updateComandos() {
         await flushComandosSQL(db,pb)
         comandos = []
     }
+    
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
         comandos = rescom.lista
         if (coninternet.connected){
             await updateComandos()
             if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
+                await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
             else{
                 let ahora = Date.now()
-                let antes = lastinter.ultimo
+                let antes = ultimo_animal.ultimo
                 const cincoMinEnMs = 300000;
                 if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
                     await updateLocalSQL()
                 }
                 else{
@@ -801,7 +1055,15 @@
         }
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        if(modedebug){
+            coninternet = {connected:false} // await Network.getStatus();
+            if(!offliner.offline){
+                coninternet = await Network.getStatus();
+            }
+        }
+        else{
+            coninternet = await Network.getStatus();
+        }
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -813,6 +1075,34 @@
 
 </script>
 <Navbarr>
+    {#if modedebug}
+        <div class="grid grid-cols-3">
+            <div class="label">
+                animales - {animales.length}
+            </div>
+            <div class="label">
+                animalescab - {animalescab.length}
+            </div>
+            <div class="label">
+                animalesrows - {animalesrows.length}
+            </div>
+            <div>
+                <span>
+                    {coninternet.connected?"COn internet":"sin internet"}
+                </span>
+            </div>
+            <div>
+                <span>
+                    internet {ultimo_animal.ultimo}
+                </span>
+            </div>
+            <div>
+                <span>
+                    get local {getlocal}
+                </span>
+            </div>
+        </div>
+    {/if}
     <div class="grid grid-cols-3 mx-1 lg:mx-10 mt-1 w-11/12">
         <div>
             <h1 class="text-2xl">Movimientos</h1>
@@ -937,188 +1227,19 @@
             </div>
         {/if}
     </div>
-    <div class="hidden w-full md:grid grid-cols-1 justify-items-center mx-1 lg:mx-10 lg:w-5/6 overflow-x-auto" >
-        <table class="table table-lg w-full " >
-            <thead>
-                <tr>
-                    <th class="px-1 p-0 m-0 border-b dark:border-gray-600">
-                        <button    
-                            aria-label="Todos"
-                            onclick={clickTodos}
-                            class={`
-                                
-                                text-base bg-transparent rounded-lg
-                                px-3 py-3 text-base
-                                ${estilos.secundario}
-                            `}
-                        >
-                            {#if todos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            {/if}
-                            {#if ninguno}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 3 3m0 0 3-3m-3 3v-7.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                            {/if}
-                            {#if algunos}
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>      
-                            {/if}                        
-                          
-                        </button>
-                    </th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Caravana</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Categoria</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Rodeo</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Lote</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Sexo</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each animalesrows as a}
-                    <tr>
-                        <td class="px-1 p-0 m-0 ">
-                            <button
-                                aria-label="fila"
-                                onclick={()=>clickAnimal(a.id)}
-                                class={`
-                                    font-medium bg-transparent rounded-lg
-                                    px-3 py-3 text-base
-                                    ${selecthashmap[a.id]?estilos.danger:estilos.primario}
-                                `}
-                            >
-                                {#if selecthashmap[a.id]}
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                    </svg>                                  
-                                {:else}             
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                    </svg>
-                                {/if}
-                            </button>
-                        </td>
-                        <td class="text-base mx-1 px-0 ">{a.caravana}</td>
-                        <td class="text-base mx-1 px-0 ">{a.categoria}</td>
-                        <td class="text-base mx-1 px-0 ">{a.expand?.rodeo?.nombre||''}</td>
-                        <td class="text-base mx-1 px-0 ">{a.expand?.lote?.nombre||''}</td>
-                        <td class="text-base mx-1 px-0 ">{a.sexo}</td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    <div class="block  md:hidden justify-items-center mx-1">
-        <div class="w-full flex justify-start">
-            <button    
-                aria-label="Todos"
-                onclick={clickTodos}
-                class={`
-                    text-base bg-transparent rounded-lg
-                    p-1 text-base flex flex-row
-                    ${estilos.secundario}
-                `}
-            >
-                {#if todos}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                {/if}
-                {#if ninguno}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 3 3m0 0 3-3m-3 3v-7.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                {/if}
-                {#if algunos}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>      
-                {/if}
-                                 
-                <span class="mt-1">
-                    Seleccionar todos 
-                </span>
-            </button>
-            
-           
-        </div>
-        
-        {#each animalesrows as a}
-        <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
-            <div class="block p-4">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-medium">
-                        <button
-                            aria-label="fila"
-                            onclick={()=>clickAnimal(a.id)}
-                            class={`
-                                font-medium bg-transparent rounded-lg
-                                px-3 py-3 text-base
-                                ${selecthashmap[a.id]?estilos.danger:estilos.primario}
-                            `}
-                        >
-                            {#if selecthashmap[a.id]}
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>                                  
-                            {:else}             
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                            {/if}
-                        </button>
-                        {a.caravana}
-                    </h3>
-                    {#if a.sexo == "H" && a.prenada != 1}
-                        <div class={`badge badge-outline badge-${getEstadoColor(a.prenada)}`}>{getEstadoNombre(a.prenada)}</div>
-                    {/if}
-                </div>
-                <div class="grid grid-cols-2 gap-y-2">
-                    <div class="flex items-start">
-                      <span class="font-semibold">{getSexoNombre(a.sexo)}</span>
-                    </div>
-                    <div class="flex items-start">
-                      <span >Categoría:</span> 
-                      <span class="font-semibold">
-                        {a.categoria}
-                      </span>
-                      
-                    </div>
-                    <div class="flex items-start">
-                      <span >Lote:</span>
-                      <span class="font-semibold">
-                        {
-                            a.expand?
-                            a.expand.lote?
-                            a.expand.lote.nombre
-                            :""
-                            :""
-
-                        }
-                      </span> 
-                    </div>
-                    <div class="flex items-start">
-                        
-                      <span >Rodeo:</span> 
-                      <span class="font-semibold">
-                        {
-                            a.expand?
-                            a.expand.rodeo?
-                            a.expand.rodeo.nombre
-                            :""
-                            :""
-
-                        }
-                      </span>
-                      
-                    </div>
-                </div>
-            </div>
-        </div>
-        {/each}
+    <div>
+        <Listamove
+            bind:todos
+            bind:ninguno
+            bind:algunos
+            bind:animalesrows
+            bind:selecthashmap
+            {clickTodos}
+            {getSexoNombre}
+            {getEstadoNombre}
+            {getEstadoColor}
+            {clickAnimal}
+        />
     </div>
     
 </Navbarr>
@@ -1135,203 +1256,19 @@
         </form>
         <h3 class="text-lg font-bold">Movimiento</h3>
         <div class="form-control gap-1">
-            <div class="collapse">
-                
-                <input type="radio" name="my-accordion-1" checked="checked" onchange={()=>onChangeCollapse("CATEGORIA")}/>
-                <div class="collapse-title text-xl font-medium">Cambiar categoria</div>
-                <div class="collapse-content">
-                    <label for = "rodeos" class="label">
-                        <span class="label-text text-base">Seleccione nueva categoria</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} 
-                            bind:value={nuevacategoria}
-                            onchange={()=>{oninput("CATEGORIA")}}
+            <Modalmove
+                bind:nuevacategoria
+                bind:nuevolote bind:nuevorodeo
+                bind:tipotratamiento bind:fecha
+                bind:motivo bind:fechabaja
+                bind:codigo bind:malcodigo
+                bind:listaanimales
+                {categorias} {lotes} 
+                {rodeos} {tipos}
+                {HOY}
+                {oninput} {onChangeCollapse}
 
-                        >    
-                            {#each categorias as r}
-                                <option value={r.id}>{r.nombre}</option>    
-                            {/each}
-                          </select>
-                    </label>
-                </div>
-            </div>
-            <div class="collapse">
-                <input type="radio" name="my-accordion-1" onchange={()=>onChangeCollapse("LOTE")} />
-                <div class="collapse-title text-xl font-medium">Cambiar lote</div>
-                <div class="collapse-content">
-                    <label for = "rodeos" class="label">
-                        <span class="label-text text-base">Seleccione nuevo lote</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} 
-                            bind:value={nuevolote}
-                            onchange={()=>oninput("LOTE")}
-                        >
-                            {#each lotes as r}
-                                <option value={r.id}>{r.nombre}</option>    
-                            {/each}
-                        </select>
-                    </label>
-                </div>
-            </div>
-            <div class="collapse">
-                <input type="radio" name="my-accordion-1" onchange={()=>onChangeCollapse("RODEO")}/>
-                <div class="collapse-title text-xl font-medium">Cambiar rodeo</div>
-                <div class="collapse-content">
-                    <label for = "rodeos" class="label">
-                        <span class="label-text text-base">Rodeos</span>
-                    </label>
-                    <label class="input-group ">
-                        <select 
-                            class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `} 
-                            bind:value={nuevorodeo}
-                            onchange={()=>oninput("RODEO")}
-                        >
-                                
-                                {#each rodeos as r}
-                                    <option value={r.id}>{r.nombre}</option>    
-                                {/each}
-                          </select>
-                    </label>
-                </div>
-            </div>
-            <div class="collapse hidden">
-                <input type="radio" name="my-accordion-1" onchange={()=>onChangeCollapse("TRATAMIENTO")}/>
-                <div class="collapse-title text-xl font-medium">Agregar tratamientos</div>
-                <div class="collapse-content">
-                    <div class="grid grid-cols-2 gap-1">
-                        <div>
-                            <label for = "tipo" class="label">
-                                <span class="label-text text-base">Tipo tratamiento</span>
-                            </label>
-                            <label class="input-group ">
-                                <select 
-                                    class={`
-                                        select select-bordered w-full
-                                        border border-gray-300 rounded-md
-                                        focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 
-                                        focus:border-green-500
-                                        ${estilos.bgdark2} 
-                                    `}
-                                    bind:value={tipotratamiento}
-                                    onchange={()=>oninput("TIPO")}
-                                >
-                                    {#each tipos as t}
-                                        <option value={t.id}>{t.nombre}</option>    
-                                    {/each}
-                                </select>
-                                
-                            </label>
-                        </div>
-                        <div>
-                            <label for = "fecha" class="label">
-                                <span class="label-text text-base">Fecha</span>
-                            </label>
-                            <label class="input-group ">
-                                <input id ="fecha" type="date" max={HOY}  
-                                    class={`
-                                        input input-bordered w-full
-                                        border border-gray-300 rounded-md
-                                        focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 
-                                        focus:border-green-500
-                                        ${estilos.bgdark2} 
-                                    `}
-                                    bind:value={fecha}
-                                    onchange={()=>oninput("FECHA")}
-                                />
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="collapse">
-                <input type="radio" name="my-accordion-1" onchange={()=>onChangeCollapse("BAJA")}/>
-                <div class="collapse-title text-xl font-medium">Dar de baja</div>
-                <div class="collapse-content">
-                    <div class="grid grid-cols-2 gap-1">
-                        <div>
-                            <label for = "fecha" class="label">
-                                <span class="label-text text-base">Motivo</span>
-                            </label>
-                            <input id ="caravana" type="text"  
-                                class={`input input-bordered w-full ${estilos.bgdark2}`}
-                                bind:value={motivo}
-                                oninput={()=>oninput("MOTIVO")}
-                            />
-                        </div>
-                        <div>
-                            <label for = "fecha" class="label">
-                                <span class="label-text text-base">Fecha</span>
-                            </label>
-                            <label class="input-group ">
-                                <input id ="fecha" type="date" max={HOY}  
-                                    class={`
-                                        input input-bordered w-full
-                                        border border-gray-300 rounded-md
-                                        focus:outline-none focus:ring-2 
-                                        focus:ring-green-500 
-                                        focus:border-green-500
-                                        ${estilos.bgdark2} 
-                                    `}
-                                    bind:value={fechabaja}
-                                    onchange={()=>oninput("FECHABAJA")}
-                                />
-                            </label>
-                        </div>
-                    </div>
-                    
-                </div>  
-            </div>
-            <div class="collapse">
-                <input type="radio" name="my-accordion-1" onchange={()=>onChangeCollapse("TRANSFER")}/>
-                <div class="collapse-title text-xl font-medium">Transferir</div>
-                <div class="collapse-content">
-                    <div class="grid grid-cols-1 gap-1">
-                        <div>
-                            <label for = "codigo" class="label">
-                                <span class="label-text text-base">Código</span>
-                            </label>
-                            <input id ="codigo" type="text"  
-                                class={`input input-bordered w-full ${estilos.bgdark2}`}
-                                bind:value={codigo}
-                                oninput={()=>oninput("CODIGO")}
-                            />
-                            {#if malcodigo}
-                                <div class="label">
-                                    <span class="label-text-alt text-red-500">No existe un establecimiento con ese codigo</span>                    
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-                    
-                </div>  
-            </div>
+            />
         </div>
         <div class="modal-action justify-start ">
             <form method="dialog" >

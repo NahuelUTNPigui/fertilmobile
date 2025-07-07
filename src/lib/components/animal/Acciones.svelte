@@ -104,9 +104,7 @@
         
     }
     onMount(async ()=>{
-
         id = $page.params.slug
-
     })
 </script>
 <div class="p-2">

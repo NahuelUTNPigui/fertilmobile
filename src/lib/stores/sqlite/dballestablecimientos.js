@@ -1,6 +1,7 @@
 import { setEstablecimientoSQL } from "./dbestablecimiento"
 import { getEstablecimientosAsociadosSQL } from "./dbasociados"
 import { getCabOffline } from "../capacitor/offlinecab"
+import { loger } from "../logs/logs.svelte"
 
 /*
 //Asociados
@@ -65,11 +66,12 @@ export async function getUpdateLocalEstablecimientosSQL(db,pb,userid) {
         filter:`user='${userid}' && active=true`,
     });
     let establecimientos = records
+    loger.addTextLog(records.length)
+    loger.addTextLog(userid)
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
     let caboff = await getCabOffline() 
-    
     if(caboff.colaborador){
         if(!asociados.includes(caboff.id)){
             asociados.push(caboff.id)

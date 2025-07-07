@@ -7,10 +7,7 @@ export async function guardarHistorialOffline(db,idanimal,user) {
     let esnuevorodeo = a.rodeo.split("_").length > 1
     let camposprov = ""
     let vacio = true
-    if(esnuevonac){
-        vacio = false
-        camposprov = "nacimientos"
-    }
+    
     if(esnuevolote){
         
         if(vacio){

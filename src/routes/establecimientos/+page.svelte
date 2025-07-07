@@ -43,6 +43,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
     let db = $state(null)
@@ -190,15 +191,16 @@
         //Aca se van a guardar todos los estableciemientos
         //colaborador o no
         let resestablecimientos = await getEstablecimientosSQL(db)
-        
+        loger.addTextLog("getlocal")
+        loger.addTextLog(resestablecimientos.lista.length)
         establecimientos = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos no sea colaborador
-            return sincronizadas.includes(s => s!=e.id)
+            return sincronizadas.includes(s => s != e.id)
         })
         
         establecimientoscolab = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos si sean colaborador
-            return sincronizadas.includes(s => s==e.id)
+            return sincronizadas.includes(s => s == e.id)
         })
         let resanimales = await getAnimalesSQL(db)
         let animales = resanimales.lista
@@ -208,6 +210,8 @@
         for(let i = 0;i <establecimientoscolab.length;i++){
             totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
         }
+        loger.addTextLog(establecimientos.length)
+        loger.addTextLog(establecimientoscolab.length)
 
     }
     async function getOnlineColabs() {
@@ -219,9 +223,12 @@
         establecimientoscolab = restxcolab
     }
     async function updateLocalSQL() {
+        loger.addTextLog("usuario: "+usuarioid)
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
         establecimientos = resestablecimientos.filter(e=>e.user == usuarioid)
+        loger.addTextLog(JSON.stringify(establecimientos,null,2))
         await getOnlineColabs()
+        loger.addTextLog(JSON.stringify(esta,null,2))
         for(let i = 0;i<establecimientos.length;i++){
             totales.push(await getTotalAnimales(establecimientos[i].id))
         }
@@ -283,9 +290,20 @@
             </div>
             <div>
                 <span>
-                    get local{getlocal}
+                    get local: {getlocal}
                 </span>
             </div>
+            <div>
+                <span>
+                    establecimientos {establecimientos.length}
+                </span>
+            </div>
+            <div>
+                <span>
+                    establecimientoscolab {establecimientoscolab.length}
+                </span>
+            </div>
+
         </div>
     {/if}
     <div class="flex justify-center mt-1">
