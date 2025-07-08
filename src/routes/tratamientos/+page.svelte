@@ -14,6 +14,8 @@
     import { goto } from "$app/navigation";
     import { shorterWord } from "$lib/stringutil/lib";  
     //Offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -324,6 +326,7 @@
         }
     }
     async function editar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarOnline()
         }   
@@ -399,7 +402,8 @@
             }
         })
     }
-    function eliminar(id){
+    async function eliminar(id){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             eliminarOnline(id)
         }
@@ -509,6 +513,7 @@
         }
     }
     async function guardarTipo(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarTipoOnline()
         }
@@ -577,6 +582,7 @@
         await setTiposTratSQL(db,tipotratamientos)
     }
     async function eliminarTipo(id){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await eliminarTipoOnline(id)
         }
@@ -758,6 +764,7 @@
         coninternet.connected  = conectado
     }
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <button onclick={updateLocalSQL} class="btn">Forzar update</button>
@@ -1189,7 +1196,7 @@
             
             
                 <button class="btn btn-success text-white" onclick={editar} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar(idtratamiento)}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={async ()=>await eliminar(idtratamiento)}>Eliminar</button>
             
               <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
               

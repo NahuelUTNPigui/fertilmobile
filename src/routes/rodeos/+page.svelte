@@ -6,6 +6,8 @@
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
     //ofline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -149,6 +151,7 @@
 
     }
     async function guardar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarOnline()
         }
@@ -225,6 +228,7 @@
         nombre = ""
     }
     async function editar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarOnline(idrodeo)
         }
@@ -312,7 +316,8 @@
             }
         })
     }
-    function eliminar(id){
+    async function eliminar(id){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             eliminarOnline(id)
         }
@@ -438,6 +443,7 @@
         }
     }
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         
@@ -563,7 +569,7 @@
                         <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>  
                     {:else}
                         <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>  
-                        <button class="btn btn-error text-white" onclick={()=>eliminar(idrodeo)}>Eliminar</button>
+                        <button class="btn btn-error text-white" onclick={async ()=>await eliminar(idrodeo)}>Eliminar</button>
                     {/if}
                     <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
                 </form>

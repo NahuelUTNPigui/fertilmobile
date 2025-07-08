@@ -36,6 +36,7 @@
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     //let db = $state(null)
@@ -58,7 +59,7 @@
         rp,
         lotes,
         rodeos,
-        coninternet,
+        coninternet = $bindable({}),
         useroff,
         caboff,
         animales,
@@ -366,6 +367,7 @@
         Swal.fire("Éxito guardar","Se pudo guardar el nacimiento","success")
     }
     async function guardarNacimiento() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarNacimientoOnline()
         }
@@ -465,6 +467,7 @@
         }
     }
     async function editarNacimiento() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarNacimientoOnline()
         }
@@ -559,6 +562,7 @@
         modoedicion = false
     }
     async function editarAnimal(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarAnimalOnline()
         }

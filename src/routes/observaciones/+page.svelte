@@ -61,6 +61,8 @@
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import Animal from "$lib/svgs/animal.svelte";
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
@@ -279,7 +281,8 @@
             }
         });
     }
-    function eliminar(id) {
+    async function eliminar(id) {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if (coninternet.connected) {
             eliminarOnline(id);
         } else {
@@ -380,6 +383,8 @@
         }
     }
     async function guardar2() {
+        coninternet = await getInternet(modedebug,offliner.offline)
+
         let idprov = "nuevo_obs_" + generarIDAleatorio();
         if (agregaranimal) {
             let a = await guardarAnimal2();
@@ -562,6 +567,7 @@
         }
     }
     async function editar() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if (coninternet.connected) {
             await editarOnline();
         } else {
@@ -723,7 +729,7 @@
         await getDataSQL();
     });
 </script>
-
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">
@@ -1006,7 +1012,7 @@
                     >
                     <button
                         class="btn btn-error text-white"
-                        onclick={() => eliminar(idobservacion)}>Eliminar</button
+                        onclick={async () =>  await eliminar(idobservacion)}>Eliminar</button
                     >
                 {/if}
                 <button class="btn btn-neutral" onclick={cerrar}>Cerrar</button>

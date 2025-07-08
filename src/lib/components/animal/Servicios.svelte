@@ -18,14 +18,17 @@
         addNewServicioSQL
     }
     from "$lib/stores/sqlite/dbeventos";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from '$lib/stores/offline';
     let ruta = import.meta.env.VITE_RUTA
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const pb = new PocketBase(ruta);
     let{
         comandos = $bindable([]),
         servicios=$bindable([]),
         inseminaciones=$bindable([]),
         animales = $bindable([]),
-        coninternet,
+        coninternet = $bindable({}),
         db,
         caravana = $bindable(""),
         cabid,categoria
@@ -365,6 +368,7 @@
         
     }
     async function guardarServicio(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(esServicio){
             if(coninternet.connected){
                 await guardarServicioOnline()

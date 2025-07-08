@@ -17,6 +17,8 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from "$lib/stores/offline";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const HOY = new Date().toISOString().split("T")[0]
@@ -24,7 +26,7 @@
     let {
         db,
         pesoanterior,caravana,peso=$bindable(""),
-        coninternet,
+        coninternet = $bindable({}),
         pesajes=$bindable([]),
         comandos=$bindable([])
     } = $props()
@@ -166,6 +168,7 @@
         
     }
     async function guardarPesaje(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarPesajeOnline()
         }

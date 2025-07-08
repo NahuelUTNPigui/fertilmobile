@@ -43,7 +43,7 @@
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL,setUltimosSQL} from '$lib/stores/sqlite/dbinternet'
-    
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';   
     import {getCabData,getCabDataByID} from "$lib/stores/cabsdata"
     import {
         addNewTactoSQL,
@@ -438,6 +438,7 @@
         }
     }
     async function guardarTacto(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         let idprov = "nuevo_tacto_"+generarIDAleatorio()
         if(agregaranimal){
             await guardarTactoAnimal(idprov)
@@ -668,6 +669,7 @@
         await setComandosSQL(db,comandos)
     }
     async function guardarNacimiento() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         let idprov = "nuevo_nac_"+generarIDAleatorio() 
         //Los nombres de la funciones horribles
         //debo verificar si voy a guardar el animal
@@ -774,6 +776,7 @@
         }
     }
     async function guardarTrat() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         let idprov = "nuevo_trat_"+generarIDAleatorio() 
         if(agregaranimal){
             
@@ -928,6 +931,7 @@
         }
     }
     async function guardarInseminacion() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         let idprov = "nuevo_ins_"+generarIDAleatorio()
         if(agregaranimal){
             await guardarInseminacionAnimal(idprov)
@@ -1062,6 +1066,7 @@
             }
     }
     async function guardarServicio(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         let idprov = "nuevo_serv_"+generarIDAleatorio() 
         if(agregaranimal){
             await guardarServicioAnimal(idprov)
@@ -1197,6 +1202,8 @@
         }
     }
     async function guardarObservacion() {
+        coninternet = await getInternet(modedebug,offliner.offline)
+        
         let idprov = "nuevo_obs_"+generarIDAleatorio() 
         if(agregaranimal){
             await guardarObservacionAnimal(idprov)
@@ -1468,6 +1475,7 @@
     })
  
 </script>
+<Barrainternet {coninternet}/>
 <Navbarr>
     {#if modedebug}
         <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
@@ -1514,6 +1522,7 @@
             </span>
         </div>
     {/if}
+
     {#if caboff.exist}
         
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">

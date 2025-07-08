@@ -15,7 +15,7 @@
     import {getAnimalesSQL,addNewAnimalSQL} from '$lib/stores/sqlite/dbanimales';
     let {
         useroff,
-        coninternet,
+        coninternet=$bindable({}),
         comandos=$bindable([]),
         db,
         usuarioid,
@@ -24,6 +24,9 @@
         caravanamadre=$bindable(""),
         cabid,sexoanimal,prenada=$bindable(0)
     } = $props()
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from '$lib/stores/offline';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -280,6 +283,7 @@
 
     }
     async function guardarParicion(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarParicionOnline()
         }

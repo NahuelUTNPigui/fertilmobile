@@ -18,6 +18,8 @@
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import { shorterWord } from '$lib/stringutil/lib';
     //Offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -314,6 +316,7 @@
         }
     }
     async function editar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarOnline()
         }
@@ -396,6 +399,7 @@
         }
     }
     async function eliminar(id,esInseminacion){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await eliminarOnline(id,esInseminacion)
         }
@@ -707,6 +711,7 @@
         ordenarServiciosDescendente(p_forma)
     }
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

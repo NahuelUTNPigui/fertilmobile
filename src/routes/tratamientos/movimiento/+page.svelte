@@ -16,6 +16,8 @@
     import { getSexoNombre } from '$lib/stringutil/lib';
     import { shorterWord } from "$lib/stringutil/lib";
     //OFfline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline} from "$lib/stores/capacitor/offlinecab"
@@ -467,6 +469,7 @@
         selectanimales = []
     }
     async function guardarTratamiento(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarTratamientoOnline()
         }
@@ -561,6 +564,7 @@
     }
 
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

@@ -25,6 +25,8 @@
     import Servicios from "$lib/components/animal/Servicios.svelte";    
     import SelectTab from "$lib/components/animal/SelectTab.svelte";
     //offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import { openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -201,6 +203,7 @@
     //Esta funcion sirve para desactivar la vaca pero no eliminarla
     //Capaz no se le pueden realizar acciones
     async function darBaja(fechafallecimiento,motivo){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await darBajaOnline(fechafallecimiento,motivo)
         }
@@ -253,6 +256,7 @@
         }
     }
     async function eliminar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await eliminarOnline()
         }
@@ -307,6 +311,7 @@
         }
     }
     async function transferir(codigo){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await transferirOnline(codigo)
         }
@@ -552,8 +557,9 @@
                 <DatosBasicos {rp} {peso} {prenada} 
                     {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} 
                     {lotes} {rodeos}
-                    {coninternet} {useroff} {caboff}
+                     {useroff} {caboff}
                     {db} animales = {animales}
+                    bind:coninternet
                     bind:comandos
                     connacimiento={nacimiento != ""} nacimiento={nacimientoobj} 
                     fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}
@@ -570,23 +576,23 @@
         {:else if tab =="pesajes"}
             <!--Pesajes-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
-                <Pesajes {db} bind:comandos bind:pesajes  {coninternet} pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
+                <Pesajes {db} bind:comandos bind:pesajes  bind:coninternet pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
             </CardAnimal>
         {:else if tab =="tratamientos"}
             <!--Tipos y tratamientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-                <Tratamientos {db} {coninternet}  bind:caravana bind:comandos bind:tratamientos {tipostrat}  cabid={cab.id} {categoria} ></Tratamientos>
+                <Tratamientos {db} bind:coninternet  bind:caravana bind:comandos bind:tratamientos {tipostrat}  cabid={cab.id} {categoria} ></Tratamientos>
             </CardAnimal>
         {:else if tab =="observaciones"}
             <!--Observaciones-->
             <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-                <Observaciones {db} {coninternet} bind:caravana bind:comandos bind:observaciones cabid={cab.id} {categoria}/>
+                <Observaciones {db} bind:coninternet bind:caravana bind:comandos bind:observaciones cabid={cab.id} {categoria}/>
             </CardAnimal>
         {:else if tab =="pariciones"}
             <!--Animales nacimientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
                 <Pariciones  
-                    {db} {useroff} {coninternet} 
+                    {db} {useroff} bind:coninternet 
                     bind:caravanamadre = {caravana} 
                     bind:animales bind:comandos 
                     bind:pariciones cabid={cab.id} 
@@ -597,12 +603,12 @@
         {:else if tab =="tactos"}
             <!--Tactos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
-                <Tactos {db} {coninternet} bind:caravana bind:comandos bind:tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
+                <Tactos {db} bind:coninternet bind:caravana bind:comandos bind:tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
             </CardAnimal>
         {:else if tab =="servicios"}
             <!--Animales servicios-->
             <CardAnimal cardsize="max-w-7xl" titulo="Servicios">
-                <Servicios {db} {coninternet} bind:caravana bind:comandos bind:servicios bind:inseminaciones bind:animales cabid={cab.id} {categoria}/>
+                <Servicios {db} bind:coninternet bind:caravana bind:comandos bind:servicios bind:inseminaciones bind:animales cabid={cab.id} {categoria}/>
                 <!--<Servicios {db} {coninternet} bind:caravana bind:comandos  cabid={cab.id} {categoria}/>-->
             </CardAnimal>
         {:else if tab =="clinica"}

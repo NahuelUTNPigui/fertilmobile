@@ -19,6 +19,8 @@
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import { shorterWord } from "$lib/stringutil/lib";
     //offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
@@ -556,6 +558,7 @@
         selectanimales = []
     }
     async function crearTactos() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await crearTactosOnline()
         }
@@ -648,6 +651,7 @@
         await getDataSQL()
     })
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

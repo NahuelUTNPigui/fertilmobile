@@ -22,6 +22,8 @@
     import{verificarNivel} from "$lib/permisosutil/lib"
     
     ///ofline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import { ACTUALIZACION } from '$lib/stores/constantes';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -433,6 +435,7 @@
     }
     //Si los lotes sigue sin guardarse
     async function guardar() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         //let totalanimals = await getTotalSQL(db)
         let verificar = true
         
@@ -774,6 +777,7 @@
         }
     }
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-2">

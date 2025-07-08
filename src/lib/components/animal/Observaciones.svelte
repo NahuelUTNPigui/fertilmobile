@@ -9,8 +9,10 @@
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {addNewObservacionSQL,setObservacionesSQL} from '$lib/stores/sqlite/dbeventos';
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from '$lib/stores/offline';
     let {
-        coninternet,
+        coninternet = $bindable({}),
         comandos=$bindable([]),
         observaciones=$bindable([]),
         db,
@@ -301,6 +303,7 @@
         Swal.fire("Éxito guardar","Se logró guardar la observación","success")  
     }
     async function guardarObservacion(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarObservacionOnline()
         }

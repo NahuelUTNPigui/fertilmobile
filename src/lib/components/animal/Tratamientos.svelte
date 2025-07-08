@@ -8,15 +8,18 @@
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {addNewTrataSQL,setTratsSQL} from '$lib/stores/sqlite/dbeventos';
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from '$lib/stores/offline';
     let{
         cabid,categoria,
         caravana=$bindable(""),
-        coninternet,
+        coninternet =  $bindable({}),
         db,
         comandos=$bindable([]),
         tratamientos=$bindable([]),
         tipostrat
     } = $props()
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -308,6 +311,7 @@
         Swal.fire("Éxito guardar","Se logró guardar el tratamiento","success")
     }
     async function guardarTratamiento(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarTratamientoOnline()
         }

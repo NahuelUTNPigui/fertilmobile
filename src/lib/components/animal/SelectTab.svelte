@@ -27,7 +27,7 @@
         }
     }
     onMount(() => {
-        console.log("Select ab")
+        
         document.addEventListener("click", handleClickOutside);
     });
 

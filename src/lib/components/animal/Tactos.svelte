@@ -17,6 +17,9 @@
         addNewTactoSQL,
         setTactosSQL
     } from "$lib/stores/sqlite/dbeventos"
+    import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { getInternet } from '$lib/stores/offline';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //VEr el historial de los animales
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -26,7 +29,7 @@
     let id = $state("")
     let tactosrows = $state([])
     let {
-        coninternet,
+        coninternet = $bindable({}),
         comandos=$bindable([]),
         tactos=$bindable([]),
         db,
@@ -318,6 +321,7 @@
         
     }
     async function guardarTacto(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarTactoOnline()
         }

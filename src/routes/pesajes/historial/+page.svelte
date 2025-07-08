@@ -13,6 +13,8 @@
     import {isEmpty} from "$lib/stringutil/lib"
     import { goto } from '$app/navigation';
     //ofline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -148,6 +150,7 @@
         detallePesaje.close()
     }
     async function editarPesaje() {
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarPesajeOnline()
         }
@@ -221,6 +224,7 @@
         })
     }
     async function eliminar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await eliminarOnline()
         }
@@ -283,6 +287,7 @@
         await getDataSQL()
     })
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

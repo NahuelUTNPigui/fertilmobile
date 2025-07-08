@@ -13,6 +13,8 @@
     import{verificarNivel,verificarNivelOffline} from "$lib/permisosutil/lib"
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     //offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
+    import { getInternet } from '$lib/stores/offline';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -352,6 +354,7 @@
         }
     }
     async function guardar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await guardarOnline()
         }
@@ -567,6 +570,7 @@
     }
     //que podemos editar
     async function editar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             await editarOnline()
         }
@@ -771,7 +775,8 @@
             }
         })
     }
-    function eliminar(){
+    async function eliminar(){
+        coninternet = await getInternet(modedebug,offliner.offline)
         if(coninternet.connected){
             eliminarOnline()
         }
@@ -974,6 +979,7 @@
         }
     }
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">
@@ -1290,7 +1296,7 @@
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
                 {:else}
                 <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={editar} >Editar</button>
-                <button class="btn btn-error text-white" onclick={()=>eliminar()}>Eliminar</button>
+                <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
               {/if}
               <button class="btn btn-neutral " onclick={cerrar}>Cerrar</button>
               
