@@ -282,11 +282,6 @@
                 actualizarDatos()
                 Swal.fire("Éxito editar","Se pudo editar el tratamiento con exito","success")
             }
-            else{
-                if(modedebug){
-                    loger.addTextLog("El idx es -1")
-                }
-            }
             
 
             

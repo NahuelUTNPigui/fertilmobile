@@ -15,6 +15,7 @@
     import { onMount } from "svelte";
     import { createCaber } from "$lib/stores/cab.svelte";
     //offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
@@ -58,9 +59,17 @@
     let animalesusuario = $state(0)
     let cargado = $state(false)
     
+    let showtoast = $state(false)
+
     //Necesito eficintizar la llamada a los lote y rodeos
     let lotes = $state([])
     let rodeos = $state([])
+    function  aparecerToast(){
+        showtoast = true
+        setTimeout(() => {
+            showtoast = false;
+        }, 2000); // 2 segundos
+    }
     async function onmountoriginal() {
         let pb_json = await JSON.parse(localStorage.getItem('pocketbase_auth'))
         usuarioid = pb_json.record.id
@@ -102,8 +111,20 @@
         comandos = rescom.lista
         
         if (coninternet.connected){
-            if(lastinter.internet == 0){
-                await updateLocalSQL()
+            try{
+                await flushComandosSQL(db,pb)
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError(JSON.stringify(err),null,2)
+                    loger.addTextError("Error en flush comandos")
+                }
+            }
+            comandos = []
+            if(cab.cambio || lastinter.internet == 0){   
+                
+                await updateLocalSQL(db)
+                await setInternetSQL(db,1,Date.now())
             }
             else{
                 let ahora = Date.now()
@@ -135,7 +156,10 @@
     })
 
 </script>
+
+<Barrainternet bind:coninternet/>
 <Navbarr>
+
     {#if cargado}
         <!--Animales-->
         <CardImportar cardsize="max-w-2xl" titulo="Importar animales">
@@ -143,6 +167,7 @@
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales} 
                 {animalesusuario} {lotes} {rodeos}
+                {aparecerToast}
             />
         </CardImportar>
         <!--Tactos-->
@@ -150,16 +175,18 @@
             <ImportarTactos 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales}
+                {aparecerToast}
             />
         </CardImportar>
         <!--Nacimientos-->
-        <div class="hidden">
+        <div class="">
             <CardImportar  cardsize="max-w-2xl" titulo="Importar nacimientos">
                 <ImportarNacimiento 
                     {db} {coninternet} {useroff} 
                     {caboff} {usuarioid} 
                     {animales} {animalesusuario} 
                     {lotes} {rodeos}
+                    {aparecerToast}
                 />
             </CardImportar>
         </div>
@@ -169,6 +196,7 @@
             <ImportarRodeos
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {rodeos}
+                {aparecerToast}
             />
         </CardImportar>
         <!--LOTE -->
@@ -176,6 +204,7 @@
             <ImportarLotes 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {lotes} 
+                {aparecerToast}
             />
         </CardImportar>
         <!--Observaciones-->
@@ -183,6 +212,7 @@
             <ImportarObservaciones 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales}
+                {aparecerToast}
             />
         </CardImportar>
         <!--Servicios-->
@@ -190,6 +220,7 @@
             <ImportarServicios 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales}
+                {aparecerToast}
             />
         </CardImportar>
         <!--Inseminaciones-->
@@ -197,6 +228,7 @@
             <ImportarInseminaciones 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales}
+                {aparecerToast}
             />
         </CardImportar>
         <!--Pesajes-->
@@ -204,6 +236,7 @@
             <ImportarPesajes 
                 {db} {coninternet} {useroff} 
                 {caboff} {usuarioid} {animales}
+                {aparecerToast}
             />
         </CardImportar>
     {:else}
@@ -211,5 +244,12 @@
             <span class="loading loading-spinner loading-xl"></span>
         </CardImportar>
     {/if}
-    
+    {#if showtoast}
+        <div class="toast toast-center">
+            <div class="alert alert-success text-white">
+                
+                <span>Las plantillas se guardan en: <strong>/Documents/Documents</strong>.</span>
+            </div>
+        </div>
+    {/if}
 </Navbarr>

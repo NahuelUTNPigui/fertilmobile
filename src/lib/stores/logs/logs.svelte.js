@@ -35,7 +35,7 @@ export const loger = {
         
         lineas = [...lineas,{time:Date.now(),text}]
     },
-    addLineaNumber:(numero,modedebug)=>{
+    addLineaNumber:(numero,modedebug=true)=>{
         if(modedebug){
             lineas = [...lineas,{time:Date.now(),text:""+numero}]
         }

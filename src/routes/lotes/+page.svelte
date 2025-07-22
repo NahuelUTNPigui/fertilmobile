@@ -86,7 +86,7 @@
         }
     }
     function openNewModal(){
-        if(userpermisos[1]){
+        if(true || userpermisos[1]){
             idlote = ""
         nombre = ""
         nuevoModal.showModal()
@@ -110,33 +110,46 @@
             await setLotesSQL(db,lotes)
             Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
         }catch(err){
-            console.error(err)
+            if(modedebug){
+                loger.addTextError("Error en guardar lote online")
+            }
             Swal.fire("Error guardar","No se pudo guardar el lote","error")
         }
     }
     async function guardarOffline() {
-        let idprov = "nuevo_lote_"+generarIDAleatorio() 
-        let data = {
-            nombre,
-            active:true,
-            cab:caboff.id,
-            id:idprov
+        try{
+            let idprov = "nuevo_lote_"+generarIDAleatorio() 
+            let data = {
+                nombre,
+                active:true,
+                cab:caboff.id,
+                id:idprov
+            }
+            let comando = {
+                tipo:"add",
+                coleccion:"lotes",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:0,
+                idprov,    
+                camposprov:""
+            }
+            comandos.push(comando)
+            
+            data.total = 0 
+            await setComandosSQL(db,comandos)
+            lotes.push(data)
+            await setLotesSQL(db,lotes)
+            Swal.fire("Éxito guardar","Se pudo guardar el lote","success")
+
         }
-        let comando = {
-            tipo:"add",
-            coleccion:"lotes",
-            data:{...data},
-            hora:Date.now(),
-            prioridad:0,
-            idprov,    
-            camposprov:""
+        catch(err){
+            if(modedebug){
+                loger.addTextError("Error en guardar lote offline")
+            }
+            Swal.fire("Error guardar","No se pudo guardar el lote","error")
         }
-        comandos.push(comando)
         
-        data.total = 0 
-        await setComandosSQL(db,comandos)
-        lotes.push(data)
-        await setLotesSQL(db,lotes)
         
         
         
@@ -219,7 +232,6 @@
             idprov:id,    
             camposprov:""
         }
-        comandos.push(comando)
         //Creo que esto es lo correcot
         let idx = lotes.findIndex(r=>r.id==id)
         lotes[idx].nombre = data.nombre

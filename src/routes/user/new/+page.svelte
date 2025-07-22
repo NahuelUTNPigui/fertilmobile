@@ -1,4 +1,5 @@
 <script>
+    import BotonLoges from "$lib/components/herramientas/BotonLoges.svelte"
     import {enabled} from '$lib/stores/enabled'
     import {usuario} from '$lib/stores/usuario'
     import Swal from 'sweetalert2'
@@ -8,7 +9,9 @@
     import { fade, fly } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
     import { randomString } from '$lib/stringutil/lib';
+    import { loger } from '$lib/stores/logs/logs.svelte';
 
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     let pre = import.meta.env.VITE_PRE
     const pb = new PocketBase(ruta);
@@ -133,10 +136,14 @@
                 "codigo":randomString(10,"n")
             };
             const record = await pb.collection('users').create(data);
+            
             Swal.fire('Éxito guardar', 'Se logró guardar el nuevo usuario. Ingrese a la aplicación', 'success');
             goto("/login")
         }catch(e){
             console.error(e)
+            if(modedebug){
+                loger.addTextError("Mal guardado el usuario")
+            }
             Swal.fire('Error guardar', 'No se puede crear el nuevo usuario', 'error');
         }
         
@@ -326,7 +333,9 @@
             </div>
         </div>
     </div>
+    
 </div>
+<BotonLoges></BotonLoges>
 <dialog id="condmodal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div class="
             modal-box max-w-xl w-11/12

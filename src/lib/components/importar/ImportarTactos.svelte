@@ -17,7 +17,9 @@
 
     let {
         db,coninternet,useroff,caboff,
-        usuarioid,animales
+        usuarioid,animales,
+        //acciones
+        aparecerToast
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -33,6 +35,7 @@
     let filename = $state("")
     let wkbk = $state(null)
     let loading = $state(false)
+    let vertactos = $state([])
     
     
 
@@ -105,6 +108,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()
         if(coninternet.connected){
             await exportarTemplateOnline()
         }
@@ -127,8 +131,6 @@
     }
     async function procesarArchivoOnline(tactosimportar){
         let errores = false
-        
-        
         for(let i = 0;i<tactosimportar.length;i++){
             let ta = tactosimportar[i]
             let lista_categoria = categorias.filter(c=>c.id.toLowerCase()==ta.categoria.toLowerCase())
@@ -143,18 +145,21 @@
                 if(modedebug){
                     loger.addError({
                         time:Date.now(),
-                        text:"mal animal"
+                        text:"mal animal: "+ta.caravana
                     })
+                    
                 }
-                continue
+
+                
             }
             //que pasa si hay mas de un animal con esa caravana?
             let an = ans[0]
+            
             if(an.sexo == "M"){
                 if(modedebug){
                     loger.addError({
                         time:Date.now(),
-                        text:"mal sexo"
+                        text:"mal sexo: "+an.sexo
                     })
                 }
                 continue
@@ -163,16 +168,10 @@
                 if(modedebug){
                     loger.addError({
                         time:Date.now(),
-                        text:"mal fecha"
+                        text:"mal fecha: "+new Date(ta.fecha).toLocaleDateString()
                     })
                 }
                 continue
-            }
-            if(modedebug){
-                loger.addLog({
-                    time:Date.now(),
-                    text:"fecha tacto: " + ta.fecha +" \n fecha iso: " + new Date(ta.fecha).toISOString().split("T")[0] + " 03:00:00"
-                })
             }
             let esFechaValida = new Date(ta.fecha).getTime() > 0
             if(!esFechaValida){
@@ -184,7 +183,7 @@
                 active: true,
                 observacion: ta.observacion,
                 animal: an.id,
-                categoria: an.categoria,
+                categoria: categoria,
                 prenada: ta.prenada,
                 tipo: ta.tipo,
                 cab: caboff.id
@@ -207,12 +206,7 @@
             //Si no existe lo guardo
             if (t_idx == -1){
                 try {
-                    if(modedebug){
-                        loger.addLog({
-                            time:Date.now(),
-                            text:"add tacto"
-                        })  
-                    }
+                    
                     let recordtacto = await pb.collection('tactos').create(dataadd);
                     recordtacto = {
                         ...recordtacto,
@@ -228,12 +222,7 @@
                         }
                     }
                     tactos.push(recordtacto)
-                    if(modedebug){
-                        loger.addLog({
-                            time:Date.now(),
-                            text:JSON.stringify(dataadd,null,2)
-                        })    
-                    }
+                    
                 }
                 catch(err){
                     if(modedebug){
@@ -249,12 +238,7 @@
             }
             else{
                 try{
-                    if(modedebug){
-                        loger.addLog({
-                            time:Date.now(),
-                            text:"update"
-                        })
-                    }
+                    
                     //let test = {
                     //    ...tactos[t_idx],
                     //    ...datamod
@@ -263,12 +247,6 @@
                     tactos[t_idx]={
                         ...tactos[t_idx],
                         ...datamod
-                    }
-                    if(modedebug){
-                        loger.addLog({
-                            time:Date.now(),
-                            text:JSON.stringify(datamod,null,2)
-                        })
                     }
                 }
                 catch(err){
@@ -290,19 +268,7 @@
     async function mostrarTactos() {
         await getDataSQL()
         let ans = animales.filter(a=>a.caravana=="AAA")
-        loger.addLog({
-            time:Date.now(),
-            text:JSON.stringify(ans.length,null,2)
-        })
-        loger.addLog({
-            time:Date.now(),
-            text:JSON.stringify(ans,null,2)
-        })
-        //let ts = tactos.filter(t=>t.animal == ans[0].id)
-        //loger.addLog({
-        //    time:Date.now(),
-        //    text:JSON.stringify(ts,null,2)
-        //})
+        
     }
     async function procesarArchivoOffline(tactosimportar) {
         let errores = false
@@ -378,12 +344,7 @@
         let tactosprocesar = []
         let tactoshashmap = {}
         loading = true
-        if(modedebug){
-            loger.addLog({
-                time:Date.now(),
-                text:"antes de leer sheet"
-            })
-        }
+        
         for (const [key, value ] of Object.entries(sheettactos)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
@@ -462,26 +423,17 @@
                 
             }
         }
-        if(modedebug){
-            loger.addLog({
-                time:Date.now(),
-                text:"antes de guardar la lista"
-            })
-        }
+        
         for (const [key, value ] of Object.entries(tactoshashmap)) {
             if(value.caravana != "" && value.fecha != "" && value.tipo != ""){
                 tactosprocesar.push(value)
             }
             
         }
+        vertactos =  tactosprocesar.map(t=>t)
         
         let errores = false
-        if(modedebug){
-            loger.addLog({
-                time:Date.now(),
-                text:"antes de procesar " + tactosprocesar.length
-            })
-        }
+        
         if(coninternet.connected){
             errores = await procesarArchivoOnline(tactosprocesar)
             await setTactosSQL(db,tactos)
@@ -515,6 +467,15 @@
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
     {#if modedebug}
         <button class="btn btn-primary" onclick={mostrarTactos}>Mostrar Tactos</button>
+    {/if}
+    {#if modedebug && vertactos.length>0}
+        <ul>
+            {#each  vertactos as vt}
+                <li>
+                    {JSON.stringify(vt,null,2)}
+                </li>
+            {/each}
+        </ul>
     {/if}
     <button
         class={`

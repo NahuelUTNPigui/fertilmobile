@@ -30,6 +30,7 @@
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { _longestText } from "chart.js/helpers";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
 
@@ -117,6 +118,9 @@
         catch(err){
             console.error(err)
             nombre = ""
+            if(modedebug){
+                loger.addTextError("Error en guardar rodeo online")
+            }
             Swal.fire("Error guardar","No se pudo guardar el rodeo","error")
         }    
     }
@@ -138,6 +142,9 @@
         }catch(err){
             console.error(err)
             nombre = ""
+            if(modedebug){
+                loger.addTextError("Error en guardar rodeo offline")
+            }
             Swal.fire("Error guardar","No se pudo guardar el rodeo","error")
         }
     }

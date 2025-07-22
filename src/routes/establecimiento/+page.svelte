@@ -20,6 +20,7 @@
     import CardExistente from '$lib/components/establecimiento/CardExistente.svelte';
     
     //offline
+    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import {openDB} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -137,18 +138,11 @@
         Swal.fire("Error guardar","No se puede crear un colaborador sin internet","error")
     }
     async function guardarColabOnline(data){
-        
-        
-        
         let codigo = await codigoSinRepetir(pb)
-        
         try{
             let nombredata = data.nombre.trim().split(" ").filter(w=>w !== "").join(".")
-            
             let apellidodata = data.apellido.trim().split(" ").filter(w=>w !== "").join(".")
-            
             let randomnumber = randomString(5,"n")
-            
             let userdata = {
                 "username": nombredata+"."+apellidodata+randomnumber,
                 email:data.email,
@@ -284,7 +278,6 @@
             mail
         };
         try{
-            await setEstablecimientoSQL(db,pb,cab.id,data)
             await setCabNombreOffline(nombre)   
             let e_idx = establecimientos.findIndex(es=>es.id==caboff.id)
             if(e_idx != -1){
@@ -300,12 +293,23 @@
             }
             let establecimiento = {...datosviejos}
             await setEstablecimientoSQL(db,establecimiento)
+            let comandodata = {
+                tipo:"update",
+                coleccion:"cabs",
+                data:{...data},
+                hora:Date.now(),
+                prioridad:2,
+                idprov:caboff.id,
+                camposprov:""
+            }
+            comandos.push(comandodata)
+            await setComandosSQL(db,comandos)
             Swal.fire("Exito modificar","Se pudo modificar la cabaña con éxito","success")
             caber.setCab(nombre,caboff.id)
         }
         catch(err){
             console.error(err)
-            Swal.fire("Error modificar","No se pudo modificar la cabaña con éxito","error")
+            Swal.fire("Error modificar","No se pudo modificar la cabaña","error")
         }
         renspaValido = true
     }
@@ -603,6 +607,7 @@
     })
  
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

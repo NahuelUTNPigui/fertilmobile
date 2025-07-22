@@ -1,6 +1,7 @@
 <script>
     import estilos from "$lib/stores/estilos";
     import * as XLSX from 'xlsx';
+    import { Filesystem, Directory } from '@capacitor/filesystem';
     import { createCaber } from '$lib/stores/cab.svelte';
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
@@ -11,14 +12,23 @@
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
     import {updateLocalLotesSQL,setLotesSQL} from "$lib/stores/sqlite/dbeventos"
+    import { loger } from "$lib/stores/logs/logs.svelte";
     
-    let {db,coninternet,useroff,caboff,usuarioid, lotes} = $props()
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let {
+        db,coninternet,
+        useroff,caboff,
+        usuarioid, lotes,
+        //acciones
+        aparecerToast
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
     let per = createPer()
     let userpermisos = getPermisosList(per.per.permisos)
-
+    let verlotes = $state([])
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
@@ -72,6 +82,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()   
         if(coninternet.connected){
             await exportarTemplateOnline()
         }
@@ -92,8 +103,11 @@
         };
         reader.readAsBinaryString(file);
     }
-    async function procesarOnline() {
+    async function procesarOnline(lotesprocesar) {
 
+
+        let errores = false
+        loger.addTextLog("108: "+lotesprocesar.length)
         for(let i = 0;i<lotesprocesar.length;i++){
             let lo = lotesprocesar[i]
 
@@ -108,19 +122,35 @@
                 nombre:lo.nombre 
             }
             let lidx = lotes.findIndex(l=>l.nombre == lo.nombre)
-            if(lidx == -1){
-                let l = await pb.collection('lotes').create(dataadd);
-                lotes.push(l);
-            }
-            else{
-                await pb.collection('lotes').update(lotes[lidx].id, datamod);
-                lotes[lidx] = {
-                    ...lotes[lidx],
-                    ...datamod
+            try {
+                loger.addLineaNumber("124: "+i)
+            
+                if(lidx == -1){
+                    if(modedebug){
+                        loger.addTextLog(JSON.stringify(dataadd,null,2))
+                    }
+                    let record = await pb.collection('lotes').create(dataadd);
+                    record = {
+                        ...record,
+                        expand:{
+                            cab: {
+                                id: caboff.id,
+                                nombre: caboff.nombre,
+                                user:usuarioid
+                            }
+                        }
+                    }
+                    lotes.push(record);
                 }
             }
-
+            catch(err){
+                if(modedebug){
+                    loger.addTextError("Error en algun lote: "+dataadd.nombre)
+                }
+                errores = true
+            }
         }
+        return errores
     }
     async function procesarOffline() {
         for(let i = 0;i<lotesprocesar.length;i++){
@@ -184,7 +214,7 @@
         return comandos
     }
     async function procesarArchivo(){
-        if(!userpermisos[2]){
+        if(false && !userpermisos[2]){
             Swal.fire("Error","No tienes permisos de importar","error")
             return
         }
@@ -203,6 +233,7 @@
         let lotesprocesar = []
         let loteshashmap = {}
         loading = true
+        let errores = false
         for (const [key, value ] of Object.entries(sheetlotes)) {
             const firstLetter = key.charAt(0);  // Get the first character
             const tail = key.slice(1);
@@ -228,8 +259,10 @@
         for (const [key, value ] of Object.entries(loteshashmap)) {
             lotesprocesar.push(value)
         }
+        verlotes = lotesprocesar.map(l=>l)
         if(coninternet.connected){
-            await procesarOnline()
+            loger.addTextLog("conectado internet")
+            errores = await procesarOnline(lotesprocesar)
             await setLotesSQL(db,lotes)
         }
         else{
@@ -242,11 +275,25 @@
         filename = ""
         loading = false
         wkbk = null
-        Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        if(!errores){
+            Swal.fire("Éxito importar","Se lograron importar los datos","success")
+        }
+        else{
+            Swal.fire("Error importar","No se lograron importar todos los datos","error")
+        }
+        
+
     }
     
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verlotes.length>0}
+        <ul>
+            {#each  verlotes as vl}
+                <li>{JSON.stringify(vl,null,2)}</li>
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full

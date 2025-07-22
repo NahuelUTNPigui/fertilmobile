@@ -78,7 +78,7 @@
     async function guardarPermisosOnline() {
         let per = ""
         for(let i= 0;i<userpermisos.length;i++){
-            if(userpermisos[i]){
+            if( userpermisos[i]){
                 per += ""+i+","
             }
         }
@@ -163,9 +163,7 @@
     
     async function getLocalSQL() {
         let rescolab = await getColabSQLByID(db,id)
-        if(modedebug){
-            loger.addTextLog(JSON.stringify(rescolab,null,2))
-        }
+        
         nombre = rescolab.expand.colab.nombre
         apellido = rescolab.expand.colab.apellido
         idpermiso = rescolab.permiso

@@ -43,45 +43,104 @@
         usuarioid = useroff.id
         
     }
+    function getColeccionName(coleccion){
+        let s = coleccion
+        if(coleccion=="inseminacion"){
+            s = `Inseminaciones`
+            //s = JSON.stringify(data,null,2)
+        }
+        else if(coleccion == "historialanimales"){
+            s = `Historial`
+        }
+        else if(coleccion == "servicios"){
+            s = "Servicios"
+        }
+        else if(coleccion=="tactos"){
+            s = "Tactos"
+        }
+        else if(coleccion == "tratamientos"){
+            s = "Tratamientos"
+        }
+        else if(coleccion == "tipotratamientos"){
+            s = "Tipo de tratamientos"
+        }
+        else if(coleccion == "pesaje"){
+            s = "Pesajes"
+        }
+        else if(coleccion == "animales"){
+            s = "Animales"
+        }
+        else if(coleccion == "nacimientos"){
+            s = "Nacimientos"
+        }
+        else if(coleccion == "observaciones"){
+            s = "Observaciones"
+        }
+        else if(coleccion == "rodeos"){
+            s = "Rodeos"
+        }
+        else if(coleccion == "lotes"){
+            s = "Lotes"
+        }
+        else if(coleccion == "cabs"){
+            s = "Establecimiento"
+        }
+        return s
+    }
     function getDescripcion(coleccion,data){
         let s = ""
         if(coleccion=="inseminacion"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fechainseminacion).toLocaleDateString()} \nObservacion: ${data.observacion}`
+            //s = JSON.stringify(data,null,2)
         }
         else if(coleccion == "historialanimales"){
-            s = JSON.stringify(data,null,2)
+            s = `Caravana: ${data.caravana}`
         }
         else if(coleccion == "servicios"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fechadesde).toLocaleDateString()} \nObservacion: ${data.observacion}`
         }
         else if(coleccion=="tactos"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fecha).toLocaleDateString()} \nObservacion: ${data.observacion}`
         }
         else if(coleccion == "tratamientos"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fecha).toLocaleDateString()} \nObservacion: ${data.observacion}`
         }
         else if(coleccion == "tipotratamientos"){
-            s = JSON.stringify(data,null,2)
+            s = `Nombre: ${data.nombre}`
         }
         else if(coleccion == "pesaje"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fecha).toLocaleDateString()} \nPeso: ${data.pesonuevo}`
         }
         else if(coleccion == "animales"){
-            s = JSON.stringify(data,null,2)
+            s = `Caravana : ${data.caravana}`
         }
         else if(coleccion == "nacimientos"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fecha).toLocaleDateString()} \nObservacion: ${data.observacion}`
         }
         else if(coleccion == "observaciones"){
-            s = JSON.stringify(data,null,2)
+            s = `Fecha: ${new Date(data.fecha).toLocaleDateString()} \nObservacion: ${data.observacion}`
         }
         else if(coleccion == "rodeos"){
-            s = JSON.stringify(data,null,2)
+            s = `Nombre: ${data.nombre}`
         }
         else if(coleccion == "lotes"){
-            s = JSON.stringify(data,null,2)
+            s = `Nombre: ${data.nombre}`
+        }
+        else if(coleccion == "cabs"){
+            s = `Nombre: ${data.nombre}`
         }
         return s
+    }
+    function getNombreTipo(tipo){
+        if(tipo =="add"){
+            return "Nuevo"
+        }
+        if(tipo =="update"){
+            return "Modificar"
+        }
+        if(tipo =="delete"){
+            return "Eliminar"
+        }
     }
     onMount(async ()=>{
         await initPage()
@@ -155,10 +214,10 @@
                     {#each comandos as c}
                         <tr class=" hover:bg-gray-200 dark:hover:bg-gray-900" >
                             <td class="text-base p-3 ">
-                                {capitalize(c.coleccion)}
+                                {getColeccionName(c.coleccion)}
                             </td>
                             <td class="text-base p-3 ">
-                                {c.tipo}
+                                {getNombreTipo(c.tipo)}
                             </td>
                             <td class="text-base p-3 ">
                                 {new Date(c.hora).toLocaleDateString()}
@@ -176,13 +235,13 @@
                 <div class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                     <div class="block p-4">
                         <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-medium">{capitalize(c.coleccion)}</h3>
+                            <h3 class="font-medium">{getColeccionName(c.coleccion)}</h3>
                         </div>
                         <div class="grid grid-cols-2 gap-y-2">
                             <div class="flex items-start">
                                 <span >Tipo:</span> 
                                 <span class="font-semibold">
-                                    {c.tipo}
+                                    {getNombreTipo(c.tipo)}
                                 </span>
                             </div>
                             <div class="flex items-start">

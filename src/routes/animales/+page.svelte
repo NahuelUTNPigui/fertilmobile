@@ -184,7 +184,7 @@
         
     }
     function openNewModal(){
-        if(userpermisos[5]){
+        if(true || userpermisos[5]){
             idanimal=""
             botonhabilitado = false
             caravana = ""

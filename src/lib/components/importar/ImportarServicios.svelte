@@ -12,12 +12,14 @@
     import { getServiciosSQL,setServiciosSQL } from "$lib/stores/sqlite/dbeventos";
     import { esMismoDia } from "$lib/stringutil/lib";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    import Servicios from "../animal/Servicios.svelte";
+    
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,coninternet,useroff,
-        caboff,usuarioid,animales
+        caboff,usuarioid,animales,
+        //acciones
+        aparecerToast
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -28,6 +30,7 @@
     let wkbk = $state(null)
     let loading = $state(false)
     let servicios = $state([])
+    let verser = $state([])
     async function exportarTemplateOffline(){
         let csvData = [{
             madre:"AAA",
@@ -99,6 +102,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()
         if(coninternet.connected){
             await exportarTemplateOnline()
             
@@ -201,16 +205,17 @@
                 if(esFechaValida && madres.length > 0 && padres.length > 0 ){
                     let madre = madres[0].id
                     let padre = padres.join()
-                    let categoria = categorias.filter(c=>c.id==an.categoria.toLowerCase())[0]
-                    
+                    let categoria = categorias.filter(c=>c.id==ser.categoria.toLowerCase())[0]
+                    let fdesde = new Date(ser.fechadesde)
                     try{
                         let dataser = {
-                            fechadesde : new Date(ser.fechadesde).toISOString().split("T")[0] + " 03:00:00",
-                            fechaparto: addDays(ser.fechadesde.toISOString().split("T")[0],280).toISOString().split("T")[0]+" 03:00:00",
+                            fechadesde : fdesde.toISOString().split("T")[0] + " 03:00:00",
+                            fechaparto: addDays(ser.fechadesde,280).toISOString().split("T")[0]+" 03:00:00",
                             observacion: ser.observacion,
                             madre:madre,
                             padres:padre,
                             active:true,
+                            categoria,
                             cab:caboff.id
                         }
                         let datamod={
@@ -345,10 +350,10 @@
         for (const [key, value ] of Object.entries(serhash)) {
             serviciosprocesar.push(value)
         }
-        
+        verser = serviciosprocesar.map(s=>s)
         if(coninternet.connected){
             errores = await procesarArchivoOnline(serviciosprocesar)
-            await setServiciosSQL(db,Servicios)
+            await setServiciosSQL(db,servicios)
         }
         else{
             Swal.fire("Atención","No tienes conexión a internet, no esta habilitado todavia","warning")
@@ -375,6 +380,16 @@
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verser}
+        <ul>
+            {#each verser as vs}
+                <li>
+                    {JSON.stringify(vs,null,2)}
+                </li>
+                
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full
@@ -392,11 +407,11 @@
             type="file"
             accept=".xlsx, .xls"  
             class="sr-only"
-            id="inseminacion-upload"
+            id="servicio-upload"
             onchange={(e)=>importarArchivo(e)}
         />
         <label
-            for="inseminacion-upload"
+            for="servicio-upload"
             class={`
                 w-full flex items-center justify-center px-4 py-4 
                 border border-green-300 dark:border-green-600 rounded-md shadow-sm text-lg

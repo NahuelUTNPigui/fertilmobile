@@ -11,10 +11,14 @@ export async function getEstablecimientosAsociadosSQL(db) {
     coleccion.lista = lista
     return coleccion
 }
-export async function addNewEstablecimientoAsosciaodSQL(db,id){
+export async function addNewEstablecimientoAsosciadoSQL(db,id){
     let establecimientos = await getEstablecimientosAsociadosSQL(db)
     let lista = establecimientos.lista
-    lista.push(id)
+
+    let l_idx = lista.findIndex(l=>l == id)
+    if(l_idx == -1){
+        lista.push(id)
+    }
     await setEstablecimientosAsociadosSQL(db, lista)
     return lista
 }

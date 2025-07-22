@@ -66,8 +66,6 @@ export async function getUpdateLocalEstablecimientosSQL(db,pb,userid) {
         filter:`user='${userid}' && active=true`,
     });
     let establecimientos = records
-    loger.addTextLog(records.length)
-    loger.addTextLog(userid)
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
@@ -100,6 +98,7 @@ export async function updateLocalEstablecimientosSQL(db,pb,userid,cabid) {
     });
     let establecimientos = records
 
+    //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
     let caboff = await getCabOffline()
@@ -121,7 +120,7 @@ export async function updateLocalEstablecimientosSQL(db,pb,userid,cabid) {
             establecimientos.push(est_asociados[0])
         }
     }
-
+    //FIN Asociados
     let establecimiento = establecimientos.filter((e) => e.id == cabid)
     await setEstablecimientosSQL(db,establecimientos)
     await setEstablecimientoSQL(db,establecimiento[0])

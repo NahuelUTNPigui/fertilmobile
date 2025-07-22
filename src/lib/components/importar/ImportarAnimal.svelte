@@ -27,7 +27,9 @@
         animales,
         animalesusuario,
         lotes,
-        rodeos
+        rodeos,
+        //acciones
+        aparecerToast
     } = $props();
     
     let ruta = import.meta.env.VITE_RUTA
@@ -35,6 +37,7 @@
     let cab = caber.cab
     let per = createPer()
     let userpermisos = getPermisosList(per.per.permisos)
+    let verimportar = $state([])
     
 
     const pb = new PocketBase(ruta);
@@ -108,6 +111,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()
         if(coninternet.connected){
             await exportarTemplateOnline()
         }
@@ -229,7 +233,8 @@
     async function procesoOnline(animalesimportar,nuevosanimales) {
         let errores = false
         //El verificar es saber si puede agregar los animales
-        let verificar = await verificarNivelCantidad(caboff.id,nuevosanimales)
+        //let verificar = await verificarNivelCantidad(caboff.id,nuevosanimales)
+        let verificar = true
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener mas de  animales`,"error")
             loading = false
@@ -238,21 +243,28 @@
         for(let i = 0;i<animalesimportar.length;i++){
             let an = animalesimportar[i]
             let conlote = false
-            let contropa = false
+            let conrodeo = false
             //LO hago case insensitive?
             let lote = ""
+            let lotenombre = ""
             let rodeo = ""
+            let rodeonombre=""
             let categoria = ""
+            
             if(an.lote != ""){
                 let lista = lotes.filter(l=>l.nombre==an.lote)
                 if(lista.length>0){
+                    conlote = true
                     lote = lista[0].id
+                    lotenombre = lista[0].nombre
                 }
             }
             if(an.rodeo != ""){
                 let lista = rodeos.filter(r=>r.nombre==an.rodeo)
                 if(lista.length>0){
+                    conrodeo = true
                     rodeo = lista[0].id
+                    rodeonombre=lista[0].nombre
                 }
             }
             if(an.categoria != ""){
@@ -290,34 +302,35 @@
             }
             let aidx = animales.findIndex(a=>a.caravana == an.caravana)
             if(aidx == -1){
-                //if(modedebug){
-                //    loger.addLog({
-                //        time:Date.now(),
-                //        text:"add"
-                //    })    
-                //}
                 
                 
                 try{
                     let a = await pb.collection('animales').create(dataadd);
+                    let fila = {
+                        ...a,
+                        expand:{
+                            lote:{
+                                id:lote,
+                                nombre:lotenombre
+                            },
+                            rodeo:{
+                                id:rodeo,
+                                nombre:rodeonombre
+                            }
+                        }
+                    }
                     animales.push(a)
-                    //if(modedebug){
-                    //    loger.addLog({
-                    //        time:Date.now(),
-                    //        text:JSON.stringify(dataadd,null,2)
-                    //    })    
-                    //}
                     
                 
                 }
                 catch(err){
                     errores = true
-                    //if(modedebug){
-                    //    loger.addError({
-                    //        time:Date.now(),
-                    //        text:JSON.stringify(err,null,2)
-                    //    })
-                    //}
+                    if(modedebug){
+                        loger.addError({
+                            time:Date.now(),
+                            text:"Error: "+an.caravana
+                        })
+                    }
                     
                     
                 }
@@ -341,6 +354,33 @@
                         ...animales[aidx],
                         ...datamod
                     }
+                    if(animales[aidx].expand){
+                        if(conlote){
+                            animales[aidx].expand.lote = {
+                                id:lote,
+                                nombre:lotenombre   
+                            }
+                        }
+                        if(conrodeo){
+                            animales[aidx].expand.rodeo = {
+                                id:rodeo,
+                                nombre:rodeonombre   
+                            }
+                        }
+                    }
+                    else{
+                        animales[aidx].expand = {
+                            lote:{
+                                id:lote,
+                                nombre:lotenombre
+                            },
+                            rodeo:{
+                                id:rodeo,
+                                nombre:rodeonombre
+                            }   
+                        }
+                    }
+                    
                     //Falta el historial del animal
                     //if(modedebug){
                     //    loger.addLog({
@@ -367,7 +407,7 @@
         
     }
     async function procesarArchivo(){
-        if(!userpermisos[2]){
+        if(false &&!userpermisos[2]){
             Swal.fire("Error","No tienes permisos de importar","error")
             return
         }
@@ -375,13 +415,12 @@
             Swal.fire("Error","Seleccione un archivo","error")
             return
         }
-
+        
         let sheetanimales = wkbk.Sheets.Animales
         if(!sheetanimales){
             Swal.fire("Error","Debe subir un archivo válido","error")
             return
         }
-        
         let animaleshashmap = {}
         loading = true
         let errores = false
@@ -448,6 +487,7 @@
                 nuevosanimales += 1
             }
         }
+        verimportar = animalesimportar.map(x=>x)
         
         if(coninternet.connected){
             errores = await procesoOnline(animalesimportar,nuevosanimales)
@@ -492,6 +532,13 @@
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verimportar.length > 0}
+        <ul>
+            {#each verimportar as vi}
+                <li>{JSON.stringify(vi,null,2)}</li>
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full

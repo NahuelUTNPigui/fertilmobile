@@ -43,6 +43,8 @@ npx cap add android
 ```
 
 Every time you make code changes, you then run `pnpm run build && npx cap sync` to sync the changes to the android project. Execute that step now.
+Con fecha y hora
+pnpm run build && npx cap sync && date
 
 Install Android Studio if you haven't and open the project with 
 `npx cap open android`.

@@ -6,10 +6,15 @@
     import Swal from 'sweetalert2';
     import { onMount } from "svelte";
     import { Filesystem, Directory } from '@capacitor/filesystem';
-    import { setRodeosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { setLotesSQL, setRodeosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,coninternet,useroff,
-        caboff,usuarioid,rodeos
+        caboff,usuarioid,rodeos,
+        //acciones
+        aparecerToast
       } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -21,6 +26,7 @@
     let wkbk = $state(null)
     
     let loading = $state(false)
+    let verrodeos = $state([])
     async function exportarTemplateOffline() {
         let csvData = [{
             nombre:"",
@@ -70,6 +76,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()
         if(coninternet.connected){
             await exportarTemplateOnline()
             
@@ -95,8 +102,8 @@
     async function procesarArchivoOnline(rodeosprocesar) {
         let errores = false
         
-        for(let i = 0;i<rodeos.length;i++){
-            let ro = rodeos[i]
+        for(let i = 0;i<rodeosprocesar.length;i++){
+            let ro = rodeosprocesar[i]
             if(ro.nombre == ""){
                 
                 continue
@@ -113,6 +120,7 @@
             }
             let r_idx = rodeos.findIndex(r=>r.nombre == ro.nombre && caboff.id == r.cab && r.active)  
             if(r_idx == -1){
+                
                 let record = await pb.collection('rodeos').create(dataadd);
                 record = {
                     ...record,
@@ -124,14 +132,8 @@
                         }
                     }
                 }
+                
                 rodeos.push(record);
-            }
-            else{
-                await pb.collection('rodeos').update(record.id, datamod);
-                rodeos[r_idx] = {
-                    ...rodeos[r_idx],
-                    ...datamod
-                }
             }
         }
         return errores
@@ -139,8 +141,8 @@
     async function procesarArchivoOffline(rodeosprocesar) {
         let errores = false
         let comandos = []
-        for(let i = 0;i<rodeos.length;i++){
-            let ro = rodeos[i]
+        for(let i = 0;i<rodeosprocesar.length;i++){
+            let ro = rodrodeosprocesareos[i]
 
             let dataadd = {
                 nombre:ro.nombre,
@@ -211,6 +213,7 @@
         for (const [key, value ] of Object.entries(rodeoshashmap)) {
             rodeosprocesar.push(value)
         }
+        verrodeos = rodeosprocesar.map(r=>r)
         if(coninternet.connected){
             errores = await procesarArchivoOnline(rodeosprocesar)
             await setRodeosSQL(db,rodeos)
@@ -234,6 +237,15 @@
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verrodeos.length>0}
+        <ul>
+            {#each verrodeos as vr}
+                <li>
+                    {JSON.stringify(vr,null,2)}
+                </li>
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full

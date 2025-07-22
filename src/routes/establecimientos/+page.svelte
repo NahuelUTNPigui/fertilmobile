@@ -14,6 +14,7 @@
     import { shorterWord } from "$lib/stringutil/lib";
     import Asoc from "$lib/components/establecimientos/Asoc.svelte";
     //offline
+    import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
@@ -36,13 +37,15 @@
     import { 
         setEstablecimientosAsociadosSQL,
         getEstablecimientosAsociadosSQL,
-        addNewEstablecimientoAsosciaodSQL,
+        addNewEstablecimientoAsosciadoSQL,
         deleteEstablecimientosAsociadosSQL
     } from "$lib/stores/sqlite/dbasociados";
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import { getInternet } from "$lib/stores/offline";
+    
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //OFLINE
@@ -101,41 +104,39 @@
         return record.totalItems
 
     }
-    async function getTotalAnimalesSQL(cabid, animales) {
-        let animalescab = animales.filter(a=>a.cab==cabid && a.active)
-        return animalescab.length
+    function getTotalAnimalesSQL(cabid, animales) {
+        let total = animales.filter(a=>a.cab==cabid && a.active)
+        return total.length
     }
     async function eliminar(id){
-        
-        Swal.fire({
-            title: 'Eliminar establecimiento',
-            text: '¿Seguro que deseas eliminar el establecimiento?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Si',
-            cancelButtonText: 'No'
-        }).then(async result=>{
-            if(result.value){
-                let data = {active :false}
-                try{
-                    await pb.collection("cabs").update(id,data)
-                    Swal.fire("Éxito","Se pudo eliminar el establecimiento","success")
+        coninternet = await getInternet(modedebug,offliner.offline)
+        if(coninternet.connected){
+            Swal.fire({
+                title: 'Eliminar establecimiento',
+                text: '¿Seguro que deseas eliminar el establecimiento?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Si',
+                cancelButtonText: 'No'
+            }).then(async result=>{
+                if(result.value){
+                    let data = {active :false}
+                    try{
+                        await pb.collection("cabs").update(id,data)
+                        Swal.fire("Éxito","Se pudo eliminar el establecimiento","success")
+                    }
+                    catch(err){
+                        Swal.fire("Error eliminar","No se pudo eliminar el establecimiento","error")
+                    }
+                    await updateLocalSQL()
                 }
-                catch(err){
-                    Swal.fire("Error eliminar","No se pudo eliminar el establecimiento","error")
-                }
-                const records = await pb.collection("cabs").getFullList({
-                    filter: `active = True && user = '${usuarioid}'` 
-                })
                 
-                establecimientos = records
-                totales = []
-                for(let i = 0;i<establecimientos.length;i++){
-                    totales.push(await getTotalAnimales(establecimientos[i].id))
-                } 
-            }
-            
-        })
+            })
+        }
+        else{
+            Swal.fire("Error eliminar","Sin internet no se puden borrar los establecimientos","error")
+        }
+        
         
         
     }
@@ -191,13 +192,14 @@
         //Aca se van a guardar todos los estableciemientos
         //colaborador o no
         let resestablecimientos = await getEstablecimientosSQL(db)
-        loger.addTextLog("getlocal")
-        loger.addTextLog(resestablecimientos.lista.length)
+        loger.addTextLog(JSON.stringify(resestablecimientos.lista.map(e=>e.nombre),null,2))
+        loger.addTextLog(JSON.stringify(resestablecimientos.lista.map(e=>e.id),null,2))
+        loger.addTextLog(JSON.stringify(sincronizadas.map(e=>e.nombre),null,2))
         establecimientos = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos no sea colaborador
-            return sincronizadas.includes(s => s != e.id)
+            return !sincronizadas.includes(s => s == e.id)
         })
-        
+        loger.addTextLog(JSON.stringify(establecimientos.map(e=>e.nombre),null,2))
         establecimientoscolab = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos si sean colaborador
             return sincronizadas.includes(s => s == e.id)
@@ -210,8 +212,6 @@
         for(let i = 0;i <establecimientoscolab.length;i++){
             totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
         }
-        loger.addTextLog(establecimientos.length)
-        loger.addTextLog(establecimientoscolab.length)
 
     }
     async function getOnlineColabs() {
@@ -223,12 +223,11 @@
         establecimientoscolab = restxcolab
     }
     async function updateLocalSQL() {
-        loger.addTextLog("usuario: "+usuarioid)
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
         establecimientos = resestablecimientos.filter(e=>e.user == usuarioid)
-        loger.addTextLog(JSON.stringify(establecimientos,null,2))
+        
         await getOnlineColabs()
-        loger.addTextLog(JSON.stringify(esta,null,2))
+        
         for(let i = 0;i<establecimientos.length;i++){
             totales.push(await getTotalAnimales(establecimientos[i].id))
         }
@@ -270,7 +269,7 @@
         //await updateLocalSQL()
     }
     async function agregarCab(idCab){
-        sincronizadas = await addNewEstablecimientoAsosciaodSQL(db,idCab)
+        sincronizadas = await addNewEstablecimientoAsosciadoSQL(db,idCab)
     }
     async function quitarCab(idCab){
         sincronizadas = await deleteEstablecimientosAsociadosSQL(db,idCab)
@@ -280,6 +279,7 @@
         await getDataSQL()
     })
 </script>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

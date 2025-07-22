@@ -180,14 +180,15 @@
         }).then(async result => {
             if(result.value){
                 try{
-                    
+                    let p_idx = pesajes.findIndex(p=>p.id == idpesaje)
+                    let pes = {...pesajes[p_idx]}
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
                     
                     await setPesajesSQL(db,pesajes)
                     let comando = {
                         tipo:"delete",
                         coleccion:"pesaje",
-                        data:{},
+                        data:{...pes},
                         hora:Date.now(),
                         prioridad:2,
                         idprov:idpesaje,
@@ -321,8 +322,8 @@
             catch(err){
                 
                 if(modedebug){
-                    loger.addTextLog("error fecha")
-                    loger.addTextLog(JSON.stringify(p,null,2))
+                    loger.addTextError("error fecha")
+                    loger.addTextError(JSON.stringify(p,null,2))
                 }
             }
             

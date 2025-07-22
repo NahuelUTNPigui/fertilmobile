@@ -7,9 +7,18 @@
     import Swal from 'sweetalert2';
     
     import categorias from "$lib/stores/categorias";
-    import {getObservacionesSQL} from "$lib/stores/sqlite/dbeventos";
+    import {getObservacionesSQL,setObservacionesSQL} from "$lib/stores/sqlite/dbeventos";
     import { esMismoDia } from "$lib/stringutil/lib";
-    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let {
+        db,coninternet,
+        useroff,caboff,
+        usuarioid,animales,
+        //acciones
+        aparecerToast
+    } = $props()
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
     let cab = caber.cab
@@ -18,7 +27,9 @@
     const pb = new PocketBase(ruta);
     let filename = $state("")
     let wkbk = $state(null)
+    let verobs = $state([])
     async  function exportarTemplate(){
+        aparecerToast()
         let csvData = [{
             caravana:"AAA",
             categoria:"",
@@ -241,6 +252,7 @@
         for (const [key, value ] of Object.entries(observacioneshashmap)) {
             observacionesimport.push(value)
         }
+        verobs = observacionesimport.map(o=>o)
         if(coninternet.connected){
             await procesarArchivoOnline(observacionesimport)
             await setObservacionesSQL(db,observaciones)
@@ -262,6 +274,13 @@
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verobs}
+        <ul>
+            {#each verobs as vo}
+                {JSON.stringify(vo,null,2)}
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full

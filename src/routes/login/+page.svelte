@@ -1,5 +1,6 @@
 <script>
     //TENGO QUE MODIFCAR EL OFFLINE CAB
+    import BotonLoges from "$lib/components/herramientas/BotonLoges.svelte"
     import {enabled} from '$lib/stores/enabled'
     import { setInternetSQL } from '$lib/stores/sqlite/dbinternet';
     import {setUserOffline} from '$lib/stores/capacitor/offlineuser'
@@ -16,7 +17,13 @@
     
     import { Network } from '@capacitor/network';
     import { onMount } from 'svelte';
+    import { loger } from '$lib/stores/logs/logs.svelte';
+    
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
+    const pb = new PocketBase(ruta);
+    
     let usuarioname= $state('')
     let contra = $state('')
     let showpass = $state(false)
@@ -34,7 +41,21 @@
         }
         
     }
+    async function existeEmailUsuario(useremail) {
+        const resultList = await pb.collection('users').getList(1, 1, {
+            filter: `name='${useremail}'`,
+            skipTotal:true
+        });
+        if(resultList.items.length>0){
+            return true
+        }
+        else{
+            return false
+        }
+    }
+    //Aca deberia borrar los de las cabañas
     async function ingresar(){
+        
         if(!coninternet.connected){
             Swal.fire("Sin intenet","Para ingresar necesitas internet","info")
             return
@@ -47,8 +68,12 @@
             Swal.fire('Error login', 'Contraseña vacia', 'error');
             return
         }
+        let emailExiste = await existeEmailUsuario(usuarioname)
+        if(!emailExiste){
+            Swal.fire("Error login","No existe un usuario con ese correo","error")
+            return
+        }
         
-        const pb = new PocketBase(ruta);
 
         try{
             let caber = createCaber()
@@ -57,46 +82,57 @@
                 usuarioname,
                 contra,
             );
-
             if(pb.authStore.isValid){
                 if(pb.authStore.model.active){
+                    
                     let pa = JSON.parse(localStorage["pocketbase_auth"])
                     usuario.set(pb.authStore.token)
                     
                     enabled.set("si")
                     // Cuando me logeo si o si debo poner si soy de otra cabaña
                     // Cuando te logeas, deberia revisar si tenes una cabaña
-                    
+                    //Donde pongo si es colaborador o nos
                     await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel,pa.record.codigo)
-                    try{
-                        const record = await pb.collection('cabs').getFirstListItem(`user='${authData.record.id}' && active=true`, {});
-                        caber.setCab(record.nombre,record.id,true)
-
+                    
+                    let reccabs = await pb.collection("cabs").getList(1,50,{
+                        filter:`user='${authData.record.id}' && active=true`
+                    })
+                    
+                    if(reccabs.totalItems > 0){
+                        let establecimiento =  reccabs.items[0]
+                        //Hay que guardar a la cabaña de preferencias
+                        caber.setCab(establecimiento.nombre,establecimiento.id,true)
                         per.setPer("0,1,2,3,4,5",authData.record.id)
+                        await setCabOffline(establecimiento.id,establecimiento.nombre,true,"0,1,2,3,4,5",false)
+                        localStorage.setItem('hasLoggedIn', 'si');
                         
-                        await setCabOffline(record.id,record.nombre,true,"0,1,2,3,4,5",false)
                     }
-                    catch(err){
-                        try{
-                            //Revisa si sos colaborador 
-                            const recordcab = await pb.collection('estxcolabs').getFirstListItem(`colab.user='${authData.record.id}'`, {
-                                expand: 'colab,cab,colab.user',
-                            })
-                            const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${recordcab.id}'`)
-                            //Debo establecer el nivel que tiene el dueño de la cabaña y cuantos animales puede tener
-                            await setCabOffline(recordcab.id,recordcab.nombre,true,recordper.permisos,true)
+                    else{
+                        //Revisa si sos colaborador 
+                        const recordcolabcab = await pb.collection('estxcolabs').getList(1,1,{
+                            filter:`colab.user='${authData.record.id}'`,
+                            expand: 'colab,cab,colab.user'
+                        })
+                        if(recordcolabcab.totalItems>0){
+                            let colabcab = recordcolabcab.items[0]
+                            let establecimiento = colabcab.expand.cab
+                            const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${colabcab.id}'`)
+                            await setCabOffline(establecimiento.id,establecimiento.nombre,true,recordper.permisos,true)
                             
                             per.setPer(recordper.permisos,authData.record.id)
-                            caber.setCab(recordcab.expand.cab.nombre,recordcab.expand.cab.id,true)
-                            
+                            caber.setCab(establecimiento.nombre,establecimiento.id,true)
+                            localStorage.setItem('hasLoggedIn', 'si');
                         }
-                        catch(err){
+                        //No tiene cab ni es colaborador
+                        else{
                             caber.setDefault()
                             per.setDefault()
+                            
                             await setDefaultCabOffline()
                         }
                         
                     }
+                    
                     goto('/')
                 }
                 else{
@@ -105,11 +141,18 @@
                 
             }
             else{
+                if(modedebug){
+                    loger.addTextError("Mal puestas las credenciales")
+                }
                 Swal.fire('Error login', 'Mal puestas las credenciales', 'error');
+
             }
         }
         catch(e){
             console.error(e)
+            if(modedebug){
+                loger.addTextError("NO se puede loger")
+            }
             Swal.fire('Error login', 'No se puede logear, puede que esten mal escritas las credenciales', 'error');
         }
         
@@ -237,4 +280,6 @@
 
         </div>
     </div>
+    
 </div>
+<BotonLoges></BotonLoges>

@@ -9,7 +9,16 @@
     import { Filesystem, Directory } from '@capacitor/filesystem';
     import { getPesajesSQL, setPesajesSQL } from "$lib/stores/sqlite/dbeventos";
     import { esMismoDia } from "$lib/stringutil/lib";
-    let {db,coninternet,useroff,caboff,usuarioid,animales} = $props()
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let {
+        db,coninternet,
+        useroff,caboff,
+        usuarioid,animales,
+        //acciones
+        aparecerToast
+    } = $props()
 
     let ruta = import.meta.env.VITE_RUTA
     let caber = createCaber()
@@ -21,6 +30,7 @@
     let wkbk = $state(null)
     let loading = $state(false)
     let pesajes = $state([])
+    let verpesajes = $state([])
     async function exportarTemplateOnline() {
         let csvData = [{
             caravana:"AAA",
@@ -78,6 +88,7 @@
         });
     }
     async function exportarTemplate(){
+        aparecerToast()
         if(coninternet.connected){
             await exportarTemplateOnline()
         }
@@ -256,6 +267,7 @@
         for (const [key, value ] of Object.entries(pesajeshashmap)) {
             pesajesprocesar.push(value)
         }
+        verpesajes = pesajesprocesar.map(p=>p)
         if(coninternet.connected){
             errores = await procesarArchivoOnline(pesajesprocesar)
             await setPesajesSQL(db,pesajes)
@@ -284,6 +296,15 @@
     }
 </script>
 <div class="space-y-4 grid grid-cols-1 flex justify-center">
+    {#if modedebug && verpesajes.length>0}
+        <ul>
+            {#each verpesajes as vp}
+                <li>
+                    {JSON.stringify(vp,null,2)}
+                </li>
+            {/each}
+        </ul>
+    {/if}
     <button
         class={`
             w-full

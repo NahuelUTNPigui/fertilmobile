@@ -343,25 +343,6 @@
         
         onChangeTactos()
         
-        if(modedebug){
-            if(offliner.offline){
-                let nuevo_tactos = tactoscab.filter(t=>t.id.split("_")[0].includes("nue")) 
-                if(nuevo_tactos.length>0){
-                    for(let i = 0;i<1;i++){
-                        loger.addLog({
-                            time: Date.now(),
-                            text:JSON.stringify(nuevo_tactos[i],null,2)  
-                        })
-                        loger.addLog({
-                            time: Date.now(),
-                            text:JSON.stringify(tactos[i],null,2)  
-                        })
-                    }
-                }
-                
-            }
-            
-        }
         filterUpdate()
         
     }
@@ -437,7 +418,6 @@
             comandos.push(comando)
             await setComandosSQL(db,comandos)
             let idx = tactos.findIndex(t=>t.id==idtacto)
-            loger.addTextLog("idx: " +idx)
             let a = animales.filter(an=>an.id == animal)[0]
             tactos[idx] ={
                 ...tactos[idx],

@@ -78,9 +78,11 @@
 
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
     import { getInternet } from '$lib/stores/offline';
+    import { setEstablecimientosAsociadosSQL } from '$lib/stores/sqlite/dbasociados';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     let ruta = import.meta.env.VITE_RUTA
+    let version = import.meta.env.VITE_VERSION
     let pre = ""
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
@@ -579,10 +581,6 @@
         }
         catch(err){
             console.error(err)
-            loger.addError({
-                time: Date.now(),
-                text:JSON.stringify(err,null,2)
-            })
             Swal.fire("Error guardar","No se pudo guardar la parición","error")
             return
         }
@@ -1360,6 +1358,7 @@
         //await setTotalSQL(db,datatotal)
         //await setUltimoTotalSQL(db)
         await setUltimosSQL(db)
+        
     }
     async function getLocalSQL(db) {
         let dataanimales = await getAnimalesSQL(db)
@@ -1380,6 +1379,7 @@
         
         tipotratamientos = data.tipostrat.lista.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
         totaleventos.animales = animales.filter(a=>a.cab == caboff.id &&  a.active).length
+        
     }
     function onChangeAnimales() { 
         animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
@@ -1413,7 +1413,16 @@
         //Reviso el internet
         lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
+        //verifica si venis del login
+        const hasLoggedIn = localStorage.getItem('hasLoggedIn') === 'si';
+        if (hasLoggedIn) {
+            //Elimino la lista de asociados y si quiero no eliminarla?
+            await setEstablecimientosAsociadosSQL(db,[])
 
+
+            
+            localStorage.setItem('hasLoggedIn', 'no');
+        } 
         
         comandos = rescom.lista
         
@@ -1427,7 +1436,6 @@
                         loger.addTextError("Error en flush comandos")
                     }
                 }
-                
                 comandos = []
                 if(cab.cambio || lastinter.internet == 0){   
                     
@@ -1461,21 +1469,23 @@
     }
     onMount(async ()=>{
         await initPage()
-        
+        //Si tiene 
         if(caboff.exist){
+            //Iniciar objetos
             initNacimiento()
             initTacto()
             initTratamiento()
             initObservacion()
             initServicio()
-
+            
+            //Trae datos
             await getDataSQL()
             
         }
     })
  
 </script>
-<Barrainternet {coninternet}/>
+<Barrainternet bind:coninternet/>
 <Navbarr>
     {#if modedebug}
         <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
@@ -1608,6 +1618,7 @@
             </div>
         </CardBase>
     {/if}
+    <span>La versión de la aplicación es {version} </span>
 </Navbarr>
 <dialog id="nuevoModalTacto" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 

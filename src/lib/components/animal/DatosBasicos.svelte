@@ -23,6 +23,7 @@
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { getInternet } from "$lib/stores/offline";
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
         addNewNacimientoSQL,
@@ -183,7 +184,7 @@
         }        
     }
     function openEditar(){
-        if(userpermisos[5]){
+        if(true || userpermisos[5]){
             modoedicion = true
             pesoviejo = peso
             sexoviejo = sexo
@@ -223,7 +224,7 @@
         }
     }
     function openNewModal(){
-        if(userpermisos[5]){
+        if(true || userpermisos[5]){
             fecha  = fechanacimiento
             nuevoModal.showModal()
         }
@@ -232,15 +233,15 @@
         }
     }
     function openEditModal(){
-        if(userpermisos[5]){
-        fechaviejo =  fecha
-        nombremadreviejo = nombremadre
-        nombrepadreviejo = nombrepadre
-        madreviejo = madre
-        padreviejo = padre
-        observacionviejo = observacion
-        
-        nuevoModal.showModal()
+        if(true || userpermisos[5]){
+            fechaviejo =  fecha
+            nombremadreviejo = nombremadre
+            nombrepadreviejo = nombrepadre
+            madreviejo = madre
+            padreviejo = padre
+            observacionviejo = observacion
+            
+            nuevoModal.showModal()
         }
         else{
             Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")

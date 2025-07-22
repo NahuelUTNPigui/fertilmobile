@@ -156,19 +156,27 @@
         }
         let idprov = "nuevo_nac_"+generarIDAleatorio()
         let idanimal = "nuevo_animal_"+generarIDAleatorio()
+        
         try{
             let ms = madres.filter(ma=>ma.id==madre)
+            
             let m = {
                 id:"",
                 nombremadre:"",
                 rodeo:"",
                 lote:""
             }
+            let lote = {id:"",nombre:""}
+            let rodeo = {id:"",nombre:""}
             if(ms.length > 0){
                 m.id = ms[0].id
                 m.nombremadre = ms[0].caravana
                 m.lote = ms[0].lote
                 m.rodeo = ms[0].rodeo
+                let reslote = lotes.filter(l=>l.nombre==m.lote)
+                let resrodeo = rodeos.filter(r=>r.nombre==m.rodeo)
+                lote = reslote.length>0?reslote[0]:lote
+                rodeo = resrodeo.length>0?resrodeo[0]:rodeo
             }
             let tipomadre = m.categoria
             let esnuevopadre = padre.split("_").length > 1
@@ -227,8 +235,20 @@
                     idprov,    
                     camposprov:`nacimiento${(nlote&nrodeo)?",lote,rodeo":nlote?",lote":nrodeo?",rodeo":""}`
                 }
+
                 //Agrego el aniaml
                 comandos.push(comandoani)
+                dataanimal = {
+                    ...dataanimal,
+                    expand:{
+                        lote:{
+                            id:lote.id,nombre:lote.nombre
+                        },
+                        rodeo:{
+                            id:rodeo.id,nombre:rodeo.nombre
+                        }
+                    }
+                }
                 animales.push(dataanimal)
                 onChangeAnimal()
                 filterUpdate()
@@ -282,11 +302,17 @@
                 rodeo:"",
                 lote:""
             }
+            let lote = {id:"",nombre:""}
+            let rodeo = {id:"",nombre:""}
             if(ms.length > 0){
                 m.id = ms[0].id
                 m.nombremadre = ms[0].caravana
                 m.lote = ms[0].lote
                 m.rodeo = ms[0].rodeo
+                let reslote = lotes.filter(l=>l.nombre==m.lote)
+                let resrodeo = rodeos.filter(r=>r.nombre==m.rodeo)
+                lote = reslote.length>0?reslote[0]:lote
+                rodeo = resrodeo.length>0?resrodeo[0]:rodeo
             }
             let tipomadre = m.categoria
             //Hace falta el expand
@@ -319,6 +345,17 @@
                 }
                 
                 let recorda = await pb.collection('animales').create(dataanimal);
+                recorda = {
+                    ...recorda,
+                    expand:{
+                        lote:{
+                            id:lote.id,nombre:lote.nombre
+                        },
+                        rodeo:{
+                            id:rodeo.id,nombre:rodeo.nombre
+                        }
+                    }
+                }
                 futuroanimal.id = recorda.id
                 futuroanimal.caravana = recorda.caravana
                 animales.push(recorda)
@@ -719,11 +756,12 @@
             if(result.value){
             
                 try{
-            
+                    let n_idx = nacimientos.findIndex(n=>n.id==idnacimiento)
+                    let n = {...nacimientos[n_idx]}
                     let comando = {
                         tipo:"delete",
                         coleccion:"nacimientos",
-                        data:{},
+                        data:{...n},
                         hora:Date.now(),
                         prioridad:0,
                         idprov:idnacimiento,    

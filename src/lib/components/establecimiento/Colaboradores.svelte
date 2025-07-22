@@ -211,7 +211,6 @@
         catch(err){
             console.error(err)
             if(modedebug){
-                alert("Erro not")
                 loger.addTextError(JSON.stringify(err,null,2))
             }
         }

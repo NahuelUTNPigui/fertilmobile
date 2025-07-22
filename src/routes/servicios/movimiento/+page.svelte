@@ -1116,10 +1116,7 @@
         </button>
         <div class="flex justify-between items-center px-1">
             <h3 class=" text-md py-2">Animales seleccionados: {Object.keys(selecthashmap).length > 0}</h3>
-            {#if modedebug}
-                {Object.keys(selecthashmap).length}
-                {JSON.stringify(selecthashmap,null,2)}
-            {/if}
+
         </div>
         {#if isOpenFilter}
         <div transition:slide class="grid grid-cols-1 lg:grid-cols-4  m-1 gap-2 w-11/12" >

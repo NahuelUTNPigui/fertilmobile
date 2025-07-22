@@ -268,7 +268,7 @@
     }
     function openNewModal(){
         listaanimales = []
-        if(userpermisos[3]){
+        if(true || userpermisos[3]){
             
             for (const [key, value ] of Object.entries(selecthashmap)) {
                 if(value != null){
@@ -297,7 +297,7 @@
 
         let nlote =  data.lote?data.lote.split("_").length>1:false
         let nrodeo =  data.rodeo?data.rodeo.split("_").length>1:false
-        loger.addTextLog(JSON.stringify(data,null,2))
+        
         
         let comando = {
             tipo:"update",
@@ -375,7 +375,7 @@
         }
         let errores = false
         let conerrores = []
-        let data = {}
+        let data = {caravana:""}
         let nombrelote = ""
         let nombrerodeo = ""
         if(selectcategoria){
@@ -402,6 +402,7 @@
         for(let i = 0;i<listaanimales.length;i++){
             let a = listaanimales[i]
             let a_idx = animales.findIndex(an=>an.id == a.id)
+            data.caravana = animales[a_idx].caravana
             animales[a_idx] = {
                 ...animales[a_idx],
                 ...data
@@ -678,15 +679,10 @@
                 if(modedebug){
                     loger.addTextError("error cabana: "+resultList.items.length)
                 }
-                if(modedebug){
-                    loger.addTextLog(JSON.stringify(resultList.items[0]))
-                }
                 return
             }
             data.cab = resultList.items[0].id
-            if(modedebug){
-                loger.addTextLog("cabana: "+data.cab)
-            }
+
             data.lote = ""
             data.rodeo = ""
             
@@ -695,8 +691,8 @@
         
                 let origenusuarioid =  pb_json.record.id
                 let datanoti = {
-                    texto:`Se transfirieron ${lista.length} animales`,
-                    titulo:`Transferencia de ${lista.length} animales`,
+                    texto:`Se transfirieron ${listaanimales.length} animales`,
+                    titulo:`Transferencia de ${listaanimales.length} animales`,
                     tipo:tiponoti[1].id,
                     origen:origenusuarioid,
                     destino:resultList.items[0].user,
@@ -707,6 +703,9 @@
             }
             catch(err){
                 console.error(err)
+                if(modedebug){
+                    loger.addTextError("Error en enviar notificación de transferencia")
+                }
             }
         }
         let errores = false
@@ -750,17 +749,8 @@
                 }
             }
             if(selecttransfer){
-                if(animales[a_idx].expand){
-                    animales[a_idx].expand.rodeo={
-                        id:"",
-                        nombre:""
-                    }
-
-                    animales[a_idx].expand.lote={
-                        id:"",
-                        nombre:""
-                    }
-                }
+                
+                animales.splice(a_idx,1)
             }
             try{
                 //loger.addTextLinea("Guadar online: "+a.caravana)
@@ -805,6 +795,12 @@
         
         onChangeAnimales()
         filterUpdate()
+        if(conerrores.length>0){
+            Swal.fire("Error movimiento","Hubo animales con errores","error")
+        }
+        else{
+            Swal.fire("Éxito movimiento","Se lograron mover todos los animales","success")
+        }
     }
     async function mover(){
         if(coninternet.connected){

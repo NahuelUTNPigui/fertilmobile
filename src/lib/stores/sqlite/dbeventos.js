@@ -811,10 +811,6 @@ export async function addNewTrataSQL(db,trat) {
     let trats = await getTratsSQL(db)
     let lista = trats.lista
     lista.push(trat)
-    loger.addLog({
-        time:Date.now(),
-        text:JSON.stringify(trat,null,2)
-    })
     await setTratsSQL(db,lista)
 }
 export async function setTratsSQL(db,trats) {

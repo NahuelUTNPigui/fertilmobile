@@ -171,12 +171,15 @@
         }).then(async result => {
             if(result.value){
                 try{
+                    let p_idx = pesajes.findIndex(p=>p.id == idpesaje)
+                    let pes = {...pesajes[p_idx]}
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
+                    
                     await setPesajesSQL(db,pesajes)
                     let comando = {
                         tipo:"delete",
                         coleccion:"pesaje",
-                        data:{},
+                        data:{...pes},
                         hora:Date.now(),
                         prioridad:2,
                         idprov:idpesaje,

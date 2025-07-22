@@ -21,7 +21,7 @@
         loger.cleanErrores()
     }
     function limpiarLineas(){
-        loger.cleanErrores()
+        loger.cleanLineas()
     }
 </script>
 <div class="dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 h-full max-h-3/4">

@@ -75,10 +75,10 @@ export async function resetTables(db) {
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (11,'tactos','[]',0)")
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (12,'pesajes','[]',0)")
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (13,'historiales','[]',0)")
-    //Aca solo van los datos de los establecimientos
+    //Aca solo van los datos de los establecimientos propios
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (14,'cabs','[]',0)")
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (15,'colaboradores','[]',0)")
-    //Aca iria el listado establecimientos asociados en los que quiero mantener los datos
+    //Aca iria el listado establecimientos asociados en los que quiero mantener los datos ajenos
     await db.run("INSERT INTO Colecciones (id,nombre,lista,ultimo) VALUES (16,'asociados','[]',0)")
     
 
