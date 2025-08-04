@@ -656,16 +656,36 @@
     {#if cargados}
         {#if opcion == 0}
             <div class="mx-1 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-6">
-                <StatCard  titulo="Animales" valor={totaleventos.animales}/>
-                <StatCard  titulo="Lotes" valor={totaleventos.lotes}/>
-                <StatCard  titulo="Rodeos" valor={totaleventos.rodeos}/>
-                <StatCard  titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
-                <StatCard  titulo="Servicios" valor={totaleventos.servicios}/>
-                <StatCard  titulo="Nacimientos" valor={totaleventos.nacimientos}/>
-                <StatCard  titulo="Tratamientos" valor={totaleventos.tratamientos}/>
-                <StatCard  titulo="Observaciones" valor={totaleventos.observaciones}/>
-                <StatCard  titulo="Pesajes" valor={totaleventos.pesajes}/>
-                <StatCard  titulo="Tactos" valor={totaleventos.tactos}/>
+                <StatCard 
+                    bind:cargado={cargados} 
+                    titulo="Animales" valor={totaleventos.animales}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Lotes" valor={totaleventos.lotes}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Rodeos" valor={totaleventos.rodeos}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Servicios" valor={totaleventos.servicios}/>
+                <StatCard  
+                bind:cargado={cargados}
+                    titulo="Nacimientos" valor={totaleventos.nacimientos}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Tratamientos" valor={totaleventos.tratamientos}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Observaciones" valor={totaleventos.observaciones}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Pesajes" valor={totaleventos.pesajes}/>
+                <StatCard  
+                    bind:cargado={cargados}
+                    titulo="Tactos" valor={totaleventos.tactos}/>
             </div>
         {:else}
             

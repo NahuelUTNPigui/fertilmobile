@@ -81,6 +81,7 @@
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
     let comandos = $state([]);
+    let cargado = $state(false)
     //online
 
     let caber = createCaber();
@@ -673,6 +674,7 @@
         changeAnimales();
         changeObservacion();
         filterUpdate();
+        cargado = true
     }
     async function getLocalSQL() {
         let resobservaciones = await getObservacionesSQL(db);
@@ -682,6 +684,7 @@
         changeObservacion();
         changeAnimales();
         filterUpdate();
+        cargado = true
     }
     async function updateComandos() {
         try{
@@ -929,6 +932,8 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
+    <div>
     <div
         class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto"
     >
@@ -1001,6 +1006,12 @@
             </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog
     id="nuevoModal"

@@ -64,6 +64,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     let coninternet = $state({connected:false})
     let comandos = $state([])
     
@@ -524,6 +525,7 @@
         rodeos = lotesrodeos.rodeos
         
         filterUpdate()
+        cargado = true
     }
     async function oldUpdate() {
         if (coninternet.connected){
@@ -713,6 +715,8 @@
         </div>
         {/if}
     </div>
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid grid-cols-1 justify-items-center mx-1 lg:mx-10 lg:w-11/12 overflow-x-auto" >
         <table class="table table-lg w-full " >
             <thead>
@@ -894,6 +898,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog id="tratamientoMasivo" class="modal modal-middle rounded-xl">
     <div 

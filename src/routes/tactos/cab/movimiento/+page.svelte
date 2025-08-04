@@ -25,7 +25,7 @@
     import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
@@ -69,6 +69,7 @@
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
     let tactos = $state([])
+    let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
 
     const pb = new PocketBase(ruta);
@@ -598,7 +599,7 @@
         rodeos = lotesrodeos.rodeos
         
         actualizarDatos()
-
+        cargado = true
     }
     async function updateLocalSQL() {
         tactos = await updateLocalTactosSQLUser(db,pb,usuarioid)
@@ -609,29 +610,34 @@
 
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         filterUpdate()
+        cargado = true
     }
-
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
+            await updateLocalSQL()
+        }
+        else{
+            let ahora = Date.now()
+            let antes = lastinter.ultimo
+            const cincoMinEnMs = 300000;
+            if((ahora - antes) >= cincoMinEnMs){
+                await updateLocalSQL()
+            }
+            else{
+                await getLocalSQL()            
+            }
+        }
+        await setInternetSQL(db,1,Date.now())
+    }
     async function getUpdateSQL() {
        //Reviso el internet
         let lastinter = await getInternetSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = lastinter.ultimo
         if (coninternet.connected){
-            if(lastinter.internet == 0){
-                await updateLocalSQL()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
-            }
-            await setInternetSQL(db,1,Date.now())
+            
         }
         else{
             await getLocalSQL()
@@ -773,6 +779,8 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10  lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full " >
             <thead>
@@ -958,6 +966,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog id="tactoMasivo" class="modal modal-middle rounded-xl">
     <div 

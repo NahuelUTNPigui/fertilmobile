@@ -47,6 +47,7 @@
     let getlocal = $state(true)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     let caber = createCaber()
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
@@ -406,6 +407,7 @@
         pesajes = await updateLocalPesajesSQLUser(db,pb,usuarioid)
         onChangePesajes()
         filterUpdate()
+        cargado = true
     }
     async function getLocalSQL() {
         
@@ -413,6 +415,7 @@
         pesajes = respesajes.lista
         onChangePesajes()
         filterUpdate()
+        cargado = true
     }
     async function initPage() {
         coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
@@ -641,83 +644,90 @@
             </div>
         {/if}
     </div>
-    
-    <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
-        <table class="table table-lg w-full" >
-            <thead>
-                <tr>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">5</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">4</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">3</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">2</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">1</th>
-                </tr>
-                
-            </thead>
-            <tbody>
-                {#each pesajesprocesados as f}
+    {#if cargado}
+    <div>
+        <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+            <table class="table table-lg w-full" >
+                <thead>
                     <tr>
-                        <td class="text-base mx-1 px-1">
-                            {shorterWord(f.animal)}
-                        </td>
-                        {#each Array(5) as _,idx}
-                            {#if f.pesajes.length < ultimos - idx}
-                                <td>
-                                    {"-"}
-                                </td>
-                            {:else}
-                                <td onclick={()=>openDetalle(f.pesajes[ultimos - idx - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
-                                    {new Date(f.pesajes[ultimos - idx - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - idx - 1].peso}
-                                </td>
-                            {/if}
-                                
-                        {/each}
-                        
-                        
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">5</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">4</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">3</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">2</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">1</th>
                     </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    <div class="w-full md:hidden justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
-        <table class="table table-lg w-full" >
-            <thead>
-                <tr>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
                     
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">3</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">2</th>
-                    <th class="text-base mx-1 px-1 border-b dark:border-gray-600">1</th>
-                </tr>
-                
-            </thead>
-            <tbody>
-                {#each pesajesprocesados as f}
+                </thead>
+                <tbody>
+                    {#each pesajesprocesados as f}
+                        <tr>
+                            <td class="text-base mx-1 px-1">
+                                {shorterWord(f.animal)}
+                            </td>
+                            {#each Array(5) as _,idx}
+                                {#if f.pesajes.length < ultimos - idx}
+                                    <td>
+                                        {"-"}
+                                    </td>
+                                {:else}
+                                    <td onclick={()=>openDetalle(f.pesajes[ultimos - idx - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
+                                        {new Date(f.pesajes[ultimos - idx - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - idx - 1].peso}
+                                    </td>
+                                {/if}
+                                    
+                            {/each}
+                            
+                            
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+        <div class="w-full md:hidden justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
+            <table class="table table-lg w-full" >
+                <thead>
                     <tr>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">Animal</th>
                         
-                        <td class="text-base mx-1 px-1">
-                            {shorterWord(f.animal)}
-                        </td>
-                        {#each Array(3) as _,idx}
-                            {#if f.pesajes.length < ultimos - (idx+2)}
-                                <td>
-                                    {"-"}
-                                </td>
-                            {:else}
-                                <td onclick={()=>openDetalle(f.pesajes[ultimos - (idx+2) - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
-                                    {new Date(f.pesajes[ultimos - (idx+2) - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - (idx+2) - 1].peso}
-                                </td>
-                            {/if}
-                                
-                        {/each}
-                        
-                        
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">3</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">2</th>
+                        <th class="text-base mx-1 px-1 border-b dark:border-gray-600">1</th>
                     </tr>
-                {/each}
-            </tbody>
-        </table>
+                    
+                </thead>
+                <tbody>
+                    {#each pesajesprocesados as f}
+                        <tr>
+                            
+                            <td class="text-base mx-1 px-1">
+                                {shorterWord(f.animal)}
+                            </td>
+                            {#each Array(3) as _,idx}
+                                {#if f.pesajes.length < ultimos - (idx+2)}
+                                    <td>
+                                        {"-"}
+                                    </td>
+                                {:else}
+                                    <td onclick={()=>openDetalle(f.pesajes[ultimos - (idx+2) - 1].id)} class="cursor-pointer text-base mx-1 px-1 hover:bg-gray-200 dark:hover:bg-gray-900">
+                                        {new Date(f.pesajes[ultimos - (idx+2) - 1].fecha).toLocaleDateString()} , {f.pesajes[ultimos - (idx+2) - 1].peso}
+                                    </td>
+                                {/if}
+                                    
+                            {/each}
+                            
+                            
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
     
 </Navbarr>
 <dialog id="detallePesaje" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">

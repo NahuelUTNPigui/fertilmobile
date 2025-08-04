@@ -67,6 +67,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //let pre = import.meta.env.VITE_PRE
@@ -469,6 +470,7 @@
         lotes = reslotes.lista.filter(a=>a.active && a.cab == caboff.id)
         rodeos = resrodeos.lista.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
+        cargado = true
     }
     async function updateLocalSQL() {
         await setUltimoRodeosLotesSQL(db)
@@ -482,6 +484,7 @@
         rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
         rodeos = rodeos.filter(a=>a.active && a.cab == caboff.id)
         filterUpdate()
+        cargado = true
     }
     async function updateComandos() {
         try{
@@ -683,7 +686,8 @@
             </div>
         {/if}
     </div>
-
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid grid-cols-1 justify-items-center mx-1 lg:mx-10 lg:w-11/12 overflow-x-auto" >
         <table class="table table-lg w-full " >
             <thead>
@@ -875,6 +879,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+       <div class="flex items-center justify-center">
+        <span class="loading loading-spinner text-success"></span>
+    </div>
+    {/if}
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 

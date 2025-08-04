@@ -14,6 +14,8 @@
     import { codigoSinRepetirEstablecimiento } from "$lib/pbutils/lib";
     import cuentas from '$lib/stores/cuentas';
     import Swal from 'sweetalert2';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
+    
     let pageurl = $page.url.pathname  
     let ruta = import.meta.env.VITE_RUTA
     //pre
@@ -72,35 +74,42 @@
         goto("/establecimientos")
     }
     async function guardarEstablecimiento(){
-        let user = await pb.collection("users").getOne(usuarioid)
-        
-        let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
-        let cabs = await pb.collection('cabs').getList(1,1,{filter:`user='${usuarioid}' && active = true`})
-        
-        if(nivel.establecimientos != -1 && cabs.totalItems >= nivel.establecimientos){
-          Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más de ${nivel.establecimientos} establecimientos`,"error")
-          return
-        }
-        
-        let codigo = await codigoSinRepetirEstablecimiento(pb)
-        const data = {
-            nombre:nombreest,
-            direccion:direccionest,
-            user: usuarioid,
-            active: true,
-            contacto:contactoest,
-            codigo
-        };
+        let coninternet = await getOnlyInternet()
+        if(coninternet.connected){
+          let user = await pb.collection("users").getOne(usuarioid)
+          
+          let nivel  = cuentas.filter(c=>c.nivel == user.nivel)[0]
+          let cabs = await pb.collection('cabs').getList(1,1,{filter:`user='${usuarioid}' && active = true`})
+          
+          if(nivel.establecimientos != -1 && cabs.totalItems >= nivel.establecimientos){
+            Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más de ${nivel.establecimientos} establecimientos`,"error")
+            return
+          }
+          
+          let codigo = await codigoSinRepetirEstablecimiento(pb)
+          const data = {
+              nombre:nombreest,
+              direccion:direccionest,
+              user: usuarioid,
+              active: true,
+              contacto:contactoest,
+              codigo
+          };
 
-        try{
-            const record = await pb.collection('cabs').create(data);
-            Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
-            volver()
+          try{
+              const record = await pb.collection('cabs').create(data);
+              Swal.fire("Exito guadar","Se pudo guardar la cabaña con éxito","success")
+              volver()
+          }
+          catch(err){
+              console.error(err)
+              Swal.fire("Error guardar","No se pudo guardar la cabaña","error")
+          }
         }
-        catch(err){
-            console.error(err)
-            Swal.fire("Error guardar","No se pudo guardar la cabaña","error")
+        else{
+          Swal.fire("Error guardar","No se puede guardar un establecimiento sin internet","error")
         }
+        
     }
     let bgnav = "bg-green-500"
     let classtext=`text-lg px-2 font-extrabold`

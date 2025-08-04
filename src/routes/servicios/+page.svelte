@@ -582,13 +582,14 @@
                 nombre:item.caravana
             }
         })
-        cargado = true
+        
         servicios = await updateLocalServiciosSQLUser(db,pb,usuarioid)
         
         inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
         onChangeServicios()
         onChangeInseminaciones()
         filterUpdate()
+        cargado = true
     }
     async function getLocalSQL() {
         
@@ -604,7 +605,7 @@
             }
         })
         
-        cargado = true
+        
         let resservicios = await getServiciosSQL(db)
         
         servicios = resservicios.lista
@@ -615,6 +616,7 @@
         onChangeServicios()
         onChangeInseminaciones()    
         filterUpdate()
+        cargado = true
     
     }
     async function actualizarComandos() {
@@ -941,6 +943,8 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
@@ -1069,6 +1073,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div class="

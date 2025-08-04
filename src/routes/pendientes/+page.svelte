@@ -33,6 +33,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     async function initPage() {
         coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         let isOnline = await getOnlyInternet()
@@ -147,18 +148,24 @@
             db = await openDB()
             let rescom = await getComandosSQL(db)
             comandos = rescom.lista
+            
             if (coninternet.connected){
                 try{
                     await flushComandosSQL(db,pb)
                     comandos = []
+                    cargado = true
                 }
                 catch(err){
                     if(modedebug){
                         loger.addTextError(JSON.stringify(err),null,2)
                         loger.addTextError("Error en flush comandos pendientes")
                     }
+                    cargado = true
                 }
                 
+            }
+            else{
+                cargado = true
             }
         }
     })
@@ -189,6 +196,7 @@
             No tienes operaciones pendientes
         </div>
     {:else}
+        {#if cargado}
         <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
             <table class="table table-lg w-full" >
                 <thead>
@@ -269,6 +277,11 @@
                 </div>
             {/each}
         </div>
+        {:else}
+            <div class="flex items-center justify-center">
+                <span class="loading loading-spinner text-success"></span>
+            </div>
+        {/if}
     {/if}
     
 </Navbarr>

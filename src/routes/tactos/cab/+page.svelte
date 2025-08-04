@@ -61,6 +61,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     let caber = createCaber()
     let cab = caber.cab
     let per = createPer()
@@ -335,6 +336,7 @@
         
         onChangeTactos()
         filterUpdate()
+        cargado = true
     }
     async function getLocalSQL() {
         getlocal = true
@@ -347,6 +349,7 @@
         onChangeTactos()
         
         filterUpdate()
+        cargado = true
         
     }
     async function updateComandos() {
@@ -740,7 +743,8 @@
             </div>
         {/if}
     </div>
-
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
@@ -822,6 +826,12 @@
 
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
     
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">

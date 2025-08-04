@@ -48,7 +48,7 @@
     let getvelocidad = $state(0)
     let ultimo_colabs = $state({})
     let comandos = $state([])
-
+    let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let id=$state("")
@@ -183,10 +183,19 @@
                 userpermisos[idx] = true
             }
         }
+        cargado = true
     }
     async function updateComandos() {
-        await flushComandosSQL(db,pb)
-        comandos =[]
+        try{
+            await flushComandosSQL(db,pb)
+            comandos =[]
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos id colaborador")
+            }
+        }
     }
     async function getDataSQL() {
         db = await openDB()
@@ -229,6 +238,7 @@
             </button>
         </div>
     </div>
+    {#if cargado}
     <dir class="mb-1">
         <h1 class="text-2xl font-bold">{apellido},{nombre}</h1>
     </dir>
@@ -295,6 +305,11 @@
         </div>
         
     </div>
+    {:else}
+    <div class="flex items-center justify-center">
+        <span class="loading loading-spinner text-success"></span>
+    </div>
+    {/if}
 
     
 </Navbarr>

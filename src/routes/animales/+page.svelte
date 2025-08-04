@@ -75,6 +75,8 @@
     let comandos = $state([])
     let getlocal = $state(false)
     let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
+    let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     //pre
     let pre = ""
@@ -573,8 +575,10 @@
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id) 
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
-        
+    
         filterUpdate()
+        cargado = true
+
     }
     async function getLocalSQL() {
         getlocal = true
@@ -587,6 +591,7 @@
         animalescab = animales.filter(a=>a.cab == caboff.id)
         
         filterUpdate()
+        cargado = true
     }
     async function initPage() {
         coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
@@ -642,7 +647,7 @@
                 velocidad,
                 confiabilidad,
                 coninternet,
-                fromColab, //solo en el internet
+                false, //solo en el internet
                 ahora,
                 antes
             );
@@ -651,10 +656,10 @@
             }
             
             if(mustUpdate){
-               await updateLocalSQL(db) 
+               await updateLocalSQL() 
             }
             else{
-                await getLocalSQL(db)
+                await getLocalSQL()
             }
             
         }
@@ -1095,6 +1100,7 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <TablaAnimales
             bind:animalesrows
@@ -1121,7 +1127,11 @@
             {getNombreRodeo}
         ></ListaAnimales>
     </div>
-    
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
     
 </Navbarr>
 <dialog id="nuevoModal" 

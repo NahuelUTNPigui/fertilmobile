@@ -67,8 +67,10 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let cargado = $state(false)
     let ultimo_tratamientos = $state({})
     let comandos = $state([])
+
 
     let caber = createCaber()
     let cab = caber.cab
@@ -702,6 +704,7 @@
         onChangeTratamientos()
         onChangeTipos()
         filterUpdate()
+        cargado = true
     }
     async function getLocalSQL() {
         let restratamientos = await getTratsSQL(db)
@@ -714,6 +717,7 @@
         onChangeTratamientos()
         onChangeTipos()
         filterUpdate()
+        cargado = true
 
     }
     async function updateComandos() {
@@ -966,7 +970,8 @@
             </div>
         {/if}
     </div>
-   
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
@@ -1033,6 +1038,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
     
     
 </Navbarr>

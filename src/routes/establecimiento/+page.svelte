@@ -65,6 +65,7 @@
     let comandos = $state([])
     let ultimo_establecimiento = $state({})
     let getlocal = $state(false)
+    let cargado = $state(false)
     let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
@@ -525,6 +526,7 @@
         telefono = res.telefono
         mail = res.mail    
         localidadesProv = localidades.filter(lo => lo.idProv == provincia)
+        cargado = true
     }
     async function updateLocalSQL(){
         
@@ -545,7 +547,7 @@
         localidadesProv = localidades.filter(lo => lo.idProv == provincia)
         let allcolabs = await updateLocalColabSQLUser(db,pb,usuarioid)
         colabs = allcolabs.filter(colab => colab.cab == caboff.id)
-
+        cargado = true
     }
     async function oldGetUpdate() {
         let lastinter = await getInternetSQL(db)
@@ -596,7 +598,7 @@
                 await updateLocalSQL()
             }
             else{
-                    await getLocalSQL()     
+                await getLocalSQL()     
             }
             
         }
@@ -658,6 +660,7 @@
         </div>
     {/if}
     {#if cab.exist}
+        {#if cargado}
         <CardExistente 
             bind:nombre bind:renspa bind:direccion
             bind:contacto bind:telefono bind:mail
@@ -671,6 +674,11 @@
             {reestablercerCabaña} {editarCabaña}
 
         />
+        {:else}
+            <div class="flex items-center justify-center">
+                <span class="loading loading-spinner text-success"></span>
+            </div>
+        {/if}
     {:else}
         <CardNuevo bind:nombre bind:direccion bind:contacto {guardarCabaña}></CardNuevo>
     {/if}

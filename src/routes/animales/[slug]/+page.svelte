@@ -649,6 +649,10 @@
             </CardAnimal>
         {/if}
         
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
     {/if}
     
     

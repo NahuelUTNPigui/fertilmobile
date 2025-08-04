@@ -1165,6 +1165,8 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1  lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full " >
             <thead>
@@ -1351,6 +1353,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog id="servicioMasivo" class="modal modal-middle rounded-xl">
     <div 

@@ -69,6 +69,8 @@
     let ultimo_animal = $state({})
     let getlocal = $state(false)
     let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
+    let cargado = $state(false)
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -973,6 +975,7 @@
         rodeos = lotesrodeos.rodeos
         onChangeAnimales()
         filterUpdate()
+        cargado = true
     }
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db)
@@ -982,7 +985,9 @@
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
         onChangeAnimales()
+
         filterUpdate()
+        cargado = true
     }
     async function updateComandos() {
         try{
@@ -1226,6 +1231,7 @@
             </div>
         {/if}
     </div>
+    {#if cargado}
     <div>
         <Listamove
             bind:todos
@@ -1240,6 +1246,11 @@
             {clickAnimal}
         />
     </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
     
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">

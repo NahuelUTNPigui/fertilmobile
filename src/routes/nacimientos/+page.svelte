@@ -66,6 +66,7 @@
     let cab = caber.cab
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
+    let cargado = $state(false)
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -867,6 +868,7 @@
             }
         })
         filterUpdate()
+        cargado = true
     }
     async function updateLocalSQL() {
         await setUltimoNacimientosSQL(db)
@@ -894,6 +896,7 @@
         })
         cargadoanimales = true
         filterUpdate()
+        cargado = true
     }
     async function initPage() {
         coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
@@ -1208,7 +1211,9 @@
                 </div>
             </div>
         {/if}
-    </div> 
+    </div>
+    {#if cargado}
+    <div>
     <div class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto">
         <table class="table table-lg w-full" >
             <thead>
@@ -1288,6 +1293,12 @@
         </div>
         {/each}
     </div>
+    </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 </Navbarr>
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div class="

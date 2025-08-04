@@ -37,6 +37,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
     //offline
@@ -49,6 +50,7 @@
     let comandos = $state([])
     let animales = $state([])
     let getlocal = $state(false)
+    let cargado = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
     let ruta = import.meta.env.VITE_RUTA
@@ -392,6 +394,7 @@
         lotes = reslotes.lista
         onChangeLote()
         filterUpdate()
+        cargado = true
     }
     async function updateLocalSQL() {
         await setUltimoRodeosLotesSQL(db)
@@ -399,6 +402,7 @@
         lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
         onChangeLote()
         filterUpdate()
+        cargado = true
     }
     async function updateComandos() {
         try{
@@ -554,6 +558,7 @@
             </div>
         </div>
     </div>
+    {#if cargado}
     <div class="w-full grid grid-cols-1 justify-items-center mx-1 lg:mx-10 lg:w-3/4">
         <table class="table table-lg w-full " >
             <thead>
@@ -575,58 +580,64 @@
             </tbody>
         </table>
     </div>
-    <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
-        <div 
-            class="
-                modal-box w-11/12 max-w-xl
-                bg-gradient-to-br from-white to-gray-100 
-                dark:from-gray-900 dark:to-gray-800
-            ">
-            <form method="dialog">
-                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
-            </form>
-            {#if idlote == ""}
-                <h3 class="text-lg font-bold">Nuevo Lote</h3>  
-            {:else}
-                <h3 class="text-lg font-bold">Ver Lote</h3>  
-            {/if}
-            <div class="form-control">
-                <label for = "nombre" class="label">
-                    <span class="label-text text-base">Nombre</span>
-                </label>
-                <label class="input-group">
-                    <input id ="nombre" type="text"  
-                        class={`
-                            input input-bordered 
-                            w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 
-                            focus:border-green-500
-                            ${estilos.bgdark2} 
-                        `}
-                        bind:value={nombre}
-                        oninput={oninput}
-                    />
-                    {#if malnombre}
-                        <div class="label">
-                            <span class="label-text-alt text-red-500">Debe escribir el nombre del lote</span>                    
-                        </div>
-                    {/if}
-                </label>
-            </div>
-            <div class="modal-action justify-start">
-                <form method="dialog" >
-                    <!-- if there is a button, it will close the modal -->
-                    {#if idlote==""}
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>  
-                    {:else}
-                        <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={()=>editar(idlote)} >Editar</button>  
-                        <button class="btn btn-error text-white" onclick={async ()=>await eliminar(idlote)}>Eliminar</button>
-                    {/if}
-                    <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
-                </form>
-            </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
         </div>
-    </dialog>
+    {/if}
+    
 </Navbarr>
+<dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
+    <div 
+        class="
+            modal-box w-11/12 max-w-xl
+            bg-gradient-to-br from-white to-gray-100 
+            dark:from-gray-900 dark:to-gray-800
+        ">
+        <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl">✕</button>
+        </form>
+        {#if idlote == ""}
+            <h3 class="text-lg font-bold">Nuevo Lote</h3>  
+        {:else}
+            <h3 class="text-lg font-bold">Ver Lote</h3>  
+        {/if}
+        <div class="form-control">
+            <label for = "nombre" class="label">
+                <span class="label-text text-base">Nombre</span>
+            </label>
+            <label class="input-group">
+                <input id ="nombre" type="text"  
+                    class={`
+                        input input-bordered 
+                        w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                    bind:value={nombre}
+                    oninput={oninput}
+                />
+                {#if malnombre}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500">Debe escribir el nombre del lote</span>                    
+                    </div>
+                {/if}
+            </label>
+        </div>
+        <div class="modal-action justify-start">
+            <form method="dialog" >
+                <!-- if there is a button, it will close the modal -->
+                {#if idlote==""}
+                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>  
+                {:else}
+                    <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={()=>editar(idlote)} >Editar</button>  
+                    <button class="btn btn-error text-white" onclick={async ()=>await eliminar(idlote)}>Eliminar</button>
+                {/if}
+                <button class="btn btn-neutral " onclick={cerrarModal}>Cerrar</button>
+            </form>
+        </div>
+    </div>
+</dialog>

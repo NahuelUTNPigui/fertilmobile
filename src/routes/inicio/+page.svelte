@@ -61,9 +61,14 @@
         addnewInseminacionSQL,
         addNewServicioSQL,
         updateLocalEventosSQLUser,
-
-        getTratsSQL
-
+        getUpdateLocalRodeosLotesSQLUser,
+        getTratsSQL,
+        getTiposTratSQL,
+        updateLocalTratsSQL,
+        updateLocalTiposTratSQLUser,
+        getTotalesRodeosLotesSQL,
+        setUltimoLotesSQL,
+        setUltimoRodeosSQL
     } from '$lib/stores/sqlite/dbeventos';
     import { 
         setAnimalesSQL,
@@ -124,6 +129,7 @@
         servicios:0
     })
     let cargados = $state(false)
+    
     let caber = createCaber()
     let cab = $state({})
     let animales = $state([])
@@ -1329,15 +1335,15 @@
         await setDefaultUserOffline()
 
     }
-    
-    async function updateLocalSQL(db) {
+    async function oldUpdateLocalSQL(db) {
+        await setInternetSQL(db,1,Date.now())
         let inicio = Date.now();
         let totales = await getTotalesEventosOnline(pb,usuarioid)
         
         tiempocargatotales = Date.now() - inicio
         inicio = Date.now()
         getlocal = false
-        await setInternetSQL(db,1,Date.now())
+        
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         //Debo traer los datos de la cabaña
@@ -1366,7 +1372,31 @@
         //await setTotalSQL(db,datatotal)
         //await setUltimoTotalSQL(db)
         await setUltimosSQL(db)
+    }
+    async function updateLocalSQL(db) {
+        let inicio = Date.now();
+        await setInternetSQL(db,1,Date.now())
+        let totales = await getTotalesEventosOnline(pb,usuarioid)
+        totaleventos.tactos = totales.tactos
+        totaleventos.inseminaciones = totales.inseminaciones
+        totaleventos.nacimientos = totales.nacimientos
+        totaleventos.tratamientos = totales.tratamientos
+        totaleventos.observaciones = totales.observaciones
+        totaleventos.pesajes = totales.pesajes
+        totaleventos.servicios = totales.servicios
         
+        let tipotrats = await updateLocalTiposTratSQLUser(db,pb,usuarioid)
+        let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
+        animales = animalesuser
+        onChangeAnimales()
+        totaleventos.animales = animales.filter(a=>a.cab == caboff.id &&  a.active).length
+        let totalrodeoslotes  = await getTotalesRodeosLotesSQL(pb,usuarioid)
+        totaleventos.lotes = totalrodeoslotes.lotes
+        totaleventos.rodeos = totalrodeoslotes.rodeos
+        tipotratamientos = tipostrat.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
+        await setUltimoAnimalesSQL(db)
+        tiempocargaupdate = Date.now() - inicio
+        cargados = true
     }
     async function getLocalSQL(db) {
         getlocal = true
@@ -1388,7 +1418,7 @@
         
         tipotratamientos = data.tipostrat.lista.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
         totaleventos.animales = animales.filter(a=>a.cab == caboff.id &&  a.active).length
-        
+        cargados = true
     }
     function onChangeAnimales() { 
         animalescab = animales.filter(a=>a.cab == caboff.id && a.active)
@@ -1470,6 +1500,7 @@
                 }
                 try{
                     await flushComandosSQL(db,pb)
+                    comandos = []
                 }
                 catch(err){
                     if(modedebug){
@@ -1477,7 +1508,7 @@
                         loger.addTextError("Error en flush comandos inicio")
                     }
                 }
-                comandos = []
+                
                 let confiabilidad = intermitenter.calculateIntermitente()
                
                 let mustUpdate = await deboActualizar(
@@ -1604,18 +1635,45 @@
         
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">
             <!--Esto puede ser un componente aparte-->
+            {#if cargados}
             <div class="mx-1 my-2 lg:mx-10 grid grid-cols-2  lg:grid-cols-3 gap-1">
-                <StatCard urlto={"/animales"}  titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}/>
-                <StatCard urlto={"/lotes"}  titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
-                <StatCard urlto={"/rodeos"}  titsize={"text-md"} titulo="Rodeos" valor={totaleventos.rodeos}/>
-                <StatCard urlto={"/servicios"}  titsize={"text-md"} titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
-                <StatCard urlto={"/servicios"}  titsize={"text-md"} titulo="Servicios" valor={totaleventos.servicios}/>
-                <StatCard urlto={"/nacimientos"}  titsize={"text-md"} titulo="Nacimientos" valor={totaleventos.nacimientos}/>
-                <StatCard urlto={"/tratamientos"}  titsize={"text-md"} titulo="Tratamientos" valor={totaleventos.tratamientos}/>
-                <StatCard urlto={"/observaciones"}  titsize={"text-md"} titulo="Observaciones" valor={totaleventos.observaciones}/>
-                <StatCard urlto={"/pesajes"}  titsize={"text-md"} titulo="Pesajes" valor={totaleventos.pesajes}/>
-                <StatCard urlto={"/tactos/cab"} titsize={"text-md"} titulo="Tactos" valor={totaleventos.tactos}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/animales"}  titsize={"text-md"} titulo="Animales" valor={totaleventos.animales}
+                />
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/lotes"}  titsize={"text-md"} titulo="Lotes" valor={totaleventos.lotes}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/rodeos"}  titsize={"text-md"} titulo="Rodeos" valor={totaleventos.rodeos}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/servicios"}  titsize={"text-md"} titulo="Inseminaciones" valor={totaleventos.inseminaciones}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/servicios"}  titsize={"text-md"} titulo="Servicios" valor={totaleventos.servicios}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/nacimientos"}  titsize={"text-md"} titulo="Nacimientos" valor={totaleventos.nacimientos}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/tratamientos"}  titsize={"text-md"} titulo="Tratamientos" valor={totaleventos.tratamientos}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/observaciones"}  titsize={"text-md"} titulo="Observaciones" valor={totaleventos.observaciones}/>
+                <StatCard 
+                    bind:cargado={cargados} 
+                    urlto={"/pesajes"}  titsize={"text-md"} titulo="Pesajes" valor={totaleventos.pesajes}/>
+                <StatCard 
+                    bind:cargado={cargados}
+                    urlto={"/tactos/cab"} titsize={"text-md"} titulo="Tactos" valor={totaleventos.tactos}/>
             </div>
+            {:else}
+                <div class="flex items-center justify-center">
+                    <span class="loading loading-spinner text-success"></span>
+                </div>
+            {/if}
             <!--Esto puede ser un componente aparte-->
             <h2 class="text-xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">Opciones</h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

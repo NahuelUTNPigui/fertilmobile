@@ -13,7 +13,13 @@
     import { usuario } from "$lib/stores/usuario";
     import { shorterWord } from "$lib/stringutil/lib";
     import Asoc from "$lib/components/establecimientos/Asoc.svelte";
+    //Actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -44,7 +50,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
-    import { getInternet } from "$lib/stores/offline";
+    
     
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
@@ -57,6 +63,9 @@
     let ultimo_establecimiento = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
+    let cargado = $state(false)
     // logica para los asociados
     let sincronizadas = $state([])
     let ruta = import.meta.env.VITE_RUTA
@@ -110,7 +119,9 @@
         return total.length
     }
     async function eliminar(id){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getOnlyInternet()
+        intermitenter.addIntermitente(coninternet.connected)
+
         if(coninternet.connected){
             Swal.fire({
                 title: 'Eliminar establecimiento',
@@ -174,15 +185,8 @@
         }
     }
     async function initPage() {
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getOnlyInternet()
+        intermitenter.addIntermitente(coninternet.connected)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id 
@@ -193,14 +197,12 @@
         //Aca se van a guardar todos los estableciemientos
         //colaborador o no
         let resestablecimientos = await getEstablecimientosSQL(db)
-        loger.addTextLog(JSON.stringify(resestablecimientos.lista.map(e=>e.nombre),null,2))
-        loger.addTextLog(JSON.stringify(resestablecimientos.lista.map(e=>e.id),null,2))
-        loger.addTextLog(JSON.stringify(sincronizadas.map(e=>e.nombre),null,2))
+        
         establecimientos = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos no sea colaborador
             return !sincronizadas.includes(s => s == e.id)
         })
-        loger.addTextLog(JSON.stringify(establecimientos.map(e=>e.nombre),null,2))
+        
         establecimientoscolab = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos si sean colaborador
             return sincronizadas.includes(s => s == e.id)
@@ -213,7 +215,7 @@
         for(let i = 0;i <establecimientoscolab.length;i++){
             totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
         }
-
+        cargado = true
     }
     async function getOnlineColabs() {
         const restxcolab = await pb.collection("estxcolabs").getFullList({
@@ -224,6 +226,7 @@
         establecimientoscolab = restxcolab
     }
     async function updateLocalSQL() {
+        await setUltimoEstablecimientosSQL(db)
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(db,pb,usuarioid)
         establecimientos = resestablecimientos.filter(e=>e.user == usuarioid)
         
@@ -235,6 +238,35 @@
         for(let i = 0;i <establecimientoscolab.length;i++){
             totalescolab.push(await getTotalAnimales(establecimientoscolab[i].expand.cab.id))
         }
+        cargado = true
+    }
+    async function actualizarComandos() {
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos establecimientos")
+            }
+        }
+    }
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
+                await setInternetSQL(db,1,0)
+                await updateLocalSQL()
+            }
+            else{
+                
+                const cincoMinEnMs = ACTUALIZACION;
+                if((ahora - antes) >= cincoMinEnMs){
+                    await updateLocalSQL()        
+                }
+                else{
+                    await getLocalSQL()
+                }
+            } 
     }
     async function getDataSQL() {
         //Reviso el internet
@@ -246,28 +278,37 @@
         comandos = rescom.lista
         let ressincronizadas = await getEstablecimientosAsociadosSQL(db)
         sincronizadas = ressincronizadas.lista
+        let ahora = Date.now()
+        let antes = ultimo_establecimiento.ultimo
         if (coninternet.connected){
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0)
-                await updateLocalSQL()
+            await actualizarComandos()
+            let velocidad = await velocidader.medirVelocidadInternet()
+            if(modedebug){
+                getvelocidad = velocidad
+            }
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+                        
+            if(mustUpdate){
+                await updateLocalSQL() 
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_establecimiento.ultimo
-                const cincoMinEnMs = ACTUALIZACION;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()        
-                }
-                else{
-                    await getLocalSQL()
-                }
-            } 
+                await getLocalSQL()
+            }
         }
         else{
-            await setInternetSQL(db,0,Date.now())
             await getLocalSQL()
         }
-        //await updateLocalSQL()
     }
     async function agregarCab(idCab){
         sincronizadas = await addNewEstablecimientoAsosciadoSQL(db,idCab)
@@ -309,6 +350,7 @@
 
         </div>
     {/if}
+    {#if cargado}
     <div class="flex justify-center mt-1">
         <div class="w-full max-w-7xl px-4">
             <div class="grid grid-cols-3 mx-1  lg:mx-10 mt-2">
@@ -403,5 +445,10 @@
             {/each}
         {/if}
     </div>
+    {:else}
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
+    {/if}
 
 </Navbarr>

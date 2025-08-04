@@ -78,9 +78,9 @@
     })
     async function cambiarPlan(p_nivel){
         if(!coninternet.connected){
-Swal.fire("Error cambiar plan","No se pudo cambiar el plan sin internet","error")
+            Swal.fire("Error cambiar plan","No se pudo cambiar el plan sin internet","error")
         }
-        Swal.fire({
+        Swala.fire({
             title: 'Cambiar plan',
             text: `¿Seguro que deseas cambiar de plan?`,
             icon: 'warning',
