@@ -92,7 +92,15 @@
                     // Cuando me logeo si o si debo poner si soy de otra cabaña
                     // Cuando te logeas, deberia revisar si tenes una cabaña
                     //Donde pongo si es colaborador o nos
-                    await setUserOffline(pa.record.id,pa.record.nombre,pa.record.apellido,pa.record.username,pa.token,pa.record.nivel,pa.record.codigo)
+                    await setUserOffline(
+                        pa.record.id,
+                        pa.record.nombre,
+                        pa.record.apellido,
+                        pa.record.username,
+                        pa.token,
+                        pa.record.nivel,
+                        pa.record.codigo
+                    );
                     
                     let reccabs = await pb.collection("cabs").getList(1,50,{
                         filter:`user='${authData.record.id}' && active=true`

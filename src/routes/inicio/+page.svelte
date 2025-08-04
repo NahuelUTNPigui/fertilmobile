@@ -36,6 +36,11 @@
     import InicioTratamiento from "$lib/components/inicio/Tratamiento.svelte"
     import InicioServicio from "$lib/components/inicio/Servicio.svelte"
     import InicioObservacion from "$lib/components/inicio/Observacion.svelte"
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //Offline
     import { ACTUALIZACION } from '$lib/stores/constantes';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
@@ -46,6 +51,7 @@
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';   
     import {getCabData,getCabDataByID} from "$lib/stores/cabsdata"
     import {
+        getTotalesEventosOnline,
         addNewTactoSQL,
         getEventosSQL, 
         setUltimoEventosSQL,
@@ -77,7 +83,7 @@
     import { loger } from '$lib/stores/logs/logs.svelte';
 
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import { setEstablecimientosAsociadosSQL } from '$lib/stores/sqlite/dbasociados';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
@@ -94,6 +100,10 @@
     let coninternet = $state({connected:false})
     let comandos = $state([])
     let lastinter = $state({})
+    let getlocal = $state(false)
+    let getactualizacion = $state(0)
+    let tiempocargatotales = $state(0)
+    let tiempocargaupdate = $state(0)
     /*
     let cab = $state({
         exist:false,
@@ -256,14 +266,6 @@
         };
     }
     
-    async function getTiposTratamientos(){
-        const records = await pb.collection('tipotratamientos').getFullList({
-            filter : `(cab='${cab.id}' || generico = true) && active = true`,
-            sort: '-created',
-        });
-        tipotratamientos = records
-        tipotratamientos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
-    }
     function openNewModalTacto(){ 
         agregaranimal = false
         caravana = ""
@@ -441,6 +443,8 @@
     }
     async function guardarTacto(){
         coninternet = await getInternet(modedebug,offliner.offline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_tacto_"+generarIDAleatorio()
         if(agregaranimal){
             await guardarTactoAnimal(idprov)
@@ -668,6 +672,8 @@
     }
     async function guardarNacimiento() {
         coninternet = await getInternet(modedebug,offliner.offline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_nac_"+generarIDAleatorio() 
         //Los nombres de la funciones horribles
         //debo verificar si voy a guardar el animal
@@ -775,6 +781,8 @@
     }
     async function guardarTrat() {
         coninternet = await getInternet(modedebug,offliner.offline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_trat_"+generarIDAleatorio() 
         if(agregaranimal){
             
@@ -930,6 +938,8 @@
     }
     async function guardarInseminacion() {
         coninternet = await getInternet(modedebug,offliner.offline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_ins_"+generarIDAleatorio()
         if(agregaranimal){
             await guardarInseminacionAnimal(idprov)
@@ -1065,6 +1075,8 @@
     }
     async function guardarServicio(){
         coninternet = await getInternet(modedebug,offliner.offline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_serv_"+generarIDAleatorio() 
         if(agregaranimal){
             await guardarServicioAnimal(idprov)
@@ -1201,7 +1213,8 @@
     }
     async function guardarObservacion() {
         coninternet = await getInternet(modedebug,offliner.offline)
-        
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         let idprov = "nuevo_obs_"+generarIDAleatorio() 
         if(agregaranimal){
             await guardarObservacionAnimal(idprov)
@@ -1308,10 +1321,7 @@
         if(modedebug){
             offliner.setOffline(!conectado)
         }
-        
         coninternet.connected  = conectado
-        
-        
     }
     async function reinicarDB() {
         await resetTables(db)
@@ -1319,26 +1329,24 @@
         await setDefaultUserOffline()
 
     }
-    async function originalMount(){
-        cab = caber.cab
-        let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
-        
-        usuarioid = pb_json.record.id
-        if(cab.exist){
-            await getAnimales()
-            await getTiposTratamientos()
-            await getTotales()
-            cargados = true
-        }
-    }
+    
     async function updateLocalSQL(db) {
+        let inicio = Date.now();
+        let totales = await getTotalesEventosOnline(pb,usuarioid)
+        
+        tiempocargatotales = Date.now() - inicio
+        inicio = Date.now()
+        getlocal = false
+        await setInternetSQL(db,1,Date.now())
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         //Debo traer los datos de la cabaña
         await updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
         let datauser = await updateLocalEventosSQLUser(db,pb,usuarioid)
         await updateLocalColabSQLUser(db,pb,usuarioid)
+        
         let datatotal = await getTotalAnimales(pb)
+        tiempocargaupdate = Date.now() - inicio
         animales = animalesuser
         onChangeAnimales()
         totaleventos.tactos = datauser.tactos.filter(t=>t.cab == caboff.id).length
@@ -1361,6 +1369,7 @@
         
     }
     async function getLocalSQL(db) {
+        getlocal = true
         let dataanimales = await getAnimalesSQL(db)
         let data = await getEventosSQL(db)
         
@@ -1402,11 +1411,35 @@
         //else{
         //    coninternet = await Network.getStatus();
         //}
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
         cab = caber.cab
+    }
+    async function oldDataUpdate() {
+        if(cab.cambio || lastinter.internet == 0){    
+            await updateLocalSQL(db)
+            await setInternetSQL(db,1,Date.now())
+        }
+        else{
+            //Logica con internet previo
+            let ahora = Date.now()
+            let antes = lastinter.ultimo
+            const cincoMinEnMs = ACTUALIZACION;
+            
+            if((ahora - antes) >= cincoMinEnMs){
+                comandos = []
+                await updateLocalSQL(db)
+                await setInternetSQL(db,1,ahora)
+            }
+            else{s
+                
+                await getLocalSQL(db)
+            }
+        }
     }
     async function getDataSQL() {
         db = await openDB()
@@ -1415,57 +1448,63 @@
         let rescom = await getComandosSQL(db)
         //verifica si venis del login
         const hasLoggedIn = localStorage.getItem('hasLoggedIn') === 'si';
+
         if (hasLoggedIn) {
             //Elimino la lista de asociados y si quiero no eliminarla?
             await setEstablecimientosAsociadosSQL(db,[])
-
-
-            
             localStorage.setItem('hasLoggedIn', 'no');
         } 
-        
+        //Verificar si venis del colaborador
+        const fromColab = localStorage.getItem('fromColab') === 'si';
+        if (fromColab) {
+            localStorage.setItem('fromColab', 'no');
+        }
         comandos = rescom.lista
-        
+
+        let ahora = Date.now()
+        let antes = lastinter.ultimo
         if (coninternet.connected){
+                let velocidad = await velocidader.medirVelocidadInternet()
+                if(modedebug){
+                    loger.addLineaNumber(velocidad,modedebug)
+                }
                 try{
                     await flushComandosSQL(db,pb)
                 }
                 catch(err){
                     if(modedebug){
                         loger.addTextError(JSON.stringify(err),null,2)
-                        loger.addTextError("Error en flush comandos")
+                        loger.addTextError("Error en flush comandos inicio")
                     }
                 }
                 comandos = []
-                if(cab.cambio || lastinter.internet == 0){   
-                    
-                    await updateLocalSQL(db)
-                    await setInternetSQL(db,1,Date.now())
+                let confiabilidad = intermitenter.calculateIntermitente()
+               
+                let mustUpdate = await deboActualizar(
+                    velocidad,
+                    confiabilidad,
+                    coninternet,
+                    fromColab,
+                    ahora,
+                    antes
+                );
+                if(modedebug){
+                    getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+                }
+                
+                if(mustUpdate){
+                   await updateLocalSQL(db) 
                 }
                 else{
-                    //Logica con internet previo
-                    let ahora = Date.now()
-                    let antes = lastinter.ultimo
-                    const cincoMinEnMs = ACTUALIZACION;
-                    
-                    if((ahora - antes) >= cincoMinEnMs){
-                        comandos = []
-                        await updateLocalSQL(db)
-                        await setInternetSQL(db,1,ahora)
-                    }
-                    else{
-                        
-                        await getLocalSQL(db)
-                    }
+                    await getLocalSQL(db)
                 }
+                
                 
         }
         else{
             await getLocalSQL(db)
-            await setInternetSQL(db,0,Date.now())
+            //await setInternetSQL(db,0,Date.now())
         }
-           
-
     }
     onMount(async ()=>{
         await initPage()
@@ -1485,8 +1524,12 @@
     })
  
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
-<Navbarr>
+{/if}
+<Navbarr
+    bind:coninternet
+>
     {#if modedebug}
         <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
         <button 
@@ -1495,7 +1538,7 @@
         >
                 Cambiar conexion a {coninternet.connected?"sin internet":"con internet"}
         </button>
-        <div class="">
+        <div class="grid grid-cols-2">
             <span>
                 Colaborador: {caboff.colaborador}
             </span>
@@ -1529,6 +1572,30 @@
             </span>
             <span>
                 Con internet: {coninternet.connected}
+            </span>
+            <span>
+                Tipo internet: {coninternet.connectionType}
+            </span>
+            <span>
+                Get local: {getlocal}
+            </span>
+            <span>
+                Actualizcion ms: {getactualizacion}
+            </span>
+            <span>
+                Actualizcion s: {getactualizacion/1000}
+            </span>
+            <span>
+                Actualizcion min: {getactualizacion/60000} 
+            </span>
+            <span>
+                Velocidad: {getactualizacion/60000} 
+            </span>
+            <span>
+                Tiempo solo totales: {tiempocargatotales} 
+            </span>
+            <span>
+                Tiempo updates: {tiempocargaupdate} 
             </span>
         </div>
     {/if}

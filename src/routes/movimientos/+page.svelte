@@ -16,9 +16,15 @@
     import tiponoti from "$lib/stores/tiponoti";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //ACtualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
@@ -62,6 +68,7 @@
     let coninternet = $state({connected:false})
     let ultimo_animal = $state({})
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
     let comandos = $state([])
 
     let ruta = import.meta.env.VITE_RUTA
@@ -231,40 +238,6 @@
             ninguno = true
         }
         
-    }
-    async function getLotes(){
-        const records = await pb.collection('lotes').getFullList({
-            filter:`active = true && cab ~ '${cab.id}'`,
-            sort: 'nombre',
-        });
-        lotes = records
-        ordenarNombre(lotes)
-    }
-    async function getRodeos(){
-        const records = await pb.collection('rodeos').getFullList({
-            filter:`active = true && cab ~ '${cab.id}'`,
-            sort: 'nombre',
-        });
-        rodeos = records
-        //ordenarNombre(rodeos)
-    }
-    async function getTipos(){
-        const records = await pb.collection('tipotratamientos').getFullList({
-            filter : `(cab='${cab.id}' || generico = true) && active = true`,
-            sort: '-created',
-        });
-        tipos = records
-        tipos.sort((tp1,tp2)=>tp1.nombre>tp2.nombre?1:-1)
-    }
-    async function getAnimales(){
-        const recordsa = await pb.collection("animales").getFullList({
-            filter:`active=true && delete=false && cab='${cab.id}'`,
-            expand:"rodeo,lote,cab"
-        })
-        
-        animales = recordsa
-        animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
-        animalesrows = animales
     }
     function openNewModal(){
         listaanimales = []
@@ -803,6 +776,9 @@
         }
     }
     async function mover(){
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await moverOnline()
         }
@@ -982,12 +958,6 @@
             }
         }
     }
-    async function onMountOriginal() {
-        await getAnimales()
-        await getRodeos()
-        await getLotes()
-        
-    }
     function onChangeAnimales() {
         animales.sort((a1,a2)=>a1.caravana>a2.caravana?1:-1)
         animalescab = animales.filter(a=>a.active && a.cab ==  caboff.id)           
@@ -1015,10 +985,34 @@
         filterUpdate()
     }
     async function updateComandos() {
-        await flushComandosSQL(db,pb)
-        comandos = []
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos movimiento")
+            }
+        }
     }
-    
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
+            await setInternetSQL(db,1,0)
+            await updateLocalSQL()
+        }
+        else{
+            let ahora = Date.now()
+            let antes = ultimo_animal.ultimo
+            const cincoMinEnMs = 300000;
+            if((ahora - antes) >= cincoMinEnMs){
+                await updateLocalSQL()
+            }
+            else{
+                await getLocalSQL()            
+            }
+        }
+    }
     async function getDataSQL() {
         db = await openDB()
         //Reviso el internet
@@ -1026,28 +1020,37 @@
         let rescom = await getComandosSQL(db)
         ultimo_animal = await getUltimoAnimalesSQL(db)
         comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = ultimo_animal.ultimo
         if (coninternet.connected){
             await updateComandos()
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0)
-                await updateLocalSQL()
+            let velocidad = await velocidader.medirVelocidadInternet()
+            if(modedebug){
+                getvelocidad = velocidad
+            }
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+                        
+            if(mustUpdate){
+                await updateLocalSQL(db) 
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_animal.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                await getLocalSQL(db)
             }
             
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     async function initPage() {

@@ -2,6 +2,64 @@ import { loger } from "../logs/logs.svelte"
 import { getEstablecimientosAsociadosSQL } from "./dbasociados"
 import { getCabOffline } from "../capacitor/offlinecab"
 
+//sin animales, ni lotes, ni rodeos
+export async function getTotalesEventosOnline(pb,userid){
+
+    let pesajes  = 0
+
+    let tactos = 0
+    let servicios = 0
+    let inseminaciones = 0
+    let observaciones = 0
+
+    let trats = 0
+    let nacimientos = 0
+
+    const resultPesajes = await pb.collection('pesaje').getList(1, 1, {
+        expand:"animal,animal.cab",
+        filter:`animal.cab.user = '${userid}'`
+    });
+    const resultTactos = await pb.collection('tactos').getList(1, 1, {
+        filter:`cab.user='${userid}' && active=true`,
+        //El cab es donde se hace el tacto
+        //El animal en el futuro puede tener un cab diferente
+        expand:"animal,cab"
+    });
+    const resultServicios = await pb.collection('servicios').getList(1, 1, {
+        filter :`cab.user = '${userid}' && active = true`,
+        expand:"madre,cab"
+    });
+    const resultInseminaciones = await pb.collection('inseminacion').getList(1, 1, {
+        filter :`cab.user = '${userid}' && active = true`,
+        expand:"animal,cab"
+    });
+    const resultObservaciones = await pb.collection('observaciones').getList(1, 1, {
+        filter:`active=true && cab.user='${userid}'`,
+        expand:"animal,cab"    
+    });
+
+    const resultTratamientos = await pb.collection('tratamientos').getList(1, 1, {
+        filter : `cab.user='${userid}' && active = true`,
+        expand:"animal,tipo,cab"
+    });
+    const resultNacimientos = await pb.collection('nacimientosall').getList(1, 1, {
+        filter:`cab.user='${userid}'`,
+        expand:"madre,padre,cab"
+    });
+
+    pesajes  = resultPesajes.totalItems
+    tactos = resultTactos.totalItems
+    servicios = resultServicios.totalItems
+    inseminaciones = resultInseminaciones.totalItems
+    observaciones = resultObservaciones.totalItems
+    trats = resultTratamientos.totalItems
+
+    nacimientos = resultNacimientos.totalItems
+
+    let totales = { pesajes,tactos,servicios,inseminaciones,observaciones,tratamientos:trats,nacimientos }
+    return totales;
+}
+
 //Eficientizar update
 export async function updateLocalEventosSQLUser(db,pb,userid) {
 

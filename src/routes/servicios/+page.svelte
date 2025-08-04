@@ -17,9 +17,14 @@
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import { shorterWord } from '$lib/stringutil/lib';
+    //actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //Offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -65,6 +70,8 @@
     let ultimo_servicio = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -316,7 +323,9 @@
         }
     }
     async function editar(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await editarOnline()
         }
@@ -399,7 +408,9 @@
         }
     }
     async function eliminar(id,esInseminacion){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await eliminarOnline(id,esInseminacion)
         }
@@ -551,15 +562,9 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -612,6 +617,35 @@
         filterUpdate()
     
     }
+    async function actualizarComandos() {
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos servicios")
+            }
+        }
+    }
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
+            await setInternetSQL(db,1,0)
+            await updateLocalSQL()
+        }
+        else{
+            
+            const cincoMinEnMs = ACTUALIZACION;
+            if((ahora - antes) >= cincoMinEnMs){
+                
+                await updateLocalSQL()
+            }
+            else{
+                await getLocalSQL()            
+            }
+        }
+    }
     async function getDataSQL() {
         getlocal = true
         db = await openDB()
@@ -620,30 +654,37 @@
         let rescom = await getComandosSQL(db)
         ultimo_servicio = await getUltimoServiciosSQL(db)
         comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = ultimo_servicio.ultimo
         if (coninternet.connected){
-            await flushComandosSQL(db,pb)
-            //comandos = []
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0)
-                await updateLocalSQL()
+            await actualizarComandos()
+            let velocidad = await velocidader.medirVelocidadInternet()
+            if(modedebug){
+                getvelocidad = velocidad
+            }
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+                        
+            if(mustUpdate){
+                await updateLocalSQL() 
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_servicio.ultimo
-                const cincoMinEnMs = ACTUALIZACION;
-                if((ahora - antes) >= cincoMinEnMs){
-                    
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                await getLocalSQL()
             }
             
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     
@@ -711,7 +752,9 @@
         ordenarServiciosDescendente(p_forma)
     }
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

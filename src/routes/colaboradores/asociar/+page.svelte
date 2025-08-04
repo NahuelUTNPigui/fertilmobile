@@ -9,8 +9,15 @@
     import estilos from '$lib/stores/estilos';
     import CardBase from '$lib/components/CardBase.svelte';
     import tiponoti from '$lib/stores/tiponoti';
+    import { getInternet } from '$lib/stores/offline';
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
+    let getvelocidad = $state(0)
     let caber = createCaber()
     let cab = caber.cab
     let tokencolab = $state("")
@@ -19,6 +26,7 @@
         goto("/establecimiento")
     }
     async function asociar() {
+        
         const resultList = await pb.collection('users').getList(1, 1, {
             filter: `codigo = '${tokencolab}'`,
             skipTotal:true

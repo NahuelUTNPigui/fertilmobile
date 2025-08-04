@@ -14,6 +14,11 @@
     import PocketBase from 'pocketbase';
     import { onMount } from "svelte";
     import { createCaber } from "$lib/stores/cab.svelte";
+
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
@@ -50,6 +55,7 @@
     let caboff = $state({})
     let coninternet = $state({connected:false})
     let comandos = $state([])
+    let getvelocidad = $state(0)
 
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -156,8 +162,9 @@
     })
 
 </script>
-
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
 
     {#if cargado}

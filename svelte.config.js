@@ -46,11 +46,11 @@ const config = {
 				"/establecimientos/nuevo",
 				"/inseminaciones/movimiento",
 				"/tratamientos/movimiento",
-				
 				"/user/nivel",
 				"/servicios",
 				"/servicios/movimiento",
-				"/pendientes"
+				"/pendientes",
+				"/internet"
 
 
 			]

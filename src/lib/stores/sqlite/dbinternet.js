@@ -18,3 +18,7 @@ export async function setUltimosSQL(db) {
 export async function setInternetSQL(db,internet,ultimo) {
     await db.run(`UPDATE Internet SET internet = ${internet},ultimo = ${ultimo} WHERE id = 1`)
 }
+//Esto registra si tuve o no internet nada mas
+export async function setInternetSinUltimoSQL(db,internet) {
+    await db.run(`UPDATE Internet SET internet = ${internet} WHERE id = 1`)
+}

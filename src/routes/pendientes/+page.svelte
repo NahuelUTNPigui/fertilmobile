@@ -13,7 +13,12 @@
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
     import { ACTUALIZACION } from '$lib/stores/constantes';
     import { loger } from '$lib/stores/logs/logs.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
+    //Actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
@@ -26,18 +31,12 @@
     let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(false)
-    
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     async function initPage() {
-        //if(modedebug){
-        //    coninternet = {connected:false} // await Network.getStatus();
-        //    if(!offliner.offline){
-        //        coninternet = await Network.getStatus();
-        //    }
-        //}
-        //else{
-        //    coninternet = await Network.getStatus();
-        //}
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -146,14 +145,20 @@
         await initPage()
         if(caboff.exist){
             db = await openDB()
-            //Reviso el internet
-            let lastinter = await getInternetSQL(db)
             let rescom = await getComandosSQL(db)
             comandos = rescom.lista
             if (coninternet.connected){
+                try{
+                    await flushComandosSQL(db,pb)
+                    comandos = []
+                }
+                catch(err){
+                    if(modedebug){
+                        loger.addTextError(JSON.stringify(err),null,2)
+                        loger.addTextError("Error en flush comandos pendientes")
+                    }
+                }
                 
-                await flushComandosSQL(db,pb)
-                comandos = []
             }
         }
     })

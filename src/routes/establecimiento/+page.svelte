@@ -18,8 +18,13 @@
     import { randomString } from '$lib/stringutil/lib';
     import CardNuevo from '$lib/components/establecimiento/CardNuevo.svelte';
     import CardExistente from '$lib/components/establecimiento/CardExistente.svelte';
-    
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
+    import { getInternet } from '$lib/stores/offline';
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import {openDB} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -60,6 +65,7 @@
     let comandos = $state([])
     let ultimo_establecimiento = $state({})
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
     const pb = new PocketBase(ruta);
@@ -75,6 +81,7 @@
     let colabs = $state([])
     let modoedicion = $state(false)
     let establecimientos = $state([])
+    
     //Datos cabaña
     let datosviejos = $state({})
     let nombre = $state("")
@@ -489,15 +496,8 @@
         mail = datosviejos.mail  
     }
     async function initPage(){
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        intermitenter.addIntermitente(coninternet.connected)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         db = await openDB()
@@ -527,6 +527,7 @@
         localidadesProv = localidades.filter(lo => lo.idProv == provincia)
     }
     async function updateLocalSQL(){
+        
         await setUltimoEstablecimientosSQL(db)
         establecimientos = await  updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
         //let res = await getEsblecimientoSQL(db)
@@ -546,35 +547,61 @@
         colabs = allcolabs.filter(colab => colab.cab == caboff.id)
 
     }
-    async function getDataSQL(){
-        
-        //Reviso el internet
+    async function oldGetUpdate() {
         let lastinter = await getInternetSQL(db)
+        if(lastinter.internet == 0){
+            await setInternetSQL(db,1,0) 
+        }
+        else{
+            const cincoMinEnMs = ACTUALIZACION;
+            if((ahora - antes) >= cincoMinEnMs){
+                await updateLocalSQL()
+            }
+            else{
+                await getLocalSQL()               
+            }
+        }
+    }
+    async function getDataSQL(){
+    
+        //Reviso el internet
         ultimo_establecimiento = await getUltimoEstablecimientosSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
-        
+        let ahora = Date.now()
+        let antes = ultimo_establecimiento.ultimo
         if (coninternet.connected){
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0) 
+            let velocidad = await velocidader.medirVelocidadInternet()
+            try{
+                await flushComandosSQL(db,pb)
+                comandos = []
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError(JSON.stringify(err),null,2)
+                    loger.addTextError("Error en flush comandos")
+                }
+            }
+            
+            let confiabilidad = intermitenter.calculateIntermitente()   
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false,
+                ahora,
+                antes
+            );
+            if(mustUpdate){
                 await updateLocalSQL()
-                
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_establecimiento.ultimo
-                const cincoMinEnMs = ACTUALIZACION;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                    await getLocalSQL()     
             }
+            
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     onMount(async ()=>{
@@ -607,7 +634,9 @@
     })
  
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

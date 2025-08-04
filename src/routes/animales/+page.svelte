@@ -20,10 +20,14 @@
     import cuentas from '$lib/stores/cuentas';
     import { getSexoNombre,capitalize,shorterWord } from '$lib/stringutil/lib';
     import{verificarNivel} from "$lib/permisosutil/lib"
-    
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     ///ofline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import { ACTUALIZACION } from '$lib/stores/constantes';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -70,6 +74,7 @@
     let ultimo_animal = $state({})
     let comandos = $state([])
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
     //pre
     let pre = ""
@@ -435,6 +440,8 @@
     }
     //Si los lotes sigue sin guardarse
     async function guardar() {
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         coninternet = await getInternet(modedebug,offliner.offline)
         //let totalanimals = await getTotalSQL(db)
         let verificar = true
@@ -554,7 +561,9 @@
         await getLotes()
         filterUpdate()
     }
+    // y siquiero get y luego update
     async function updateLocalSQL() {
+
         await setUltimoAnimalesSQL(db)
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
         let resanimales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)
@@ -580,18 +589,30 @@
         filterUpdate()
     }
     async function initPage() {
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        
+        intermitenter.addIntermitente(coninternet.connected)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
+    }
+    async function oldGetUpdate() {
+        if(lastinter.internet == 0){
+            //Para que cuando vaya al inicio se actualice si o si
+            await setInternetSQL(db,1,0)
+            await updateLocalSQL()
+        }
+        else{
+            let ahora = Date.now()
+            let antes = ultimo_animal.ultimo
+            const cincoMinEnMs = ACTUALIZACION;
+            if((ahora - antes) >= cincoMinEnMs){
+                await updateLocalSQL()        
+            }
+            else{
+                await getLocalSQL()            
+            }
+        }
     }
     async function getDataSQL() {
         
@@ -601,30 +622,45 @@
         ultimo_animal = await getUltimoAnimalesSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
-        
+        let ahora = Date.now()
+        let antes = ultimo_animal.ultimo
         if (coninternet.connected){
-            await flushComandosSQL(db,pb)
-            if(lastinter.internet == 0){
-                //Para que cuando vaya al inicio se actualice si o si
-                await setInternetSQL(db,1,0)
-                await updateLocalSQL()
+            
+            try{
+                await flushComandosSQL(db,pb)
+                comandos = []
+            }
+            catch(err){
+                if(modedebug){
+                    loger.addTextError(JSON.stringify(err),null,2)
+                    loger.addTextError("Error en flush comandos animales")
+                }
+            }
+            let velocidad = await velocidader.medirVelocidadInternet()
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                fromColab, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+            
+            if(mustUpdate){
+               await updateLocalSQL(db) 
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_animal.ultimo
-                const cincoMinEnMs = ACTUALIZACION;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()        
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                await getLocalSQL(db)
             }
             
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
+            ///await setInternetSQL(db,0,Date.now())
         }
     }
     onMount(async()=>{
@@ -777,7 +813,9 @@
         }
     }
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-2">

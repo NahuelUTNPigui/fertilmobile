@@ -15,9 +15,14 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getSexoNombre } from '$lib/stringutil/lib';
     import { shorterWord } from "$lib/stringutil/lib";
+    //Actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //OFfline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline} from "$lib/stores/capacitor/offlinecab"
@@ -57,7 +62,8 @@
     let caboff = $state({})
     let ultimo_animal = $state({})
     let getlocal = $state(false)
-
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     let coninternet = $state({connected:false})
     let comandos = $state([])
     
@@ -469,7 +475,9 @@
         selectanimales = []
     }
     async function guardarTratamiento(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await guardarTratamientoOnline()
         }
@@ -485,15 +493,9 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -523,16 +525,8 @@
         
         filterUpdate()
     }
-    async function getDataSQL() {
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        ultimo_animal = await getUltimoAnimalesSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
+    async function oldUpdate() {
         if (coninternet.connected){
-            //await flushComandosSQL(db)
-            //comandos = []
             if(lastinter.internet == 0){
                 await updateLocalSQL()
             }
@@ -552,8 +546,17 @@
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
+        let rescom = await getComandosSQL(db)
+        comandos = rescom.lista
+        await getLocalSQL()
+        
     }
     onMount(async ()=>{
         await initPage()    
@@ -564,7 +567,9 @@
     }
 
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

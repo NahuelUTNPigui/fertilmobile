@@ -79,6 +79,7 @@
         
         //await updateLocalEventosSQL(db,pb,est.expand.cab.id)
         per.setPer("0,1,2,3,4,5",usuarioid)
+        localStorage.setItem('fromColab', 'si');
         goto("/")
     }
     async function irEstablecimiento(id){
@@ -279,7 +280,9 @@
         await getDataSQL()
     })
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

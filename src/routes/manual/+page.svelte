@@ -46,7 +46,7 @@
                         download="Manual de Usuario.pdf"
                         class={`
                             w-full
-                            ${estilos.basico} ${estilos.grande} ${estilos.secundario}
+                            ${estilos.basico} ${estilos.grande} ${estilos.primario}
                         `}
                         
                     >

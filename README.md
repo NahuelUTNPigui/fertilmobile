@@ -70,3 +70,5 @@ npx capacitor-assets generate --android
 2. Go to build
 3. Go to Build app bundler/apk
 4. Select "Build apk"
+
+

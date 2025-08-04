@@ -186,9 +186,8 @@ async function delComando(pb,c,tablaids) {
 }
 //Si pongo aca el historial?
 export async function flushComandosSQL(db,pb) {
-    //NO LO ELIMIINES
+    
     let rescoms = await getComandosSQL(db)
-    //NO LO ELIMINES
     
     let listacomandos = []
     

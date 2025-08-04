@@ -28,9 +28,17 @@
   import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
   import {openDB} from '$lib/stores/sqlite/main'
   import { shorterWord } from "$lib/stringutil/lib";
-  let {children} = $props();
+  import { offliner } from '$lib/stores/logs/coninternet.svelte';
+  import {customoffliner} from  '$lib/stores/offline/custom.svelte';
+  import { getInternet } from '$lib/stores/offline';
+  //let debo poner el coninternet
+  let {
+    children,
+    coninternet=$bindable({connected:false,connectionType:"none"})
+  } = $props();
   let pageurl = $page.url.pathname  
   let ruta = import.meta.env.VITE_RUTA
+  let modedebug = import.meta.env.VITE_MODO_DEV == "si"
   //pre
   let pre =""
   const pb = new PocketBase(ruta);
@@ -39,6 +47,7 @@
   let notificaciones = $state([])
   let useroff = $state({})
   let caboff = $state({})
+  //let coninternet = $state({})
   let cab = $state({
       exist:false,
       nombre:"",
@@ -67,6 +76,7 @@
   }
   //let rol = "cab"
   onMount(async ()=>{
+    coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffliner)
     let caber = createCaber()
     nombreestablecimiento = caber.cab.nombre
     //if (window.innerWidth <= 600) { // Pantallas pequeñas
@@ -99,6 +109,9 @@
   }
   function cambiarEstablecimiento(){
     goto("/establecimientos")
+  }
+  function goInternet(){
+    goto("/internet")
   }
   let checked = $state('');
   function handleClick() {
@@ -202,6 +215,7 @@
                   <ul class={`menu dropdown-content rounded-box z-[1] shadow ${classtextnavbar} ${bgnav}`}>
                     <li><button onclick={editarUser}>Usuario</button></li>
                     <li><button onclick={cambiarEstablecimiento}>Establecimientos</button></li>
+                    <li><button onclick={goInternet}>{coninternet.connected?"Online 🟢":"Offline 🔴"}</button></li>
                     <li><button onclick={salir}>Salir</button></li>
                     
                   </ul>

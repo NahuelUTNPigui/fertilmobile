@@ -19,9 +19,17 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
+
+
     import { loger } from '$lib/stores/logs/logs.svelte';
     import { ACTUALIZACION } from '$lib/stores/constantes';
     import { addNewAnimalSQL } from '$lib/stores/sqlite/dbanimales';
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let cab = $state({
         exist:false,
@@ -37,6 +45,7 @@
     let coninternet = $state({connected:false})
     let establecimiento = $state({})
     let getlocal = $state(false)
+    let getvelocidad = $state(0)
     let ultimo_colabs = $state({})
     let comandos = $state([])
 
@@ -96,6 +105,9 @@
         }
     }
     async function guardarPermiso(){
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await guardarPermisosOnline()
         }
@@ -130,7 +142,10 @@
             }
         })
     }
-    async function desasociar() {    
+    async function desasociar() { 
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)  
         if(coninternet.connected){
             await desasociarOnline()
         }
@@ -145,15 +160,9 @@
         await getPermisos()
     }
     async function initPage(){
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         //Esto no va andar, sera siempre userer y caber
         useroff = await getUserOffline()
         caboff = await getCabOffline()
@@ -188,13 +197,6 @@
         await getLocalSQL()
         if (coninternet.connected){
             await updateComandos()
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0)
-            }
-        }
-        else{
-            
-            await setInternetSQL(db,0,Date.now())
         }
     }
     onMount(async ()=>{

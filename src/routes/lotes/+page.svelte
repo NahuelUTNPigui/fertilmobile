@@ -7,9 +7,14 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
     import { getPermisosList } from '$lib/permisosutil/lib';
+    //actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -44,7 +49,8 @@
     let comandos = $state([])
     let animales = $state([])
     let getlocal = $state(false)
-
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     let ruta = import.meta.env.VITE_RUTA
     //pre
     const pb = new PocketBase(ruta);
@@ -156,7 +162,9 @@
         
     }
     async function guardar() {
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await guardarOnline()
         }
@@ -241,7 +249,9 @@
         await setComandosSQL(db,comandos)
     }
     async function editar(idlote){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if (coninternet.connected){
             await  editarOnline(idlote)
         }
@@ -329,7 +339,9 @@
         })
     }
     async function eliminar(id){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             eliminarOnline(id)
         }
@@ -362,15 +374,9 @@
     }
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -395,8 +401,34 @@
         filterUpdate()
     }
     async function updateComandos() {
-        await flushComandosSQL(db,pb)
-        comandos = []
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos lotes")
+            }
+        }
+        
+    }
+    async function oldDataUpdate() {
+        if(lastinter.internet == 0){
+            await setInternetSQL(db,1,0)
+            await updateLocalSQL()
+        }
+        else{
+            let ahora = Date.now()
+            let antes = ultimo_rodeo.ultimo
+            const cincoMinEnMs = 300000;
+            if((ahora - antes) >= cincoMinEnMs){
+                await updateLocalSQL()
+            }
+            else{
+                await getLocalSQL()            
+            }
+        }
     }
     async function getDataSQL() {
         db = await openDB()
@@ -406,28 +438,37 @@
         //Uso rodeo como guia
         ultimo_rodeo = await getUltimoRodeosSQL(db)
         comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = ultimo_rodeo.ultimo
         if (coninternet.connected){
             await updateComandos()
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,0)
-                await updateLocalSQL()
+            let velocidad = await velocidader.medirVelocidadInternet()
+            if(modedebug){
+                getvelocidad = velocidad
+            }
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+                        
+            if(mustUpdate){
+                await updateLocalSQL() 
             }
             else{
-                let ahora = Date.now()
-                let antes = ultimo_rodeo.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                await getLocalSQL()
             }
             
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     onMount(async ()=>{
@@ -455,7 +496,9 @@
         }
     }
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         

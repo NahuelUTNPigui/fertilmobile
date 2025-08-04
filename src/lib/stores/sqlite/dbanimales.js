@@ -69,6 +69,7 @@ export async function addNewAnimalSQL(db,animal) {
 }
 export async function updateLocalAnimalesSQLUser(db,pb,userid) {
     
+    //Con esta linea puedo dar velocidad
     const recordsa = await pb.collection("animales").getFullList({
         filter:`delete=false && cab.user='${userid}'`,
         expand:"rodeo,lote,nacimiento,cab"

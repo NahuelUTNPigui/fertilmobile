@@ -24,9 +24,15 @@
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
     import SelectTab from "$lib/components/animal/SelectTab.svelte";
+    //probar internet
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+    
     //offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import { openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
@@ -75,6 +81,7 @@
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { loger } from "$lib/stores/logs/logs.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    
     //offline
     let db = $state(null)
     let usuarioid = $state("")
@@ -83,6 +90,8 @@
     let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(false)
+    //variables
+    let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
     let pre = ""
     const pb = new PocketBase(ruta);
@@ -203,7 +212,9 @@
     //Esta funcion sirve para desactivar la vaca pero no eliminarla
     //Capaz no se le pueden realizar acciones
     async function darBaja(fechafallecimiento,motivo){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await darBajaOnline(fechafallecimiento,motivo)
         }
@@ -256,7 +267,9 @@
         }
     }
     async function eliminar(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await eliminarOnline()
         }
@@ -311,7 +324,9 @@
         }
     }
     async function transferir(codigo){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await transferirOnline(codigo)
         }

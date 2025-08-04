@@ -8,7 +8,13 @@
     import { createDarker } from "$lib/stores/dark.svelte";
     import CardBase from '$lib/components/CardBase.svelte';
     import estilos from "$lib/stores/estilos";
+    //Actualizacion
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     ///ofline
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline,updateLocalSQLUser,editUserCommonData} from "$lib/stores/capacitor/offlineuser"
@@ -20,7 +26,9 @@
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
-    
+    let getlocal = $state(false)
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     let coninternet = $state({connected:false})
     let comandos = $state([])
     
@@ -105,6 +113,9 @@
         }
     }
     async function editarUsuario(){
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await editarUsuarioOnline()
         }   
@@ -190,6 +201,9 @@
         }
     }
     async function cambiarContra(){
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await cambiarContraOnline()
         }   
@@ -226,6 +240,9 @@
             }).then(async (result) => {
             /* Read more about isConfirmed, isDenied below */
             if (result.isConfirmed) {
+                coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+                let isOnline = await getOnlyInternet()
+                intermitenter.addIntermitente(isOnline)
                 if(coninternet.connected){
                     await eliminarCuentaOnline()
                 }
@@ -267,14 +284,21 @@
         totalanimales = resanimales.filter(a=>a.active).length
         totalesta = resestablecimientos.length
     }
-    async function getDataSQL() {
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        comandos = rescom.lista
-        if (coninternet.connected){
-            if(lastinter.internet == 0){
+    async function actualizarComandos() {
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos config")
+            }
+        }
+        
+    }
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
                 await updateLocalSQL()
             }
             else{
@@ -288,11 +312,22 @@
                     await getLocalSQL()            
                 }
             }
-            await setInternetSQL(db,1,Date.now())
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        let ahora = Date.now()
+        let antes = lastinter.ultimo
+        comandos = rescom.lista
+        if (coninternet.connected){
+            await actualizarComandos()
+            await updateLocalSQL()
+            
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     async function initPage() {

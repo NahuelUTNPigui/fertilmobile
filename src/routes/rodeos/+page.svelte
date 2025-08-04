@@ -5,9 +5,13 @@
     import { onMount } from 'svelte';
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
+    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
+    import { customoffliner } from '$lib/stores/offline/custom.svelte';
+    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
+    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
     //ofline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet } from '$lib/stores/offline';
+    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {generarIDAleatorio} from "$lib/stringutil/lib"
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
@@ -30,7 +34,6 @@
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    import { _longestText } from "chart.js/helpers";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
 
@@ -42,6 +45,8 @@
     let ultimo_rodeo = $state({})
     let getlocal = $state(false)
     let comandos = $state([])
+    let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
     //offline
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -158,7 +163,9 @@
 
     }
     async function guardar(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await guardarOnline()
         }
@@ -235,7 +242,9 @@
         nombre = ""
     }
     async function editar(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             await editarOnline(idrodeo)
         }
@@ -324,7 +333,9 @@
         })
     }
     async function eliminar(id){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
             eliminarOnline(id)
         }
@@ -356,16 +367,9 @@
         await getRodeos()
     }
     async function initPage() {
-        //coninternet = {connected:false} // await Network.getStatus();
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -390,19 +394,19 @@
         
     }
     async function updateComandos() {
-        await flushComandosSQL(db,pb)
-        comandos = []
+        try{
+            await flushComandosSQL(db,pb)
+            comandos = []
+        }
+        catch(err){
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err),null,2)
+                loger.addTextError("Error en flush comandos rodeos")
+            }
+        }
     }
-    async function getDataSQL() {
-        db = await openDB()
-        //Reviso el internet
-        let lastinter = await getInternetSQL(db)
-        let rescom = await getComandosSQL(db)
-        ultimo_rodeo = await getUltimoRodeosSQL(db)
-        comandos = rescom.lista
-        if (coninternet.connected){
-            await updateComandos()
-            if(lastinter.internet == 0){
+    async function oldUpdate() {
+        if(lastinter.internet == 0){
                 await setInternetSQL(db,1,0)
                 await updateLocalSQL()
             }
@@ -418,11 +422,46 @@
                     await getLocalSQL()            
                 }
             }
+    }
+    async function getDataSQL() {
+        db = await openDB()
+        //Reviso el internet
+        let lastinter = await getInternetSQL(db)
+        let rescom = await getComandosSQL(db)
+        ultimo_rodeo = await getUltimoRodeosSQL(db)
+        comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = ultimo_rodeo.ultimo
+        if (coninternet.connected){
+            await updateComandos()
+            let velocidad = await velocidader.medirVelocidadInternet()
+            if(modedebug){
+                getvelocidad = velocidad
+            }
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+            getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+                        
+            if(mustUpdate){
+                await updateLocalSQL() 
+            }
+            else{
+                await getLocalSQL()
+            }
+            
             
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     onMount(async ()=>{
@@ -450,7 +489,9 @@
         }
     }
 </script>
+{#if modedebug}
 <Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         
