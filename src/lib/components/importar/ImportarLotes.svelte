@@ -13,12 +13,12 @@
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
     import {updateLocalLotesSQL,setLotesSQL} from "$lib/stores/sqlite/dbeventos"
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
+    import{getPermisosMessage} from "$lib/permisosutil/lib"
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,coninternet,
-        useroff,caboff,
+        useroff,caboff =$bindable({}),
         usuarioid, lotes,
         //acciones
         aparecerToast
@@ -104,10 +104,10 @@
         reader.readAsBinaryString(file);
     }
     async function procesarOnline(lotesprocesar) {
-
+        
 
         let errores = false
-        loger.addTextLog("108: "+lotesprocesar.length)
+        
         for(let i = 0;i<lotesprocesar.length;i++){
             let lo = lotesprocesar[i]
 
@@ -214,10 +214,7 @@
         return comandos
     }
     async function procesarArchivo(){
-        if(false && !userpermisos[2]){
-            Swal.fire("Error","No tienes permisos de importar","error")
-            return
-        }
+        
         if(filename == ""){
             Swal.fire("Error","Seleccione un archivo","error")
             return
@@ -261,7 +258,15 @@
         }
         verlotes = lotesprocesar.map(l=>l)
         if(coninternet.connected){
-            loger.addTextLog("conectado internet")
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                return 
+            }
             errores = await procesarOnline(lotesprocesar)
             await setLotesSQL(db,lotes)
         }

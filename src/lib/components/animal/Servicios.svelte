@@ -20,6 +20,9 @@
     from "$lib/stores/sqlite/dbeventos";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const pb = new PocketBase(ruta);
@@ -31,7 +34,9 @@
         coninternet = $bindable({}),
         db,
         caravana = $bindable(""),
-        cabid,categoria
+        cabid,categoria,
+        usuarioid,
+        caboff=$bindable({})
     } = $props()
     let id = $state("")
 
@@ -232,6 +237,12 @@
         
     }
     async function guardarInseminacionOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         let data = {
             cab:cabid,
             animal: id,
@@ -277,6 +288,12 @@
         }
     }
     async function guardarServicioOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         let data = {
             fechadesde : fechadesdeserv + " 03:00:00",
             fechaparto: fechaparto + " 03:00:00",

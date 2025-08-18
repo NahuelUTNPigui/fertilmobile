@@ -13,13 +13,15 @@
     import { createCaber } from '$lib/stores/cab.svelte';
     import { createUserer } from '$lib/stores/user.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
-    import { getPermisosList } from '$lib/permisosutil/lib';
+    
     import RadioButton from '$lib/components/RadioButton.svelte';
     import { getEstadoNombre,getEstadoColor } from '$lib/components/estadosutils/lib';
     import MultiSelect from '$lib/components/MultiSelect.svelte';
     import cuentas from '$lib/stores/cuentas';
     import { getSexoNombre,capitalize,shorterWord } from '$lib/stringutil/lib';
-    import{verificarNivel} from "$lib/permisosutil/lib"
+    //permisos
+    import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
+    
     //probar internet
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -32,7 +34,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
         getAnimalesSQL,
@@ -76,8 +78,10 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
+
     //pre
     let pre = ""
     
@@ -87,7 +91,8 @@
     let userer = createUserer()
     let per = createPer()
     let cab = caber.cab
-    let userpermisos = getPermisosList(per.per.permisos)
+    //let userpermisos = getPermisosList(per.per.permisos)
+    let userpermisos = $state([])
     let filtros = false
 
 
@@ -352,6 +357,14 @@
         Swal.fire("Éxito guardar","Se pudo guardar el animal con exito","success")
     }
     async function guardarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[5]){
+            Swal.fire("Error permisos",getPermisosMessage(5),"error")
+            return 
+        }
+        
         try{
             let recordparicion = null
             if(conparicion){
@@ -573,6 +586,8 @@
         animalescab = animales.filter(a=>a.cab == caboff.id)
         await setUltimoRodeosLotesSQL(db)
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id) 
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         lotes = lotesrodeos.lotes
         rodeos = lotesrodeos.rodeos
     
@@ -599,6 +614,7 @@
         intermitenter.addIntermitente(coninternet.connected)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
+        getpermisos = caboff.permisos
         usuarioid = useroff.id
     }
     async function oldGetUpdate() {
@@ -1178,8 +1194,6 @@
                     {#if idanimal==""}
                         <button class="btn btn-success text-white" disabled='{!botonhabilitado}' onclick={guardar} >Guardar</button>
                     {/if}
-                    
-
                 </form>
             </div>
         </div>

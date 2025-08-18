@@ -571,9 +571,9 @@
             <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
                 <DatosBasicos {rp} {peso} {prenada} 
                     {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} 
-                    {lotes} {rodeos}
-                     {useroff} {caboff}
+                    {lotes} {rodeos}{useroff} 
                     {db} animales = {animales}
+                    bind:caboff
                     bind:coninternet
                     bind:comandos
                     connacimiento={nacimiento != ""} nacimiento={nacimientoobj} 
@@ -591,23 +591,49 @@
         {:else if tab =="pesajes"}
             <!--Pesajes-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pesajes">
-                <Pesajes {db} bind:comandos bind:pesajes  bind:coninternet pesoanterior={peso} bind:peso={peso} {caravana}></Pesajes>
+                <Pesajes 
+                    {db} bind:comandos 
+                    bind:pesajes  
+                    bind:coninternet 
+                    bind:caboff
+                    pesoanterior={peso} 
+                    bind:peso={peso} 
+                    {caravana}
+                    {usuarioid}
+                ></Pesajes>
             </CardAnimal>
         {:else if tab =="tratamientos"}
             <!--Tipos y tratamientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Tratamientos">
-                <Tratamientos {db} bind:coninternet  bind:caravana bind:comandos bind:tratamientos {tipostrat}  cabid={cab.id} {categoria} ></Tratamientos>
+                <Tratamientos 
+                    {db} bind:coninternet  
+                    bind:caravana bind:comandos 
+                    bind:tratamientos 
+                    bind:caboff
+                    {tipostrat} {usuarioid} 
+                    cabid={cab.id} {categoria} 
+                ></Tratamientos>
             </CardAnimal>
         {:else if tab =="observaciones"}
             <!--Observaciones-->
             <CardAnimal cardsize="max-w-7xl" titulo="Observaciones">
-                <Observaciones {db} bind:coninternet bind:caravana bind:comandos bind:observaciones cabid={cab.id} {categoria}/>
+                <Observaciones 
+                    {db} bind:coninternet 
+                    bind:caravana bind:comandos 
+                    bind:observaciones 
+                    bind:caboff 
+                    {usuarioid}
+                    cabid={cab.id} 
+
+                    {categoria}
+                />
             </CardAnimal>
         {:else if tab =="pariciones"}
             <!--Animales nacimientos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Pariciones">
                 <Pariciones  
                     {db} {useroff} bind:coninternet 
+                    bind:caboff
                     bind:caravanamadre = {caravana} 
                     bind:animales bind:comandos 
                     bind:pariciones cabid={cab.id} 
@@ -618,12 +644,26 @@
         {:else if tab =="tactos"}
             <!--Tactos-->
             <CardAnimal cardsize="max-w-7xl" titulo="Tactos">
-                <Tactos {db} bind:coninternet bind:caravana bind:comandos bind:tactos cabid={cab.id}  bind:prenadaori={prenada} {categoria}/>
+                <Tactos 
+                    {db} bind:coninternet 
+                    bind:caravana bind:comandos 
+                    bind:caboff
+                    bind:tactos cabid={cab.id}  
+                    bind:prenadaori={prenada} 
+                    {categoria} {usuarioid}
+                />
             </CardAnimal>
         {:else if tab =="servicios"}
             <!--Animales servicios-->
             <CardAnimal cardsize="max-w-7xl" titulo="Servicios">
-                <Servicios {db} bind:coninternet bind:caravana bind:comandos bind:servicios bind:inseminaciones bind:animales cabid={cab.id} {categoria}/>
+                <Servicios 
+                    {db} bind:coninternet 
+                    bind:caboff
+                    bind:caravana bind:comandos 
+                    bind:servicios bind:inseminaciones 
+                    bind:animales cabid={cab.id} 
+                    {categoria} {usuarioid}
+                />
                 <!--<Servicios {db} {coninternet} bind:caravana bind:comandos  cabid={cab.id} {categoria}/>-->
             </CardAnimal>
         {:else if tab =="clinica"}

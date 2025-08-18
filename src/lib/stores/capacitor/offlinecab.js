@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+//debria agregar estxcolabs
 let defaultcab = {
     exist:false,
     colaborador:false,
@@ -29,6 +30,36 @@ export async function getCabOffline() {
     const c = await Preferences.get({ key: 'cab' });
     if(c.value){
         return JSON.parse(c.value)
+    }
+    else{
+        return defaultcab
+    }
+}
+export async function updatePermisos(pb,userid){
+    const c = await Preferences.get({ key: 'cab' });
+    if(c.value){
+        let cab = JSON.parse(c.value)
+        if(cab.colaborador){
+            const recordcolabcab = await pb.collection('estxcolabs').getList(1,1,{
+                filter:`colab.user='${userid}' && cab='${cab.id}'`,
+                expand: 'colab,cab,colab.user',
+                skipTotal:true
+            })
+            if(recordcolabcab.items.length>0){
+                let colabcab = recordcolabcab.items[0]
+                const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${colabcab.id}'`)
+                cab.permisos = recordper.permisos
+                await Preferences.set({key:"cab",value:JSON.stringify(cab)})
+                return cab
+            }
+            else{
+                return defaultcab
+            }
+        }
+        else{
+            return cab
+        }
+        
     }
     else{
         return defaultcab

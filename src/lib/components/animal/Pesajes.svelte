@@ -13,12 +13,17 @@
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {guardarHistorial} from "$lib/historial/lib"
+
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
     import Swal from "sweetalert2";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
-    import { getInternet } from "$lib/stores/offline";
+    import { getInternet,getOnlyInternet } from "$lib/stores/offline";
+    //offline
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const HOY = new Date().toISOString().split("T")[0]
@@ -28,7 +33,9 @@
         pesoanterior,caravana,peso=$bindable(""),
         coninternet = $bindable({}),
         pesajes=$bindable([]),
-        comandos=$bindable([])
+        comandos=$bindable([]),
+        caboff=$bindable({}),
+        usuarioid
     } = $props()
     let pesajesrows = $state([])
     let id = $state("")
@@ -53,6 +60,12 @@
 	let canvas;
     let chart
     async function guardarPesajeOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         let data ={
             fecha:fecha+" 03:00:00",
             animal:id,

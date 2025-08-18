@@ -4,7 +4,5 @@ export default [
     {id:2,nombre:"Importar"},
     {id:3,nombre:"Movimientos"},
     {id:4,nombre:"Eventos"},
-    {id:5,nombre:"Animales"},
-    
-
+    {id:5,nombre:"Animales"}
 ]

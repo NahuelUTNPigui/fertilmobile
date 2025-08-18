@@ -7,11 +7,14 @@
 
     import { slide } from 'svelte/transition';
     import tiponoti from '$lib/stores/tiponoti';
-    import {verificarNivelColab} from "$lib/permisosutil/lib"
+    import {getPermisosMessage, verificarNivelColab} from "$lib/permisosutil/lib"
     import PocketBase from 'pocketbase'
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { onMount } from "svelte";
     import { setColabSQL } from "$lib/stores/sqlite/dbcolaboradores";
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import {updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //offline
     let ruta = import.meta.env.VITE_RUTA
@@ -24,7 +27,9 @@
         desasociar,
         asociado,
         cabid,
-        db
+        db,
+        usuarioid,
+        caboff=$bindable({})
         
     } = $props();
     let titulo = $state("Colaboradores")
@@ -50,6 +55,12 @@
     let codigoasociar = $state("")
 
     async function asociarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         if(correoasociar==""){
             malcorreo = true
             return

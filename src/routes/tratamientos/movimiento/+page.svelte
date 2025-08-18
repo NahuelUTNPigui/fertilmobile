@@ -15,6 +15,8 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getSexoNombre } from '$lib/stringutil/lib';
     import { shorterWord } from "$lib/stringutil/lib";
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //Actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -25,7 +27,7 @@
     import { getInternet,getOnlyInternet } from '$lib/stores/offline';
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import {getUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import { Network } from '@capacitor/network';
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
@@ -64,6 +66,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let cargado = $state(false)
     let coninternet = $state({connected:false})
     let comandos = $state([])
@@ -480,6 +483,13 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            caboff = await updatePermisos(pb,usuarioid)
+            getpermisos = caboff.permisos
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
             await guardarTratamientoOnline()
         }
         else{

@@ -14,7 +14,10 @@
     import PocketBase from 'pocketbase';
     import { onMount } from "svelte";
     import { createCaber } from "$lib/stores/cab.svelte";
-
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
+    //Internet
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
     import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
@@ -46,6 +49,7 @@
         getAnimalesCabSQL
     } from "$lib/stores/sqlite/dbanimales"
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"  
 
     //OFLINE
@@ -54,8 +58,11 @@
     let useroff = $state({})
     let caboff = $state({})
     let coninternet = $state({connected:false})
+    let ultimo_animal = $state({})
     let comandos = $state([])
     let getvelocidad = $state(0)
+    let getactualizacion = $state(0)
+    let getpermisos = $state("")
 
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -99,6 +106,10 @@
         cargado = true
     }
     async function updateLocalSQL() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        await setUltimoAnimalesSQL(db)
+        await setUltimoRodeosLotesSQL(db)
         animales = await  updateLocalAnimalesSQLUser(db,pb,usuarioid)
         lotes = await  updateLocalLotesSQLUser(db,pb,usuarioid)
         rodeos = await  updateLocalRodeosSQLUser(db,pb,usuarioid)
@@ -113,12 +124,18 @@
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
+        ultimo_animal = await getUltimoAnimalesSQL(db)
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
+        let ahora = Date.now()
+        let antes = ultimo_animal.ultimo
         
         if (coninternet.connected){
+            
             try{
                 await flushComandosSQL(db,pb)
+                comandos = []
+                
             }
             catch(err){
                 if(modedebug){
@@ -126,34 +143,37 @@
                     loger.addTextError("Error en flush comandos")
                 }
             }
-            comandos = []
-            if(cab.cambio || lastinter.internet == 0){   
-                
-                await updateLocalSQL(db)
-                await setInternetSQL(db,1,Date.now())
+            let velocidad = await velocidader.medirVelocidadInternet()
+            let confiabilidad = intermitenter.calculateIntermitente()
+            let mustUpdate = await deboActualizar(
+                velocidad,
+                confiabilidad,
+                coninternet,
+                false, //solo en el internet
+                ahora,
+                antes
+            );
+            if(modedebug){
+                getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            }
+            if(mustUpdate){
+               await updateLocalSQL() 
             }
             else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
+                await getLocalSQL()
             }
-            await setInternetSQL(db,1,Date.now())
         }
         else{
             await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
         }
     }
     async function initPage() {
-        coninternet = await Network.getStatus();
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        
+        intermitenter.addIntermitente(coninternet.connected)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
+        getpermisos = caboff.permisos
         usuarioid = useroff.id
     }
     onMount(async ()=>{
@@ -172,7 +192,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar animales">
             <ImportarAnimal 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales} 
+                bind:caboff {usuarioid} {animales} 
                 {animalesusuario} {lotes} {rodeos}
                 {aparecerToast}
             />
@@ -181,7 +201,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar tactos">
             <ImportarTactos 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales}
+                bind:caboff {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>
@@ -190,7 +210,7 @@
             <CardImportar  cardsize="max-w-2xl" titulo="Importar nacimientos">
                 <ImportarNacimiento 
                     {db} {coninternet} {useroff} 
-                    {caboff} {usuarioid} 
+                    bind:caboff {usuarioid} 
                     {animales} {animalesusuario} 
                     {lotes} {rodeos}
                     {aparecerToast}
@@ -202,7 +222,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar rodeos">
             <ImportarRodeos
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {rodeos}
+                bind:caboff {usuarioid} {rodeos}
                 {aparecerToast}
             />
         </CardImportar>
@@ -210,7 +230,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar lotes">
             <ImportarLotes 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {lotes} 
+                bind:caboff {usuarioid} {lotes} 
                 {aparecerToast}
             />
         </CardImportar>
@@ -218,7 +238,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar observaciones">
             <ImportarObservaciones 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales}
+                bind:caboff {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>
@@ -226,7 +246,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar servicios">
             <ImportarServicios 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales}
+                bind:caboff {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>
@@ -234,7 +254,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar inseminaciones">
             <ImportarInseminaciones 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales}
+                v {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>
@@ -242,7 +262,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar pesajes">
             <ImportarPesajes 
                 {db} {coninternet} {useroff} 
-                {caboff} {usuarioid} {animales}
+                bind:caboff {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>

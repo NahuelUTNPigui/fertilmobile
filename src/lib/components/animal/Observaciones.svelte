@@ -11,13 +11,18 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let {
         coninternet = $bindable({}),
         comandos=$bindable([]),
         observaciones=$bindable([]),
         db,
         cabid,categoria,
-        caravana=$bindable("")
+        caravana=$bindable(""),
+        caboff=$bindable({}),
+        usuarioid
 
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
@@ -86,6 +91,12 @@
         });
     }
     async function eliminarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         Swal.fire({
             title: "Eliminar observación",
             text: "¿Seguro que deseas eliminar la observacion?",
@@ -186,6 +197,12 @@
         }
     }
     async function editarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try {
             let data = {
             
@@ -231,6 +248,12 @@
     }
     //Guardar
     async function guardarObservacionOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let data = {
                 animal:id,

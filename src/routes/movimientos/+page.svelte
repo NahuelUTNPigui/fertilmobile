@@ -10,12 +10,14 @@
     import sexos from "$lib/stores/sexos";
     import {guardarHistorial, guardarHistorialOffline} from "$lib/historial/lib"
     import {createPer} from "$lib/stores/permisos.svelte"
-    import { getPermisosList } from '$lib/permisosutil/lib';
+    
     import motivos from '$lib/stores/motivos';
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import tiponoti from "$lib/stores/tiponoti";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
+    //Permisos
+    import{getPermisosMessage,getPermisosList} from "$lib/permisosutil/lib"
     //ACtualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -29,7 +31,7 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
         getLotesSQL,
@@ -414,7 +416,7 @@
             }
             try {
                 
-                //loger.addTextLinea("Guadar offline: "+a.caravana)
+                
                 await moverAnimalOffline(a,data)
                 
             }
@@ -728,7 +730,7 @@
                 animales.splice(a_idx,1)
             }
             try{
-                //loger.addTextLinea("Guadar online: "+a.caravana)
+                
                 await  moverAnimalOnline(a,data)
             }
             catch(err){
@@ -782,6 +784,11 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[3]){
+                Swal.fire("Error permisos",getPermisosMessage(3),"error")
+                return 
+            }
             await moverOnline()
         }
         else{
@@ -966,6 +973,7 @@
         
     }
     async function updateLocalSQL() {
+        caboff = await updatePermisos(pb,usuarioid)
         await setUltimoRodeosLotesSQL(db)
         await setUltimoAnimalesSQL(db)
         animales = await updateLocalAnimalesSQLUser(db,pb,usuarioid)

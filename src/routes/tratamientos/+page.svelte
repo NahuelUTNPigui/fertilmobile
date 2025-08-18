@@ -13,6 +13,8 @@
     import estilos from '$lib/stores/estilos';
     import { goto } from "$app/navigation";
     import { shorterWord } from "$lib/stringutil/lib";  
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //Actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -24,7 +26,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
 
     import {
@@ -67,6 +69,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let cargado = $state(false)
     let ultimo_tratamientos = $state({})
     let comandos = $state([])
@@ -271,6 +274,7 @@
                 tratamientos[tidx].fecha = data.fecha
                 //Muy confuso pero basicamente si existe el tipo, fijarse si es nuevo, sino es falso tanto como viejo como inexistente
                 let ntipo = tipo?tipo.split("_").length > 1:false
+                
                 let comando={
                     tipo:"update",
                     coleccion:"tratamientos",
@@ -301,6 +305,13 @@
         }
     }
     async function editarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         try{
             let data = {
                 //animal,
@@ -413,6 +424,13 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            caboff = await updatePermisos(pb,usuarioid)
+            getpermisos = caboff.permisos
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
             eliminarOnline(id)
         }
         else{
@@ -440,6 +458,13 @@
         addtipo = true
     }
     async function guardarTipoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         if(idtipotratamiento == ""){
             try{
                 let data = {
@@ -525,6 +550,13 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            caboff = await updatePermisos(pb,usuarioid)
+            getpermisos = caboff.permisos
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
             await guardarTipoOnline()
         }
         else{
@@ -533,6 +565,13 @@
     }
 
     async function editarTipoOnline(){
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         try{
             let data = {
                 nombre:nombretipotratamiento,
@@ -596,6 +635,13 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            caboff = await updatePermisos(pb,usuarioid)
+            getpermisos = caboff.permisos
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
             await eliminarTipoOnline(id)
         }
         else{
@@ -704,6 +750,9 @@
         onChangeTratamientos()
         onChangeTipos()
         filterUpdate()
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        
         cargado = true
     }
     async function getLocalSQL() {

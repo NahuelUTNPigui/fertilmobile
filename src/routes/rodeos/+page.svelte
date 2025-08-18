@@ -5,10 +5,14 @@
     import { onMount } from 'svelte';
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
+    //actaualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
     import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
     import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+
     //ofline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import { getInternet,getOnlyInternet } from '$lib/stores/offline';
@@ -16,7 +20,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
@@ -47,6 +51,7 @@
     let comandos = $state([])
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let cargado = $state(false)
     //offline
     let ruta = import.meta.env.VITE_RUTA
@@ -131,6 +136,14 @@
         }    
     }
     async function guardarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            nombre = ""
+            return 
+        }
         try{
             let data = {
                 nombre,
@@ -221,6 +234,14 @@
         nombre = ""
     }
     async function editarOnline(id) {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            nombre = ""
+            return 
+        }
         try{
             let data = {
                 nombre
@@ -260,6 +281,14 @@
 
     }
     function eliminarOnline(id) {
+        
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            
+            return 
+        }
         Swal.fire({
             title: 'Eliminar rodeo',
             text: '¿Seguro que deseas eliminar el rodeo?',

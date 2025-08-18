@@ -10,6 +10,9 @@
     import {addNewTrataSQL,setTratsSQL} from '$lib/stores/sqlite/dbeventos';
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let{
         cabid,categoria,
         caravana=$bindable(""),
@@ -17,7 +20,9 @@
         db,
         comandos=$bindable([]),
         tratamientos=$bindable([]),
-        tipostrat
+        tipostrat,
+        caboff = $bindable({}),
+        usuarioid
     } = $props()
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
@@ -101,6 +106,12 @@
         })
     }
     async function eliminarTratamientoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         Swal.fire({
             title: 'Eliminar tratamiento',
             text: '¿Seguro que deseas eliminar el tratamiento?',
@@ -185,6 +196,12 @@
         }
     }
     async function editarTratamientoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let data = {
                 //animal,
@@ -224,6 +241,12 @@
     }
 
     async function guardarTratamientoOnline(){
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let data = {
                 animal:id,

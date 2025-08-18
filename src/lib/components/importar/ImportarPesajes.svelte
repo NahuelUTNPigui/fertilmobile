@@ -10,11 +10,11 @@
     import { getPesajesSQL, setPesajesSQL } from "$lib/stores/sqlite/dbeventos";
     import { esMismoDia } from "$lib/stringutil/lib";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
+    import { getPermisosList,getPermisosMessage } from "$lib/permisosutil/lib";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,coninternet,
-        useroff,caboff,
+        useroff,caboff =$bindable({}),
         usuarioid,animales,
         //acciones
         aparecerToast
@@ -110,6 +110,7 @@
         reader.readAsBinaryString(file);
     }
     async function procesarArchivoOnline(pesajesprocesar){
+        
         let errores = false
         for(let i = 0;i<pesajesprocesar.length;i++){
             let pe = pesajesprocesar[i]          
@@ -269,6 +270,21 @@
         }
         verpesajes = pesajesprocesar.map(p=>p)
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                loading = false
+                filename = ""
+                wkbk = null
+                return 
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                loading = false
+                filename = ""
+                wkbk = null
+                return 
+            }
             errores = await procesarArchivoOnline(pesajesprocesar)
             await setPesajesSQL(db,pesajes)
         }
@@ -287,8 +303,6 @@
         filename = ""
         wkbk = null
         loading = false
-        
-        
     }
     async function getDataSQL(){
         let respesajes = await getPesajesSQL(db)

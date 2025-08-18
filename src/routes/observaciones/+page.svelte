@@ -16,11 +16,16 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    //Permisos
+    import { getPermisosList, getPermisosMessage } from "$lib/permisosutil/lib";
     //Actualizacion
-    import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
-    import { customoffliner } from '$lib/stores/offline/custom.svelte';
-    import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
-    import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+    import {
+        actualizacion,
+        deboActualizar,
+    } from "$lib/stores/offline/actualizar";
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
+    import { intermitenter } from "$lib/stores/offline/intermitencia.svelte";
+    import { velocidader } from "$lib/stores/offline/velocidad.svelte";
     //offline
     import { openDB } from "$lib/stores/sqlite/main";
     import { Network } from "@capacitor/network";
@@ -43,16 +48,15 @@
         getTotalSQL,
         setTotalSQL,
         setUltimoTotalSQL,
-
     } from "$lib/stores/sqlite/dbtotal";
     import {
         getUserOffline,
         setDefaultUserOffline,
-
     } from "$lib/stores/capacitor/offlineuser";
     import {
         getCabOffline,
         setDefaultCabOffline,
+        updatePermisos,
     } from "$lib/stores/capacitor/offlinecab";
     import {
         updateLocalObservaciones,
@@ -61,27 +65,28 @@
         getObservacionesSQL,
         updateLocalObservacionesSQLUser,
         setUltimoObservacionesSQL,
-        getUltimoObservacionesSQL
+        getUltimoObservacionesSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import Animal from "$lib/svgs/animal.svelte";
-    import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
-    import { getInternet,getOnlyInternet } from '$lib/stores/offline';
-    
-    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
+    import { getInternet, getOnlyInternet } from "$lib/stores/offline";
+
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
     let caboff = $state({});
-    let coninternet = $state({connected:false});
+    let coninternet = $state({ connected: false });
     let ultimo_observaciones = $state({});
-    let getlocal = $state(false)
-    let getvelocidad = $state(0)
-    let getactualizacion = $state(0)
+    let getlocal = $state(false);
+    let getvelocidad = $state(0);
+    let getactualizacion = $state(0);
+    let getpermisos = $state("");
     let comandos = $state([]);
-    let cargado = $state(false)
+    let cargado = $state(false);
     //online
 
     let caber = createCaber();
@@ -247,6 +252,11 @@
         });
     }
     function eliminarOnline(id) {
+        let listapermisos = getPermisosList(caboff.permisos);
+        if (!listapermisos[4]) {
+            Swal.fire("Error permisos", getPermisosMessage(4), "error");
+            return;
+        }
         Swal.fire({
             title: "Eliminar observación",
             text: "¿Seguro que deseas eliminar la observacion?",
@@ -290,9 +300,13 @@
         });
     }
     async function eliminar(id) {
-        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
-        let isOnline = await getOnlyInternet()
-        intermitenter.addIntermitente(isOnline)
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+        let isOnline = await getOnlyInternet();
+        intermitenter.addIntermitente(isOnline);
         if (coninternet.connected) {
             eliminarOnline(id);
         } else {
@@ -350,17 +364,17 @@
         let verificar = true;
         //No funciona correctamente porque prueva el usuario cuando deberia probar el usuario
         //Dueño de la cabaña
-        if (useroff.nivel != -1 && totalanimals >= useroff.nivel) {
-            verificar = false;
-        }
-        if (!verificar) {
-            Swal.fire(
-                "Error guardar",
-                `No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,
-                "error",
-            );
-            return { id: -1 };
-        }
+        //if (useroff.nivel != -1 && totalanimals >= useroff.nivel) {
+        //    verificar = false;
+        //}
+        //if (!verificar) {
+        //    Swal.fire(
+        //        "Error guardar",
+        //        `No tienes el nivel de la cuenta para tener mas de ${useroff.nivel} animales`,
+        //        "error",
+        //    );
+        //    return { id: -1 };
+        //}
         let data = {
             caravana: caravananuevo,
             active: true,
@@ -373,6 +387,13 @@
         };
         let idprov = "nuevo_animal_" + generarIDAleatorio();
         if (coninternet.connected) {
+            caboff = await updatePermisos(pb, usuarioid);
+            getpermisos = caboff.permisos;
+            let listapermisos = getPermisosList(caboff.permisos);
+            if (!listapermisos[5]) {
+                Swal.fire("Error permisos", getPermisosMessage(5), "error");
+                return { id: -1 };
+            }
             let recorda = await pb.collection("animales").create(data);
             return recorda;
         } else {
@@ -392,113 +413,142 @@
             return data;
         }
     }
+    async function guardarConAnimal() {
+        let a = await guardarAnimal2();
+        if (a.id == -1) {
+            return;
+        }
+        animales.push(a);
+        changeAnimales();
+        await setAnimalesSQL(db, animales);
+        let data = {
+            animal: a.id,
+            categoria: a.categoria,
+            fecha: fecha + " 03:00:00",
+            cab: caboff.id,
+            observacion: observacion,
+            active: true,
+        };
+
+        if (coninternet.connected) {
+            caboff = await updatePermisos(pb, usuarioid);
+            getpermisos = caboff.permisos;
+            let listapermisos = getPermisosList(caboff.permisos);
+
+            if (!listapermisos[4]) {
+                Swal.fire("Error permisos", getPermisosMessage(4), "error");
+                return;
+            }
+
+            let record = await pb.collection("observaciones").create(data);
+            record.expand = { animal: a, cab: { id: caboff.id } };
+            observaciones.push(record);
+            changeObservacion();
+            await setObservacionesSQL(db, observaciones);
+            filterUpdate();
+            Swal.fire(
+                "Éxito guardar",
+                "Se pudo guardar la observación con éxito",
+                "success",
+            );
+        } else {
+            data.id = idprov;
+            let comando = {
+                tipo: "add",
+                coleccion: "observaciones",
+                data: { ...data },
+                hora: Date.now(),
+                prioridad: 3,
+                idprov,
+                camposprov: "animal",
+            };
+
+            comandos.push(comando);
+            await setComandosSQL(db, comandos);
+            data.expand = { animal: a, cab: { id: caboff.id } };
+            observaciones.push(data);
+            changeObservacion();
+            await setObservacionesSQL(db, observaciones);
+            Swal.fire(
+                "Éxito guardar",
+                "Se pudo guardar la observación con éxito",
+                "success",
+            );
+        }
+    }
+    async function guardarSinAnimal() {
+        let data = {
+            animal,
+            fecha: fecha + " 03:00:00",
+            categoria: categoria,
+            cab: caboff.id,
+            observacion: observacion,
+            active: true,
+        };
+        if (coninternet.connected) {
+            caboff = await updatePermisos(pb, usuarioid);
+            getpermisos = caboff.permisos;
+            let listapermisos = getPermisosList(caboff.permisos);
+
+            if (!listapermisos[4]) {
+                Swal.fire("Error permisos", getPermisosMessage(4), "error");
+                return;
+            }
+            let record = await pb.collection("observaciones").create(data);
+            record.expand = {
+                animal: animales.filter((an) => an.id == animal)[0],
+                cab: { id: caboff.id },
+            };
+            observaciones.push(record);
+            changeObservacion();
+            filterUpdate();
+            await setObservacionesSQL(db, observaciones);
+            Swal.fire(
+                "Éxito guardar",
+                "Se pudo guardar la observación con éxito",
+                "success",
+            );
+        } else {
+            let nuevoanimal = animal.split("_")[0] == "nuevo";
+            data.id = idprov;
+            let comando = {
+                tipo: "add",
+                coleccion: "observaciones",
+                data: { ...data },
+                hora: Date.now(),
+                prioridad: 3,
+                idprov,
+                camposprov: nuevoanimal ? "animal" : "",
+            };
+            comandos.push(comando);
+            await setComandosSQL(db, comandos);
+            observaciones.push(record);
+            changeObservacion();
+            filterUpdate();
+            Swal.fire(
+                "Éxito guardar",
+                "Se pudo guardar la observación con éxito",
+                "success",
+            );
+            filterUpdate();
+        }
+    }
     async function guardar2() {
-        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
-        let isOnline = await getOnlyInternet()
-        intermitenter.addIntermitente(isOnline)
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+        let isOnline = await getOnlyInternet();
+        intermitenter.addIntermitente(isOnline);
 
         let idprov = "nuevo_obs_" + generarIDAleatorio();
         if (agregaranimal) {
-            let a = await guardarAnimal2();
-            if (a.id == -1) {
-                return;
-            }
-            animales.push(a);
-            changeAnimales();
-            await setAnimalesSQL(db, animales);
-            let data = {
-                animal: a.id,
-                categoria: a.categoria,
-                fecha: fecha + " 03:00:00",
-                cab: caboff.id,
-                observacion: observacion,
-                active: true,
-            };
-            if (coninternet.connected) {
-                let record = await pb.collection("observaciones").create(data);
-                record.expand = { animal: a, cab: { id: caboff.id } };
-                observaciones.push(record);
-                changeObservacion();
-                await setObservacionesSQL(db, observaciones);
-                filterUpdate();
-                Swal.fire(
-                    "Éxito guardar",
-                    "Se pudo guardar la observación con éxito",
-                    "success",
-                );
-            } else {
-                data.id = idprov;
-                let comando = {
-                    tipo: "add",
-                    coleccion: "observaciones",
-                    data: { ...data },
-                    hora: Date.now(),
-                    prioridad: 3,
-                    idprov,
-                    camposprov: "animal",
-                };
-                comandos.push(comando);
-                await setComandosSQL(db, comandos);
-                data.expand = { animal: a, cab: { id: caboff.id } };
-                observaciones.push(data);
-                changeObservacion();
-                await setObservacionesSQL(db, observaciones);
-                Swal.fire(
-                    "Éxito guardar",
-                    "Se pudo guardar la observación con éxito",
-                    "success",
-                );
-            }
+            await guardarConAnimal();
         }
         //Animal seleccionaod
         else {
-            let data = {
-                animal,
-                fecha: fecha + " 03:00:00",
-                categoria: categoria,
-                cab: caboff.id,
-                observacion: observacion,
-                active: true,
-            };
-            if (coninternet.connected) {
-                let record = await pb.collection("observaciones").create(data);
-                record.expand = {
-                    animal: animales.filter((an) => an.id == animal)[0],
-                    cab: { id: caboff.id },
-                };
-                observaciones.push(record);
-                changeObservacion();
-                filterUpdate();
-                await setObservacionesSQL(db, observaciones);
-                Swal.fire(
-                    "Éxito guardar",
-                    "Se pudo guardar la observación con éxito",
-                    "success",
-                );
-            } else {
-                let nuevoanimal = animal.split("_")[0] == "nuevo";
-                data.id = idprov;
-                let comando = {
-                    tipo: "add",
-                    coleccion: "observaciones",
-                    data: { ...data },
-                    hora: Date.now(),
-                    prioridad: 3,
-                    idprov,
-                    camposprov: nuevoanimal ? "animal" : "",
-                };
-                comandos.push(comando);
-                await setComandosSQL(db, comandos);
-                observaciones.push(record);
-                changeObservacion();
-                filterUpdate();
-                Swal.fire(
-                    "Éxito guardar",
-                    "Se pudo guardar la observación con éxito",
-                    "success",
-                );
-                filterUpdate();
-            }
+            await guardarSinAnimal();
         }
     }
     async function editarOffline() {
@@ -546,6 +596,13 @@
         }
     }
     async function editarOnline() {
+        caboff = await updatePermisos(pb, usuarioid);
+        getpermisos = caboff.permisos;
+        let listapermisos = getPermisosList(caboff.permisos);
+        if (!listapermisos[4]) {
+            Swal.fire("Error permisos", getPermisosMessage(4), "error");
+            return;
+        }
         try {
             let data = {
                 animal,
@@ -579,9 +636,13 @@
         }
     }
     async function editar() {
-        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
-        let isOnline = await getOnlyInternet()
-        intermitenter.addIntermitente(isOnline)
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+        let isOnline = await getOnlyInternet();
+        intermitenter.addIntermitente(isOnline);
         if (coninternet.connected) {
             await editarOnline();
         } else {
@@ -648,9 +709,13 @@
         await getAnimales();
     }
     async function initPage() {
-        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
-        let isOnline = await getOnlyInternet()
-        intermitenter.addIntermitente(isOnline)
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+        let isOnline = await getOnlyInternet();
+        intermitenter.addIntermitente(isOnline);
         useroff = await getUserOffline();
         caboff = await getCabOffline();
         usuarioid = useroff.id;
@@ -662,8 +727,8 @@
         animalescab = animales.filter((a) => a.cab == caboff.id);
     }
     async function updateLocalSQL() {
-        await setUltimoObservacionesSQL(db)
-        await setUltimoAnimalesSQL(db)
+        await setUltimoObservacionesSQL(db);
+        await setUltimoAnimalesSQL(db);
         observaciones = await updateLocalObservacionesSQLUser(
             db,
             pb,
@@ -674,7 +739,7 @@
         changeAnimales();
         changeObservacion();
         filterUpdate();
-        cargado = true
+        cargado = true;
     }
     async function getLocalSQL() {
         let resobservaciones = await getObservacionesSQL(db);
@@ -684,84 +749,81 @@
         changeObservacion();
         changeAnimales();
         filterUpdate();
-        cargado = true
+        cargado = true;
     }
     async function updateComandos() {
-        try{
-            await flushComandosSQL(db,pb)
-            comandos = []
-        }
-        catch(err){
-            if(modedebug){
-                loger.addTextError(JSON.stringify(err),null,2)
-                loger.addTextError("Error en flush comandos observaciones")
+        try {
+            await flushComandosSQL(db, pb);
+            comandos = [];
+        } catch (err) {
+            if (modedebug) {
+                loger.addTextError(JSON.stringify(err), null, 2);
+                loger.addTextError("Error en flush comandos observaciones");
             }
         }
-        
     }
     async function oldUpdate() {
         if (lastinter.internet == 0) {
-                if(modedebug){
-                    loger.addLog({
-                        time:Date.now(),
-                        text:"updatelocalsql"
-                    })
-                }
-                await setInternetSQL(db, 1, 0);
+            if (modedebug) {
+                loger.addLog({
+                    time: Date.now(),
+                    text: "updatelocalsql",
+                });
+            }
+            await setInternetSQL(db, 1, 0);
+            await updateLocalSQL();
+        } else {
+            const cincoMinEnMs = ACTUALIZACION;
+            if (ahora - antes >= cincoMinEnMs) {
                 await updateLocalSQL();
             } else {
-                
-                const cincoMinEnMs = ACTUALIZACION;
-                if (ahora - antes >= cincoMinEnMs) {
-                    
-                    await updateLocalSQL();
-                    
-                } else {
-                    await getLocalSQL();
-                }
+                await getLocalSQL();
             }
+        }
     }
     async function getDataSQL() {
         db = await openDB();
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
-        let ultimo_observaciones = await getUltimoObservacionesSQL(db)
+        let ultimo_observaciones = await getUltimoObservacionesSQL(db);
         comandos = rescom.lista;
         let ahora = Date.now();
         let antes = ultimo_observaciones.ultimo;
         if (coninternet.connected) {
-            await updateComandos()
-            let velocidad = await velocidader.medirVelocidadInternet()
-            if(modedebug){
-                getvelocidad = velocidad
+            await updateComandos();
+            let velocidad = await velocidader.medirVelocidadInternet();
+            if (modedebug) {
+                getvelocidad = velocidad;
             }
-            let confiabilidad = intermitenter.calculateIntermitente()
+            let confiabilidad = intermitenter.calculateIntermitente();
             let mustUpdate = await deboActualizar(
                 velocidad,
                 confiabilidad,
                 coninternet,
                 false, //solo en el internet
                 ahora,
-                antes
+                antes,
             );
-            if(modedebug){
-            getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
+            if (modedebug) {
+                getactualizacion = await actualizacion(
+                    velocidad,
+                    confiabilidad,
+                    coninternet.connectionType,
+                );
             }
-                        
-            if(mustUpdate){
-                await updateLocalSQL() 
+
+            if (mustUpdate) {
+                await updateLocalSQL();
+            } else {
+                await getLocalSQL();
             }
-            else{
-                await getLocalSQL()
-            }
-            
         } else {
-            if(modedebug){
+            if (modedebug) {
                 loger.addLog({
-                    time:Date.now(),
-                    text:"getdatasql"
-                })
+                    time: Date.now(),
+                    text: "getdatasql",
+                });
             }
             await getLocalSQL();
         }
@@ -771,15 +833,16 @@
         await getDataSQL();
     });
 </script>
+
 {#if modedebug}
-<Barrainternet bind:coninternet/>
+    <Barrainternet bind:coninternet />
 {/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">
             <div>
                 <span>
-                    {coninternet.connected?"COn internet":"sin internet"}
+                    {coninternet.connected ? "COn internet" : "sin internet"}
                 </span>
             </div>
             <div>
@@ -933,80 +996,82 @@
         {/if}
     </div>
     {#if cargado}
-    <div>
-    <div
-        class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto"
-    >
-        <table class="table table-lg w-full">
-            <thead>
-                <tr>
-                    <th class="text-base border-b dark:border-gray-600"
-                        >Fecha</th
-                    >
-                    <th class="text-base border-b dark:border-gray-600"
-                        >Animal</th
-                    >
-                    <th class="text-base border-b dark:border-gray-600"
-                        >Categoria</th
-                    >
-                    <th class="text-base border-b dark:border-gray-600"
-                        >Observacion</th
-                    >
-                </tr>
-            </thead>
-            <tbody>
-                {#each observacionesrow as o}
-                    <tr
-                        onclick={() => openModalEditar(o.id)}
-                        class=" hover:bg-gray-200 dark:hover:bg-gray-900"
-                    >
-                        <td class="text-base">
-                            {`${new Date(o.fecha).toLocaleDateString()}`}
-                        </td>
-                        <td class="text-base">
-                            {`${o.expand.animal.caravana}`}
-                        </td>
-                        <td class="text-base">
-                            {`${o.categoria}`}
-                        </td>
-                        <td class="text-base">
-                            {`${o.observacion}`}
-                        </td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    <div class="block w-full md:hidden justify-items-center mx-1">
-        {#each observacionesrow as o}
+        <div>
             <div
-                class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900"
+                class="hidden w-full md:grid justify-items-center mx-1 lg:mx-10 lg:w-3/4 overflow-x-auto"
             >
-                <button onclick={() => openModalEditar(o.id)}>
-                    <div class="block p-4">
-                        <div class="grid grid-cols-2 gap-y-2">
-                            <div class="flex items-start">
-                                <span>Fecha:</span>
-                                <span class="mx-1 font-semibold">
-                                    {new Date(o.fecha).toLocaleDateString()}
-                                </span>
-                            </div>
-                            <div class="flex items-start">
-                                <span>Caravana:</span>
-                                <span class="mx-1 font-semibold">
+                <table class="table table-lg w-full">
+                    <thead>
+                        <tr>
+                            <th class="text-base border-b dark:border-gray-600"
+                                >Fecha</th
+                            >
+                            <th class="text-base border-b dark:border-gray-600"
+                                >Animal</th
+                            >
+                            <th class="text-base border-b dark:border-gray-600"
+                                >Categoria</th
+                            >
+                            <th class="text-base border-b dark:border-gray-600"
+                                >Observacion</th
+                            >
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each observacionesrow as o}
+                            <tr
+                                onclick={() => openModalEditar(o.id)}
+                                class=" hover:bg-gray-200 dark:hover:bg-gray-900"
+                            >
+                                <td class="text-base">
+                                    {`${new Date(o.fecha).toLocaleDateString()}`}
+                                </td>
+                                <td class="text-base">
                                     {`${o.expand.animal.caravana}`}
-                                </span>
-                            </div>
-                            <div class="col-span-2 flex items-start">
-                                <span>{`${o.observacion}`}</span>
-                            </div>
-                        </div>
-                    </div>
-                </button>
+                                </td>
+                                <td class="text-base">
+                                    {`${o.categoria}`}
+                                </td>
+                                <td class="text-base">
+                                    {`${o.observacion}`}
+                                </td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
             </div>
-        {/each}
-    </div>
-    </div>
+            <div class="block w-full md:hidden justify-items-center mx-1">
+                {#each observacionesrow as o}
+                    <div
+                        class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900"
+                    >
+                        <button onclick={() => openModalEditar(o.id)}>
+                            <div class="block p-4">
+                                <div class="grid grid-cols-2 gap-y-2">
+                                    <div class="flex items-start">
+                                        <span>Fecha:</span>
+                                        <span class="mx-1 font-semibold">
+                                            {new Date(
+                                                o.fecha,
+                                            ).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <span>Caravana:</span>
+                                        <span class="mx-1 font-semibold">
+                                            {`${o.expand.animal.caravana}`}
+                                        </span>
+                                    </div>
+                                    <div class="col-span-2 flex items-start">
+                                        <span>{`${o.observacion}`}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                {/each}
+            </div>
+        </div>
     {:else}
         <div class="flex items-center justify-center">
             <span class="loading loading-spinner text-success"></span>
@@ -1038,13 +1103,24 @@
         <div class="form-control">
             <NuevaObservacion
                 {oninput}
-                bind:agregaranimal bind:caravananuevo bind:categorianuevo
-                bind:sexonuevo bind:pesonuevo bind:fechanacimientonuevo
-                bind:animal bind:animalescab bind:malanimal
-                bind:categoria bind:caravana bind:idobservacion
-                bind:malcaravana bind:sexo bind:peso
-                bind:fecha bind:malfecha bind:observacion
-
+                bind:agregaranimal
+                bind:caravananuevo
+                bind:categorianuevo
+                bind:sexonuevo
+                bind:pesonuevo
+                bind:fechanacimientonuevo
+                bind:animal
+                bind:animalescab
+                bind:malanimal
+                bind:categoria
+                bind:caravana
+                bind:idobservacion
+                bind:malcaravana
+                bind:sexo
+                bind:peso
+                bind:fecha
+                bind:malfecha
+                bind:observacion
             ></NuevaObservacion>
         </div>
         <div class="modal-action justify-start">
@@ -1064,7 +1140,8 @@
                     >
                     <button
                         class="btn btn-error text-white"
-                        onclick={async () =>  await eliminar(idobservacion)}>Eliminar</button
+                        onclick={async () => await eliminar(idobservacion)}
+                        >Eliminar</button
                     >
                 {/if}
                 <button class="btn btn-neutral" onclick={cerrar}>Cerrar</button>

@@ -12,6 +12,8 @@
     import PredictSelect from '$lib/components/PredictSelect.svelte';
     import{verificarNivel,verificarNivelOffline} from "$lib/permisosutil/lib"
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //Actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -24,7 +26,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
@@ -61,6 +63,7 @@
     let comandos = $state([])
     let getlocal = $state(false)
     let getvelocidad = $state(0)
+    let getpermisos = $state("")
     let getactualizacion = $state(0)
     let caber = createCaber()
     let cab = caber.cab
@@ -293,8 +296,18 @@
         
     }
     async function guardarOnline(){
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         if(agregaranimal){
-
+            if(!listapermisos[5]){
+                Swal.fire("Error permisos",getPermisosMessage(5),"error")
+                return 
+            }
             //let verificar = await verificarNivel(caboff.id)
             let verificar = true
             if(!verificar){
@@ -410,6 +423,13 @@
         }
     }
     async function editarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         let ms = madres.filter(ma=>ma.id==madre)
         let m = {
             id:"",
@@ -713,6 +733,11 @@
 
     }
     function eliminarOnline(){
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            return 
+        }
         Swal.fire({
             title: 'Eliminar nacimiento',
             text: '¿Seguro que deseas eliminar el nacimiento?',
@@ -871,6 +896,8 @@
         cargado = true
     }
     async function updateLocalSQL() {
+        
+        
         await setUltimoNacimientosSQL(db)
         await setUltimoAnimalesSQL(db)
         await setUltimoRodeosLotesSQL(db)
@@ -895,6 +922,8 @@
             }
         })
         cargadoanimales = true
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         filterUpdate()
         cargado = true
     }

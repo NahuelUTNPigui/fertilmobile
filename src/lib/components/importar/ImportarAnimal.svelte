@@ -6,10 +6,11 @@
     import PocketBase from 'pocketbase'
     import Swal from 'sweetalert2';
     import { createPer } from "$lib/stores/permisos.svelte";
-    import { getPermisosList } from "$lib/permisosutil/lib";
+    import { getPermisosList,getPermisosMessage } from "$lib/permisosutil/lib";
     
     import categorias from "$lib/stores/categorias";
     import{verificarNivelCantidad,verificarNivelOffline} from "$lib/permisosutil/lib"
+    
     //offline
     import {generarIDAleatorio} from "$lib/stringutil/lib"  
     import {concatComandosSQL} from "$lib/stores/sqlite/dbcomandos"
@@ -21,7 +22,7 @@
         db,
         coninternet,
         useroff,
-        caboff,
+        caboff =$bindable({}),
         usuarioid,
         //Tendria que ser bindeble
         animales,
@@ -231,6 +232,9 @@
     }
     //debo verificar el nivel de la cuenta
     async function procesoOnline(animalesimportar,nuevosanimales) {
+        
+        
+        
         let errores = false
         //El verificar es saber si puede agregar los animales
         //let verificar = await verificarNivelCantidad(caboff.id,nuevosanimales)
@@ -407,10 +411,7 @@
         
     }
     async function procesarArchivo(){
-        if(false &&!userpermisos[2]){
-            Swal.fire("Error","No tienes permisos de importar","error")
-            return
-        }
+        
         if(filename == ""){
             Swal.fire("Error","Seleccione un archivo","error")
             return
@@ -490,6 +491,21 @@
         verimportar = animalesimportar.map(x=>x)
         
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[5]){
+                Swal.fire("Error permisos",getPermisosMessage(5),"error")
+                loading = false
+                filename = ""
+                wkbk = null
+                return 
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                loading = false
+                filename = ""
+                wkbk = null
+                return 
+            }
             errores = await procesoOnline(animalesimportar,nuevosanimales)
             await setAnimalesSQL(db,animales)
             
@@ -503,9 +519,7 @@
 
         }
         
-        
         loading = false
-        
         filename = ""
         wkbk = null
         if(!errores){

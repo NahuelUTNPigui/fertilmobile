@@ -8,11 +8,11 @@
     import { Filesystem, Directory } from '@capacitor/filesystem';
     import { setLotesSQL, setRodeosSQL } from "$lib/stores/sqlite/dbeventos";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
+    import { getPermisosList,getPermisosMessage } from "$lib/permisosutil/lib";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,coninternet,useroff,
-        caboff,usuarioid,rodeos,
+        caboff =$bindable({}),usuarioid,rodeos,
         //acciones
         aparecerToast
       } = $props()
@@ -215,6 +215,21 @@
         }
         verrodeos = rodeosprocesar.map(r=>r)
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                filename = ""
+                wkbk = null
+                loading = false
+                return
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                filename = ""
+                wkbk = null
+                loading = false
+                return
+            }
             errores = await procesarArchivoOnline(rodeosprocesar)
             await setRodeosSQL(db,rodeos)
         }

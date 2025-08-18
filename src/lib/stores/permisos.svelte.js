@@ -3,6 +3,7 @@ let defaultper={
     permisos:"",
     //ID del usuario
     id:""
+
 }
 export function createPer(){
     let per = defaultper

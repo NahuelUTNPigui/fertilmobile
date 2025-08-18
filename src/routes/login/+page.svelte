@@ -127,7 +127,7 @@
                             const recordper = await pb.collection("permisos").getFirstListItem(`estxcolab='${colabcab.id}'`)
                             await setCabOffline(establecimiento.id,establecimiento.nombre,true,recordper.permisos,true)
                             
-                            per.setPer(recordper.permisos,authData.record.id)
+                            per.setPaer(recordper.permisos,authData.record.id)
                             caber.setCab(establecimiento.nombre,establecimiento.id,true)
                             localStorage.setItem('hasLoggedIn', 'si');
                         }

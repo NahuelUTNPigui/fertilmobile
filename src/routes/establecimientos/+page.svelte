@@ -13,6 +13,8 @@
     import { usuario } from "$lib/stores/usuario";
     import { shorterWord } from "$lib/stringutil/lib";
     import Asoc from "$lib/components/establecimientos/Asoc.svelte";
+    //Permisos
+    import { getPermisosCabUser, getPermisosEstXColab } from "$lib/permisosutil/lib";
     //Actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -82,12 +84,16 @@
     async function irEstablecimientoColab(id){
         let per = createPer()
         let est = establecimientoscolab.filter(e=>e.id == id)[0]
-        caber.setCab(est.expand.cab.nombre,est.expand.cab.id)
-        await setCabOffline(est.expand.cab.id,est.expand.cab.nombre,true,"0,1,2,3,4,5",true)
-        //await updateLocalAnimalesSQL(db,pb,est.expand.cab.id)
         
+        caber.setCab(est.expand.cab.nombre,est.expand.cab.id)
+        //Ver los permisos
+        let permisos = await getPermisosCabUser(pb,usuarioid,est.expand.cab.id)
+        per.setPer(permisos.permisos,usuarioid)
+        await setCabOffline(est.expand.cab.id,est.expand.cab.nombre,true,permisos.permisos,true)
+
+        //await updateLocalAnimalesSQL(db,pb,est.expand.cab.id)
         //await updateLocalEventosSQL(db,pb,est.expand.cab.id)
-        per.setPer("0,1,2,3,4,5",usuarioid)
+        
         localStorage.setItem('fromColab', 'si');
         goto("/")
     }
@@ -185,8 +191,10 @@
         }
     }
     async function initPage() {
-        coninternet = await getOnlyInternet()
-        intermitenter.addIntermitente(coninternet.connected)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
+        let isOnline = await getOnlyInternet()
+        intermitenter.addIntermitente(isOnline)
+
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id 
@@ -200,21 +208,41 @@
         
         establecimientos = resestablecimientos.lista.filter(e=>{
             //Reviso que los establecimientos no sea colaborador
-            return !sincronizadas.includes(s => s == e.id)
+            //Osea que el user es igual a u id
+            return e.user == usuarioid
+            //return !sincronizadas.includes(s => s == e.id)
         })
+        //loger.addTextLog(JSON.stringify(resestablecimientos.lista,null,2))
+        //loger.addTextLog(JSON.stringify(sincronizadas.lista,null,2))
+        if(coninternet.connected){
+            await getOnlineColabs()
+            
+            
+        }
+        else{
+            establecimientoscolab = resestablecimientos.lista.filter(e=>{
+                //Reviso que los establecimientos si sean colaborador
+                return e.user != usuarioid
+                //return sincronizadas.includes(s => s == e.id)
+            })
+        }
         
-        establecimientoscolab = resestablecimientos.lista.filter(e=>{
-            //Reviso que los establecimientos si sean colaborador
-            return sincronizadas.includes(s => s == e.id)
-        })
         let resanimales = await getAnimalesSQL(db)
         let animales = resanimales.lista
         for(let i = 0;i<establecimientos.length;i++){
             totales.push(getTotalAnimalesSQL(establecimientos[i].id,animales))
         }
-        for(let i = 0;i <establecimientoscolab.length;i++){
-            totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
+        if(coninternet.connected){
+            for(let i = 0;i <establecimientoscolab.length;i++){
+                totalescolab.push(await getTotalAnimales(establecimientoscolab[i].expand.cab.id))
+            }
         }
+        else{
+            for(let i = 0;i <establecimientoscolab.length;i++){
+                totalescolab.push(getTotalAnimalesSQL(establecimientoscolab[i].id,animales))
+            }
+        }
+        
         cargado = true
     }
     async function getOnlineColabs() {
@@ -224,6 +252,7 @@
 
         })
         establecimientoscolab = restxcolab
+        
     }
     async function updateLocalSQL() {
         await setUltimoEstablecimientosSQL(db)
@@ -268,6 +297,8 @@
                 }
             } 
     }
+    //En este caso hace falta usar el internet directo 
+    //Para buscar los establecimientos a quien soy colaborador
     async function getDataSQL() {
         //Reviso el internet
         db = await openDB()
@@ -280,6 +311,7 @@
         sincronizadas = ressincronizadas.lista
         let ahora = Date.now()
         let antes = ultimo_establecimiento.ultimo
+        
         if (coninternet.connected){
             await actualizarComandos()
             let velocidad = await velocidader.medirVelocidadInternet()
@@ -351,81 +383,81 @@
         </div>
     {/if}
     {#if cargado}
-    <div class="flex justify-center mt-1">
-        <div class="w-full max-w-7xl px-4">
-            <div class="grid grid-cols-3 mx-1  lg:mx-10 mt-2">
-                <div>
-                    <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Tus establecimientos</h1>
-                </div>
-                <div class="flex col-span-2 justify-end mt-2 lg:mt-0">
-                    <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={crearEstablecimiento}>
-                        <span  class="text-xl">Nuevo</span>
-                    </button>
+        <div class="flex justify-center mt-1">
+            <div class="w-full max-w-7xl px-4">
+                <div class="grid grid-cols-3 mx-1  lg:mx-10 mt-2">
+                    <div>
+                        <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 ">Tus establecimientos</h1>
+                    </div>
+                    <div class="flex col-span-2 justify-end mt-2 lg:mt-0">
+                        <button class={`btn btn-primary rounded-lg ${estilos.btntext}`} data-theme="forest" onclick={crearEstablecimiento}>
+                            <span  class="text-xl">Nuevo</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="grid grid-cols-1 gap-2 my-2">
+        <div class="grid grid-cols-1 gap-2 my-2">
 
-        
-        {#each establecimientos as e,i}
-            <div class="flex items-center justify-center p-1">
-                <div 
-                    class={`
-                            bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 w-full 
-                            max-w-5xl
-                    `}
-                >
-                    <h2 class="flex items-center text-2xl font-bold  mb-1 text-start p-2">
-                        {shorterWord(e.nombre)}
-                        <!--Sincronizada-->
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
-                    </h2>
-                    <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
-
-                        <span class="text-xl font-semibold text-start">Direccion:</span>
-
-                        <span class="text-xl font-medium text-end">{e.direccion}</span>
-                    </div>
-                    <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
-
-                        <span class="text-xl font-semibold text-start">Animales:</span>
-
-                        <span class="text-xl font-medium text-end">{totales[i]}</span>
-                    </div>
-                    <div class="p-2">
-                        <button onclick={async ()=>await irEstablecimiento(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
-                            <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
-                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+            
+            {#each establecimientos as e,i}
+                <div class="flex items-center justify-center p-1">
+                    <div 
+                        class={`
+                                bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 w-full 
+                                max-w-5xl
+                        `}
+                    >
+                        <h2 class="flex items-center text-2xl font-bold  mb-1 text-start p-2">
+                            {shorterWord(e.nombre)}
+                            <!--Sincronizada-->
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                        </button>
+                        </h2>
+                        <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
+
+                            <span class="text-xl font-semibold text-start">Direccion:</span>
+
+                            <span class="text-xl font-medium text-end">{e.direccion}</span>
+                        </div>
+                        <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
+
+                            <span class="text-xl font-semibold text-start">Animales:</span>
+
+                            <span class="text-xl font-medium text-end">{totales[i]}</span>
+                        </div>
+                        <div class="p-2">
+                            <button onclick={async ()=>await irEstablecimiento(e.id)} class={`mt-3  hover:text-gray-500 dark:hover:text-gray-600 inline-flex items-center `}>Ir establecimiento
+                                <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        {#if e.id != cab.id}
+                        <button aria-label="Eliminar" 
+                                
+                                onclick={()=>eliminar(e.id)}
+                                class={`
+                                    flex 
+                                    items-center p-2
+                                    rounded-full 
+                                    focus:ring-offset-2 transition-colors duration-300 focus:outline-none focus:ring-2
+                                    bg-red-600 text-white hover:bg-red-700  focus:ring-red-500 
+                                    
+                                    
+                                `}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                    </svg>                          
+                            </button>
+                        {/if}
                     </div>
-                    {#if e.id != cab.id}
-                    <button aria-label="Eliminar" 
-                            
-                            onclick={()=>eliminar(e.id)}
-                            class={`
-                                flex 
-                                items-center p-2
-                                rounded-full 
-                                focus:ring-offset-2 transition-colors duration-300 focus:outline-none focus:ring-2
-                                bg-red-600 text-white hover:bg-red-700  focus:ring-red-500 
-                                
-                                
-                            `}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                </svg>                          
-                        </button>
-                    {/if}
                 </div>
-            </div>
-        {/each}
-        
-    </div>
+            {/each}
+            
+        </div>
     {#if establecimientoscolab.length != 0}
         <div class="flex justify-center mt-1">
             <div class="w-full max-w-7xl px-4">

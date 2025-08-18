@@ -14,6 +14,8 @@
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from '$lib/stringutil/lib';
     import { shorterWord } from "$lib/stringutil/lib";
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //Actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -25,7 +27,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos'; 
     import {
@@ -67,6 +69,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let cargado = $state(false)
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
@@ -438,6 +441,13 @@
         let isOnline = await getOnlyInternet()
         intermitenter.addIntermitente(isOnline)
         if(coninternet.connected){
+            caboff = await updatePermisos(pb,usuarioid)
+            getpermisos = caboff.permisos
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
             await crearPesajeOnline()
         }
         else{
@@ -483,6 +493,8 @@
         lotes = lotes.filter(a=>a.active && a.cab == caboff.id)
         rodeos = await updateLocalRodeosSQLUser(db,pb,usuarioid)
         rodeos = rodeos.filter(a=>a.active && a.cab == caboff.id)
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         filterUpdate()
         cargado = true
     }

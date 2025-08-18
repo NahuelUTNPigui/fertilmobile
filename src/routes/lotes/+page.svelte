@@ -6,7 +6,8 @@
     import estilos from '$lib/stores/estilos';
     import { createCaber } from '$lib/stores/cab.svelte';
     import {createPer} from "$lib/stores/permisos.svelte"
-    import { getPermisosList } from '$lib/permisosutil/lib';
+    //Permisos
+    import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //actualizacion
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -19,7 +20,7 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline,updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
@@ -53,6 +54,7 @@
     let cargado = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let ruta = import.meta.env.VITE_RUTA
     //pre
     const pb = new PocketBase(ruta);
@@ -61,6 +63,7 @@
     let cab = caber.cab
     let per = createPer()
     let userpermisos = getPermisosList(per.per.permisos)
+    
 
     //Datos para mostrar
     let lotescab = $state([])
@@ -105,6 +108,14 @@
         
     }
     async function guardarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            nombre = ""
+            return 
+        }
         try{
             let data = {
                 nombre,
@@ -203,6 +214,14 @@
         nuevoModal.showModal()
     }
     async function editarOnline(idlote) {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            nombre = ""
+            return 
+        }
         try{
             let data = {
                 nombre
@@ -309,6 +328,13 @@
         })
     }
     function eliminarOnline(id) {
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[1]){
+            Swal.fire("Error permisos",getPermisosMessage(1),"error")
+            
+            return 
+        }
         Swal.fire({
             title: 'Eliminar lote',
             text: '¿Seguro que deseas eliminar el lote?',
@@ -402,6 +428,8 @@
         lotes = await updateLocalLotesSQLUser(db,pb,usuarioid)
         onChangeLote()
         filterUpdate()
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         cargado = true
     }
     async function updateComandos() {

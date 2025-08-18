@@ -25,6 +25,9 @@
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
     import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
     import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     //offline
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';
     import { getInternet,getOnlyInternet } from '$lib/stores/offline';
@@ -76,6 +79,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let comandos = $state([])
     let ruta = import.meta.env.VITE_RUTA
 
@@ -829,6 +833,13 @@
         await setComandosSQL(db,comandos)
     }
     async function guardarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        getpermisos = caboff.permisos
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         if(esservicio){
             if(listapadres.length == 0){
                 Swal.fire("Sin padres","No hay padres seleccionados","error")

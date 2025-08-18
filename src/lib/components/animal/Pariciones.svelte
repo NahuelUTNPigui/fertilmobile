@@ -8,11 +8,14 @@
     import PredictSelect from "../PredictSelect.svelte";
     import cuentas from '$lib/stores/cuentas';
     import AgregarAnimal from "../eventos/AgregarAnimal.svelte";
-    import{verificarNivel} from "$lib/permisosutil/lib"
+    
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {addNewNacimientoSQL} from '$lib/stores/sqlite/dbeventos';
     import {getAnimalesSQL,addNewAnimalSQL} from '$lib/stores/sqlite/dbanimales';
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let {
         useroff,
         coninternet=$bindable({}),
@@ -22,7 +25,9 @@
         animales=$bindable([]),
         pariciones=$bindable([]),
         caravanamadre=$bindable(""),
-        cabid,sexoanimal,prenada=$bindable(0)
+        cabid,sexoanimal,prenada=$bindable(0),
+        caboff = $bindable({}),
+        
     } = $props()
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
@@ -91,14 +96,24 @@
         
     }
     async function eliminarParicion() {
-        
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
     }
     //EDitar
     async function editarParicionOffline() {
         
     }
     async function editarParicionOnline() {
-        
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
     }
     async function editarParicion() {
         
@@ -106,12 +121,18 @@
     //Guardar
     async function guardarParicionOnline() {
         if(agregaranimal){
-            //let verificar = await verificarNivel(cab.id)
-            let verificar = true
-            if(!verificar){
-                Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más animales`,"error")
-                return
+            caboff = await updatePermisos(pb,usuarioid)
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[5]){
+                Swal.fire("Error permisos","No tienes permisos para los animales","error")
+                return 
             }
+        }
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
         }
         try{
             let dataparicion = {

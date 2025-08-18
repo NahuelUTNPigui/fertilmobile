@@ -30,6 +30,9 @@
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
     import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
     import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+    //permisos
+    import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
+    import {updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let cab = $state({
         exist:false,
@@ -46,6 +49,7 @@
     let establecimiento = $state({})
     let getlocal = $state(false)
     let getvelocidad = $state(0)
+    let getpermisos = $state("")
     let ultimo_colabs = $state({})
     let comandos = $state([])
     let cargado = $state(false)
@@ -85,6 +89,13 @@
        Swal.fire("Error no hay internet","No puedes guardar los permisos sin internet","error")
     }
     async function guardarPermisosOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         let per = ""
         for(let i= 0;i<userpermisos.length;i++){
             if( userpermisos[i]){
@@ -120,6 +131,13 @@
         Swal.fire("Error no hay internet","No puedes desasociar al colaborador sin internet","error")
     }
     async function desasociarOnline(){
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         Swal.fire({
             title: 'Desasociar colaborador',
             text: '¿Seguro que deseas desasociar el colaborador?',
@@ -306,9 +324,9 @@
         
     </div>
     {:else}
-    <div class="flex items-center justify-center">
-        <span class="loading loading-spinner text-success"></span>
-    </div>
+        <div class="flex items-center justify-center">
+            <span class="loading loading-spinner text-success"></span>
+        </div>
     {/if}
 
     

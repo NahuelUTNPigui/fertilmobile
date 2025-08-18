@@ -21,12 +21,12 @@
         setNacimientosSQL
     } from "$lib/stores/sqlite/dbeventos"
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
+    import{getPermisosMessage,getPermisosList} from "$lib/permisosutil/lib"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         db,
         coninternet,
-        useroff,caboff,usuarioid,
+        useroff,caboff =$bindable({}),usuarioid,
         animales,animalesusuario,rodeos,lotes,
         //acciones
         aparecerToast
@@ -179,6 +179,7 @@
         return nuevorecord
     }
     async function procesarOnline(nacimientosprocesar,nuevoanimales) {
+        
         //let verificar = await verificarNivelCantidad(caboff.id,nuevoanimales)
         let verificar = true
         let errores = false
@@ -410,6 +411,21 @@
         }
         vernacimientos = nacimientosprocesar.map(n=>n)
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                filename = ""
+                loading = false
+                wkbk = null
+                return 
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                filename = ""
+                loading = false
+                wkbk = null
+                return 
+        }
             errores = await procesarOnline(nacimientosprocesar,nuevoanimales)
         }
         else{

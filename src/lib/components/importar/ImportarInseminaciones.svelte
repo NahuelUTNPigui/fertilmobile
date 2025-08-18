@@ -17,10 +17,11 @@
         
     } from "$lib/stores/sqlite/dbeventos"
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import{getPermisosMessage,getPermisosList} from "$lib/permisosutil/lib"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
             db,coninternet,
-            useroff,caboff,
+            useroff,caboff =$bindable({}),
             usuarioid,animales,
             //acciones
             aparecerToast
@@ -130,6 +131,8 @@
         }
     }
     async function procesarOnline(inseminacionesprocesar) {
+        
+        
         let errores = false
 
         for(let i = 0;i<inseminacionesprocesar.length;i++){
@@ -271,6 +274,15 @@
         verinseminaciones = inseminacionesprocesar.map(i=>i)
         let errores = false
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                return 
+            }
+            if(!listapermisos[2]){
+                Swal.fire("Error permisos",getPermisosMessage(2),"error")
+                return 
+            }
             errores = await procesarOnline(inseminacionesprocesar)
             await setInseminacionesSQL(db,inseminaciones)
             

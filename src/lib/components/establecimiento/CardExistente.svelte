@@ -19,6 +19,8 @@
         localidadesProv  = $bindable([]),
         coninternet=$bindable({}),
         db=$bindable(null),
+        caboff=$bindable({}),
+        usuarioid,
         provincias ,
         mostrarcolab,
         guardarColab,
@@ -347,6 +349,6 @@
         {/if}
         
     </div>
-    <Colaboradores bind:colabs bind:coninternet {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cabid} {cab} />
+    <Colaboradores bind:caboff bind:colabs bind:coninternet {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cabid} {cab} {usuarioid}/>
     <ListaColabs bind:colabs={colabs} {cabid} bind:db/>
 </CardBase>

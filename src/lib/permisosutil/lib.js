@@ -1,5 +1,6 @@
 import cuentas from '$lib/stores/cuentas';
 import {getUserOffline} from '$lib/stores/capacitor/offlineuser';
+import { loger } from '$lib/stores/logs/logs.svelte';
 let ruta = import.meta.env.VITE_RUTA
 export function getPermisosList(per){
     let userpermisos = [false,false,false,false,false,false]
@@ -10,6 +11,17 @@ export function getPermisosList(per){
         }
     }
     return userpermisos
+}
+export function getPermisosMessage(per){
+    let permisosmap ={
+        0:"No tienes permisos administrar el establecimiento",
+        1:"No tienes permisos de crear grupos",
+        2:"No tienes permisos para importar",
+        3:"No tienes permisos para hacer movimientos",
+        4:"No tienes permisos para administrar eventos",
+        5 :"No tienes permisos para administrar animales"
+    }              
+    return permisosmap[per]
 }
 export async function verificarNivel(cabid) {
     
@@ -63,4 +75,42 @@ export async function verificarNivelOffline(animalestotal,nuevos) {
 
 export async function verificarNivelColabOffline(cabid) {
     return true
+}
+export async function getPermisosCabUser(pb,userid,cabid) {
+    const recordcolabcab = await pb.collection('estxcolabs').getList(1,1,{
+        filter:`colab.user='${userid}' && cab='${cabid}'`,
+        expand: 'colab,cab,colab.user'
+
+    })
+    if(recordcolabcab.items.length>0){
+        let colabcab = recordcolabcab.items[0]
+    
+    
+        let respermisos = await pb.collection("permisos").getList(1, 1, {
+            filter: `estxcolab = '${colabcab.id}'`,
+            skipTotal :true
+        });
+        if(respermisos.items>0){
+            return respermisos.items[0]
+        }
+        else{
+            return {id:"",permisos:""}
+        }
+        
+    }
+    else{
+        return {id:"",permisos:""}
+    }
+    
+}
+export async function getPermisosEstXColab(pb,estxcolab) {
+    let respermisos = await pb.collection("permisos").getList(1, 1, {
+        filter: `estxcolab = '${estxcolab}'`,
+        skipTotal :true
+    });
+    return respermisos
+    
+}
+export function esColab(cab,userid){
+    return cab.user == userid
 }

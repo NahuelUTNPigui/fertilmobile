@@ -30,7 +30,9 @@
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
-
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {
         getServiciosSQL,
         getInseminacionesSQL,
@@ -72,6 +74,7 @@
     let getlocal = $state(false)
     let getvelocidad = $state(0)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0]
     const today = new Date();
@@ -173,6 +176,14 @@
         }
     }
     async function editarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        getpermisos = caboff.permisos
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
+        
         if(esservicio){
             try{
                 let dataser = {
@@ -339,6 +350,7 @@
     }
     //Aca va el offline
     async function eliminarOffline(id,esInseminacion) {
+        
         if(!esInseminacion){
             try{
                 servicios = servicios.filter(s=>s.id!=id)
@@ -384,6 +396,13 @@
         }
     }
     async function eliminarOnline(id,esInseminacion) {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        getpermisos = caboff.permisos
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         if(!esInseminacion){
             try{
                 
@@ -586,6 +605,8 @@
         servicios = await updateLocalServiciosSQLUser(db,pb,usuarioid)
         
         inseminaciones = await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         onChangeServicios()
         onChangeInseminaciones()
         filterUpdate()

@@ -18,6 +18,9 @@
     import { randomString } from '$lib/stringutil/lib';
     import CardNuevo from '$lib/components/establecimiento/CardNuevo.svelte';
     import CardExistente from '$lib/components/establecimiento/CardExistente.svelte';
+    //permisos
+    import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
+    import {updatePermisos} from "$lib/stores/capacitor/offlinecab"
     //probar internet
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -65,6 +68,7 @@
     let comandos = $state([])
     let ultimo_establecimiento = $state({})
     let getlocal = $state(false)
+    let getpermisos = $state("")
     let cargado = $state(false)
     let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
@@ -146,6 +150,14 @@
         Swal.fire("Error guardar","No se puede crear un colaborador sin internet","error")
     }
     async function guardarColabOnline(data){
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            
+            return 
+        }
         let codigo = await codigoSinRepetir(pb)
         try{
             let nombredata = data.nombre.trim().split(" ").filter(w=>w !== "").join(".")
@@ -223,6 +235,13 @@
         Swal.fire("Error guardar","No se puede crear un establecimiento sin internet","error")
     }
     async function guardarCabañaOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         let codigo = await codigoSinRepetirEstablecimiento(pb)
         const data = {
             nombre,
@@ -322,6 +341,14 @@
         renspaValido = true
     }
     async function editarCabañaOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            reestablercerCabaña()
+            return 
+        }
         const data = {
             nombre,
             direccion,
@@ -372,7 +399,13 @@
         }
     }
     async function desasociarOnline(idestxcolab) {
-
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         try{
             await pb.collection('estxcolabs').delete(idestxcolab);
             colabs = colabs.filter(colab => colab.id != idestxcolab)
@@ -667,11 +700,13 @@
             bind:codigo bind:modoedicion bind:provincia
             bind:localidad bind:colabs bind:localidadesProv
             bind:coninternet bind:db
+            bind:caboff
             {provincias} {guardarColab} {mostrarcolab}
             {asociado} {desasociar} cabid={caboff.id}
             {cab} {getNombreProvincia} 
             {getNombreLocalidad} {getLocalidades} 
             {reestablercerCabaña} {editarCabaña}
+            {usuarioid}
 
         />
         {:else}

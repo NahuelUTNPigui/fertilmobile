@@ -19,6 +19,9 @@
     } from "$lib/stores/sqlite/dbeventos"
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    //Permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     //VEr el historial de los animales
     let ruta = import.meta.env.VITE_RUTA
@@ -34,7 +37,10 @@
         tactos=$bindable([]),
         db,
         caravana=$bindable(""),
-        cabid,prenadaori=$bindable(0),categoria
+        cabid,prenadaori=$bindable(0),categoria,
+        caboff=$bindable({}),
+        usuarioid
+
     } = $props()
 
 
@@ -111,6 +117,12 @@
         })
     }
     async function eliminarOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         Swal.fire({
             title: 'Eliminar tacto',
             text: '¿Seguro que deseas eliminar el tacto?',
@@ -194,6 +206,12 @@
         }
     }
     async function editarTactoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let data = {
                fecha:fecha +" 03:00:00" ,
@@ -281,6 +299,12 @@
         
     }
     async function guardarTactoOnline(){
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let data = {
                fecha:fecha +" 03:00:00" ,

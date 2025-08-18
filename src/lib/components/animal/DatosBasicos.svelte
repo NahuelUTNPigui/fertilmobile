@@ -12,24 +12,24 @@
     import estados from "$lib/stores/estados";
     import RadioButton from "$lib/components/RadioButton.svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
-    import { getPermisosList } from "$lib/permisosutil/lib";
+    
     import { guardarHistorial, guardarHistorialOffline } from "$lib/historial/lib";
     import PredictSelect from "../PredictSelect.svelte";
     import {shorterWord} from "$lib/stringutil/lib"
+    //permisos
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
     //ofline
-    //Creo que no harai falta
+    //Creo que no haria falta
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline, updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import { getInternet } from "$lib/stores/offline";
     import {getInternetSQL, setInternetSQL} from '$lib/stores/sqlite/dbinternet'
     import {
         addNewNacimientoSQL,
-        editarNacimientoSQL,
-        
-
+        editarNacimientoSQL
     } from "$lib/stores/sqlite/dbeventos";
     import {
         editarAnimalSQL,
@@ -62,7 +62,7 @@
         rodeos,
         coninternet = $bindable({}),
         useroff,
-        caboff,
+        caboff = $bindable({}),
         animales,
         comandos=$bindable([]),
         db,
@@ -75,6 +75,7 @@
     let caber = createCaber()
     let userer = createUserer()
     let cab = caber.cab
+    //Uso otro mecanismo
     let per = createPer()
     let userpermisos = getPermisosList(per.per.permisos)
     let userid = userer.userid
@@ -184,20 +185,29 @@
         }        
     }
     function openEditar(){
-        if(true || userpermisos[5]){
-            modoedicion = true
-            pesoviejo = peso
-            sexoviejo = sexo
-            loteviejo = lote
-            rodeovieja = rodeo
-            caravanavieja = caravana
-            categoriavieja = categoria
-            prenadaviejo  = prenada
-            rpviejo = rp
-        }
-        else{
-            Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        }
+        modoedicion = true
+        pesoviejo = peso
+        sexoviejo = sexo
+        loteviejo = lote
+        rodeovieja = rodeo
+        caravanavieja = caravana
+        categoriavieja = categoria
+        prenadaviejo  = prenada
+        rpviejo = rp
+        //if(true || userpermisos[5]){
+        //    modoedicion = true
+        //    pesoviejo = peso
+        //    sexoviejo = sexo
+        //    loteviejo = lote
+        //    rodeovieja = rodeo
+        //    caravanavieja = caravana
+        //    categoriavieja = categoria
+        //    prenadaviejo  = prenada
+        //    rpviejo = rp
+        //}
+        //else{
+        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
+        //}
         
     }
     function cancelarEditar(){
@@ -224,31 +234,47 @@
         }
     }
     function openNewModal(){
-        if(true || userpermisos[5]){
-            fecha  = fechanacimiento
-            nuevoModal.showModal()
-        }
-        else{
-            Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        }
+        fecha  = fechanacimiento
+        nuevoModal.showModal()
+        //if(true || userpermisos[5]){
+        //    fecha  = fechanacimiento
+        //    nuevoModal.showModal()
+        //}
+        //else{
+        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
+        //}
     }
     function openEditModal(){
-        if(true || userpermisos[5]){
-            fechaviejo =  fecha
-            nombremadreviejo = nombremadre
-            nombrepadreviejo = nombrepadre
-            madreviejo = madre
-            padreviejo = padre
-            observacionviejo = observacion
-            
-            nuevoModal.showModal()
-        }
-        else{
-            Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        }
+        fechaviejo =  fecha
+        nombremadreviejo = nombremadre
+        nombrepadreviejo = nombrepadre
+        madreviejo = madre
+        padreviejo = padre
+        observacionviejo = observacion
+        
+        nuevoModal.showModal()
+        //if(true || userpermisos[5]){
+        //    fechaviejo =  fecha
+        //    nombremadreviejo = nombremadre
+        //    nombrepadreviejo = nombrepadre
+        //    madreviejo = madre
+        //    padreviejo = padre
+        //    observacionviejo = observacion
+        //    
+        //    nuevoModal.showModal()
+        //}
+        //else{
+        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
+        //}
         
     }
     async function guardarNacimientoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         try{
             let dataparicion = {
                 madre,
@@ -425,6 +451,12 @@
         Swal.fire("Éxito editar","Se pudo editar el nacimiento","success")
     }
     async function editarNacimientoOnline() {
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            return 
+        }
         let data = {
             madre,
             padre,
@@ -497,6 +529,12 @@
             prenada,
             categoria,
             rp
+        }
+        caboff = await updatePermisos(pb,usuarioid)
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[5]){
+            Swal.fire("Error permisos","No tienes permisos para los animales","error")
+            return 
         }
         try{
             const record = await pb.collection('animales').update(id, data);
@@ -594,7 +632,8 @@
     async function initPage() {
         //coninternet = await Network.getStatus();
         //useroff = await getUserOffline()
-        //caboff = await getCabOffline()
+        caboff = await getCabOffline()
+
         usuarioid = useroff.id
     }
     function processAnimales(){

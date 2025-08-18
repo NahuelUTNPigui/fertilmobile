@@ -30,6 +30,8 @@
     import Servicio from '$lib/svgs/servicio.svelte';
     import Tratamiento from '$lib/svgs/tratamiento.svelte';
     import Observacion from '$lib/svgs/observacion.svelte';
+    //Permisos
+    import{getPermisosMessage,getPermisosList} from "$lib/permisosutil/lib"
     //Formularios
     import InicioNacimiento from "$lib/components/inicio/Nacimiento.svelte"
     import InicioTacto from "$lib/components/inicio/Tacto.svelte"
@@ -46,12 +48,13 @@
     import {openDB,resetTables} from '$lib/stores/sqlite/main'
     import { Network } from '@capacitor/network';
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
-    import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import {getCabOffline,setDefaultCabOffline, updatePermisos} from "$lib/stores/capacitor/offlinecab"
     import {getInternetSQL, setInternetSQL,setUltimosSQL} from '$lib/stores/sqlite/dbinternet'
     import Barrainternet from '$lib/components/internet/Barrainternet.svelte';   
     import {getCabData,getCabDataByID} from "$lib/stores/cabsdata"
     import {
         getTotalesEventosOnline,
+        getTotalesEventosOnlineCab,
         addNewTactoSQL,
         getEventosSQL, 
         setUltimoEventosSQL,
@@ -107,6 +110,7 @@
     let lastinter = $state({})
     let getlocal = $state(false)
     let getactualizacion = $state(0)
+    let getpermisos = $state("")
     let tiempocargatotales = $state(0)
     let tiempocargaupdate = $state(0)
     /*
@@ -318,6 +322,22 @@
         initObservacion()
         nuevoModalObservacion.showModal()
     }
+    function verficarPermisosColab(animal){
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            
+            return false
+        }
+        if(animal){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if( !listapermisos[5]){
+                Swal.fire("Error permisos",getPermisosMessage(5),"error")    
+                return false
+            }
+        }
+        return true
+    }
     //Debo agregar la verificacion de cantidad de animales de cabaña
     //Debo crearle el pesaje cuando le guardo el animl
     async function guardarAnimal(esTacto,esInseminacion) {
@@ -354,6 +374,11 @@
         //}
         let idprov = "nuevo_animal_"+generarIDAleatorio() 
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if( !listapermisos[5]){
+                Swal.fire("Error permisos",getPermisosMessage(5),"error")    
+                return {id:-1}
+            }
             let recorda = await pb.collection('animales').create(data); 
             return recorda   
         }
@@ -403,6 +428,12 @@
             active:true
         }
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                
+                return false
+            }
             try{
                 //que pasa si el animal no existe
                 let record = await pb.collection('tactos').create(data);
@@ -469,6 +500,12 @@
                 active:true
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 try{
                     let record = await pb.collection('tactos').create(data);
                     //await pb.collection('animales').update(animaltacto,{
@@ -546,6 +583,12 @@
     }
     async function guardarNacimientoOnline(dataparicion){
         //debo agregar el lote y rodeo de la madre
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[4]){
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
+            
+            return false
+        }
         try{
             let recordparicion = await pb.collection('nacimientos').create(dataparicion);
             recordparicion = {
@@ -566,6 +609,12 @@
             }
             
             if(agregaranimal){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[5]){
+                    Swal.fire("Error permisos",getPermisosMessage(5),"error")
+                    
+                    return false
+                }
                 let data = {
                     caravana:caravana,
                     active:true,
@@ -745,6 +794,12 @@
         //si tengo internet lo hgao derecho
         
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                
+                return false
+            }
             let record = await pb.collection("tratamientos").create(data)
             record = {
                 ...record,
@@ -808,6 +863,12 @@
                 observacion:tratamiento.observaciontrat,
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 try{
                     let a = animales.filter(an=>an.id==tratamiento.animaltrat)[0]
                     let record = await pb.collection("tratamientos").create(data)
@@ -892,6 +953,12 @@
             observacion:inseminacion.observacion
         }
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                
+                return false
+            }
             try{
                 let record = await pb.collection('inseminacion').create(data);
                     record = {
@@ -963,6 +1030,12 @@
                 observacion:inseminacion.observacion
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 try{
                     let animalins = animales.filter(an=>an.id==inseminacion.idanimalins)[0]
                     let record = await pb.collection('inseminacion').create(data);
@@ -1046,6 +1119,12 @@
                 dataser.fechahasta = servicio.fechahastaserv + " 03:00:00"
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 let record = await pb.collection("servicios").create(dataser)
                 record = {
                     ...record,
@@ -1102,6 +1181,12 @@
                 dataser.fechahasta = servicio.fechahastaserv + " 03:00:00"
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 try{
                     let madre = animales.filter(an=>an.id==servicio.idanimalser)[0] 
                     let record = await pb.collection("servicios").create(dataser)
@@ -1173,6 +1258,12 @@
             active:true
         }
         if(coninternet.connected){
+            let listapermisos = getPermisosList(caboff.permisos)
+            if(!listapermisos[4]){
+                Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                
+                return false
+            }
            try{
                let record = await pb.collection('observaciones').create(data);
                record = {
@@ -1236,6 +1327,12 @@
                 active:true
             }
             if(coninternet.connected){
+                let listapermisos = getPermisosList(caboff.permisos)
+                if(!listapermisos[4]){
+                    Swal.fire("Error permisos",getPermisosMessage(4),"error")
+                    
+                    return false
+                }
                 try{
                     let a = animales.filter(an=>an.id==observacion.animalobs)[0]
                     let record = await pb.collection('observaciones').create(data);
@@ -1375,8 +1472,10 @@
     }
     async function updateLocalSQL(db) {
         let inicio = Date.now();
+        
         await setInternetSQL(db,1,Date.now())
-        let totales = await getTotalesEventosOnline(pb,usuarioid)
+        let totales = await getTotalesEventosOnlineCab(pb,caboff.id)
+        
         totaleventos.tactos = totales.tactos
         totaleventos.inseminaciones = totales.inseminaciones
         totaleventos.nacimientos = totales.nacimientos
@@ -1386,16 +1485,23 @@
         totaleventos.servicios = totales.servicios
         
         let tipotrats = await updateLocalTiposTratSQLUser(db,pb,usuarioid)
+        
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
         animales = animalesuser
+        
         onChangeAnimales()
         totaleventos.animales = animales.filter(a=>a.cab == caboff.id &&  a.active).length
-        let totalrodeoslotes  = await getTotalesRodeosLotesSQL(pb,usuarioid)
+        let totalrodeoslotes  = await getTotalesRodeosLotesSQL(pb,caboff.id)
+        
         totaleventos.lotes = totalrodeoslotes.lotes
         totaleventos.rodeos = totalrodeoslotes.rodeos
-        tipotratamientos = tipostrat.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
+        tipotratamientos = tipotrats.filter(t=>(t.cab == caboff.id && t.active)||t.generico)  
+        
         await setUltimoAnimalesSQL(db)
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
         tiempocargaupdate = Date.now() - inicio
+        
         cargados = true
     }
     async function getLocalSQL(db) {
@@ -1446,6 +1552,7 @@
         intermitenter.addIntermitente(isOnline)
         useroff = await getUserOffline()
         caboff = await getCabOffline()
+        getpermisos = caboff.permisos
         usuarioid = useroff.id
         cab = caber.cab
     }
@@ -1519,13 +1626,15 @@
                     ahora,
                     antes
                 );
+
                 if(modedebug){
                     getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
                 }
-                
+ 
                 if(mustUpdate){
                    await updateLocalSQL(db) 
                 }
+                
                 else{
                     await getLocalSQL(db)
                 }
@@ -1627,6 +1736,9 @@
             </span>
             <span>
                 Tiempo updates: {tiempocargaupdate} 
+            </span>
+            <span>
+                Permisos: {getpermisos} 
             </span>
         </div>
     {/if}

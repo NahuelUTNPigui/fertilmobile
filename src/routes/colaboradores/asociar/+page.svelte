@@ -15,18 +15,29 @@
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
     import { intermitenter } from '$lib/stores/offline/intermitencia.svelte';
     import { velocidader } from '$lib/stores/offline/velocidad.svelte';
+    //permisos
+    import {updatePermisos} from "$lib/stores/capacitor/offlinecab"
+    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
     let getvelocidad = $state(0)
     let caber = createCaber()
     let cab = caber.cab
     let tokencolab = $state("")
+    let usuarioid = $state("")
+    let caboff = $state({})
     
     function volver(){
         goto("/establecimiento")
     }
     async function asociar() {
-        
+        caboff = await updatePermisos(pb,usuarioid)
+        getpermisos = caboff.permisos
+        let listapermisos = getPermisosList(caboff.permisos)
+        if(!listapermisos[0]){
+            Swal.fire("Error permisos",getPermisosMessage(0),"error")
+            return 
+        }
         const resultList = await pb.collection('users').getList(1, 1, {
             filter: `codigo = '${tokencolab}'`,
             skipTotal:true
