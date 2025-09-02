@@ -14,7 +14,7 @@
     import {addNewNacimientoSQL} from '$lib/stores/sqlite/dbeventos';
     import {getAnimalesSQL,addNewAnimalSQL} from '$lib/stores/sqlite/dbanimales';
     //permisos
-    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import{verificarNivel,getPermisosList, getPermisosMessage} from "$lib/permisosutil/lib"
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let {
         useroff,
@@ -124,14 +124,14 @@
             caboff = await updatePermisos(pb,usuarioid)
             let listapermisos = getPermisosList(caboff.permisos)
             if(!listapermisos[5]){
-                Swal.fire("Error permisos","No tienes permisos para los animales","error")
+                Swal.fire("Error permisos",getPermisosMessage(5),"error")
                 return 
             }
         }
         caboff = await updatePermisos(pb,usuarioid)
         let listapermisos = getPermisosList(caboff.permisos)
         if(!listapermisos[4]){
-            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
             return 
         }
         try{

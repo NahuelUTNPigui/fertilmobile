@@ -83,19 +83,16 @@
 
     async function actualizarDatos() {
         actualizando = true
-        loger.addTextLog(actualizando)
+        
         await setInternetSQL(db,1,Date.now())
-        loger.addLineaNumber(76)
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
-        loger.addLineaNumber(78)
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
-        loger.addLineaNumber(80)
         //Debo traer los datos de la cabaña
         await updateLocalEstablecimientosSQL(db,pb,usuarioid,caboff.id)
         let datauser = await updateLocalEventosSQLUser(db,pb,usuarioid)
         await updateLocalColabSQLUser(db,pb,usuarioid)
         actualizando = false
-        loger.addTextLog(actualizando)
+        
     }
 </script>
 <Navbarr>

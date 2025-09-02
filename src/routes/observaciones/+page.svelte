@@ -16,6 +16,9 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    //FILTROS
+    import { createStorageProxy } from "$lib/filtros/filtros";
+    import Limpiar from "$lib/filtros/Limpiar.svelte";
     //Permisos
     import { getPermisosList, getPermisosMessage } from "$lib/permisosutil/lib";
     //Actualizacion
@@ -75,6 +78,7 @@
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
+    let infotoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -127,6 +131,16 @@
     let fechadesde = $state("");
     let fechahasta = $state("");
     let isOpenFilter = $state(false);
+    let defaultfiltro = {
+        buscar: "",
+        buscarcategoria: "",
+        fechadesde: "",
+        fechahasta: "",
+    };
+    let proxyfiltros = $state({
+        ...defaultfiltro,
+    });
+    let proxy = createStorageProxy("listaobservaciones", defaultfiltro);
     //Datos animal
     let caravananuevo = $state("");
     let categorianuevo = $state("");
@@ -327,7 +341,29 @@
         agregaranimal = false;
         nuevoModal.close();
     }
+    function setFilters() {
+        buscar = proxyfiltros.buscar;
+        buscarcategoria = proxyfiltros.buscarcategoria;
+        fechadesde = proxyfiltros.fechadesde;
+        fechahasta = proxyfiltros.fechahasta;
+    }
+
+    function setProxyFilter() {
+        proxyfiltros.buscar = buscar;
+        proxyfiltros.buscarcategoria = buscarcategoria;
+        proxyfiltros.fechadesde = fechadesde;
+        proxyfiltros.fechahasta = fechahasta;
+    }
+
+    function limpiarFiltros() {
+        proxyfiltros = { ...defaultfiltro };
+
+        setFilters();
+        filterUpdate();
+    }
     function filterUpdate() {
+        setProxyFilter();
+        proxy.save(proxyfiltros);
         observacionesrow = observacionescab;
         totalObservacionesEncontradas = observacionesrow.length;
         if (buscar != "") {
@@ -782,6 +818,8 @@
         }
     }
     async function getDataSQL() {
+        proxyfiltros = proxy.load();
+        setFilters();
         db = await openDB();
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
@@ -790,6 +828,7 @@
         comandos = rescom.lista;
         let ahora = Date.now();
         let antes = ultimo_observaciones.ultimo;
+        await getLocalSQL();
         if (coninternet.connected) {
             await updateComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
@@ -814,18 +853,27 @@
             }
 
             if (mustUpdate) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
+                etTimeout(async () => {
+                    try {
+                        await updateLocalSQL();
+                        // Notificar cambios solo si hay diferencias
+                        infotoast = true;
+                        setTimeout(() => {
+                            infotoast = false;
+                            if (modedebug) {
+                                loger.addTextLog("BUEN SYNC");
+                            }
+                        }, 2000); // 2 segundos
+                    } catch (err) {
+                        if (modedebug) {
+                            loger.addTextError("ERROR FALLO SYNC");
+                        }
+
+                        console.warn("Fallo en sincronización background", err);
+                        // No afecta al usuario
+                    }
+                }, 0);
             }
-        } else {
-            if (modedebug) {
-                loger.addLog({
-                    time: Date.now(),
-                    text: "getdatasql",
-                });
-            }
-            await getLocalSQL();
         }
     }
     onMount(async () => {
@@ -883,8 +931,8 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 m-1 mb-2 mt-1 mx-1 lg:mx-10 w-11/12">
-        <div class="w-full lg:w-1/2">
+    <div class="grid grid-cols-1 lg:grid-cols-2 m-1 mb-2 mt-1 mx-1 lg:mx-10 w-11/12">
+        <div class="w-11/12">
             <label
                 class={`
                         input input-bordered flex items-center gap-2
@@ -899,6 +947,11 @@
                     oninput={filterUpdate}
                 />
             </label>
+        </div>
+        <div class="w-11/12">
+            <Limpiar
+                {limpiarFiltros}
+            />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1078,6 +1131,13 @@
         </div>
     {/if}
 </Navbarr>
+{#if infotoast}
+    <div class="toast toast-top toast-center">
+        <div class="alert alert-info">
+            <span>Datos actualizados</span>
+        </div>
+    </div>
+{/if}
 <dialog
     id="nuevoModal"
     class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle"

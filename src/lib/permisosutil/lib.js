@@ -76,7 +76,7 @@ export async function verificarNivelOffline(animalestotal,nuevos) {
 export async function verificarNivelColabOffline(cabid) {
     return true
 }
-export async function getPermisosCabUser(pb,userid,cabid) {
+export async function   getPermisosCabUser(pb,userid,cabid) {
     const recordcolabcab = await pb.collection('estxcolabs').getList(1,1,{
         filter:`colab.user='${userid}' && cab='${cabid}'`,
         expand: 'colab,cab,colab.user'

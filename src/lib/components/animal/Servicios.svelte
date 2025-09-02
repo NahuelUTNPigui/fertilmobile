@@ -21,7 +21,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
     //permisos
-    import{verificarNivel,getPermisosList} from "$lib/permisosutil/lib"
+    import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
@@ -240,7 +240,7 @@
         caboff = await updatePermisos(pb,usuarioid)
         let listapermisos = getPermisosList(caboff.permisos)
         if(!listapermisos[4]){
-            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
             return 
         }
         let data = {
@@ -291,7 +291,7 @@
         caboff = await updatePermisos(pb,usuarioid)
         let listapermisos = getPermisosList(caboff.permisos)
         if(!listapermisos[4]){
-            Swal.fire("Error permisos","No tienes permisos para los eventos","error")
+            Swal.fire("Error permisos",getPermisosMessage(4),"error")
             return 
         }
         let data = {

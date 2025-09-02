@@ -80,7 +80,7 @@
         if(!coninternet.connected){
             Swal.fire("Error cambiar plan","No se pudo cambiar el plan sin internet","error")
         }
-        Swala.fire({
+        Swal.fire({
             title: 'Cambiar plan',
             text: `¿Seguro que deseas cambiar de plan?`,
             icon: 'warning',

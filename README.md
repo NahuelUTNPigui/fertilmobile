@@ -48,6 +48,7 @@ pnpm run build && npx cap sync && date
 
 Install Android Studio if you haven't and open the project with 
 `npx cap open android`.
+npx cap open android
 si quiero tener el logo y el splahs screen
 npx capacitor-assets generate --android
 

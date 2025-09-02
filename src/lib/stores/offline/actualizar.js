@@ -10,7 +10,7 @@ export function actualizacion(
     tipoRed
 ){
     const MIN = CINCO_MIN;     // 5 minutos
-    const MAX = MEDIA_HORA; // 2 horas
+    const MAX = UNA_HORA; // 2 horas
     const vmax = 1_000_000;        // 1MB/s como velocidad máxima razonable
 
     // Normalizar velocidad
@@ -47,10 +47,11 @@ export function deboActualizar(
 ){
     if(coninternet.connected){
         
-        //Soy colaborador en la cabaña y capaz debo actualizar
-        if(fromColab){   
-            return true
+        if(confiabilidad<0.75){
+            return false
         }
+            
+        
         let ACTUALIZACION = actualizacion(velocidad,confiabilidad,coninternet.connectionType)
         //No importa si hay internet sino si es tiempo de actualizar
         if((ahora-antes)>=ACTUALIZACION){

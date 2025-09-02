@@ -1,3 +1,12 @@
+export async function updateLocalIDAsociadosSQL(db,pb,userid) {
+    const recordcolabcab = await pb.collection('estxcolabs').getFullList({
+        filter:`colab.user='${userid}'`,
+        expand: 'colab,cab'
+    })
+    let ids = recordcolabcab.map(c=>c.cab)
+    await setEstablecimientosAsociadosSQL(db,ids)
+}
+
 //Esto es la lista de establecimientos asociados que quiero offline
 //Van a ser cabid
 export async function setEstablecimientosAsociadosSQL(db, establecimientos) {

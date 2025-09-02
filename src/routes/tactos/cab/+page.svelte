@@ -20,6 +20,9 @@
     import { goto } from "$app/navigation";
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
+    //FILTROS
+import { createStorageProxy } from "$lib/filtros/filtros";
+import Limpiar from "$lib/filtros/Limpiar.svelte";
     //Permisos
     import{getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     //Actualizacion
@@ -53,6 +56,7 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     
     //offline
+    let infotoast = $state(false)
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
@@ -93,6 +97,20 @@
     let buscarcategoria = $state("")
     let buscarestado = $state("")
     let buscartipo = $state("")
+
+    let defaultfiltro = {
+        buscar:"",
+        fechadesde:"",
+        fechahasta:"",
+        buscarcategoria:"",
+        buscarestado:"",
+        buscartipo:""
+    };
+    let proxyfiltros = $state({
+        ...defaultfiltro,
+    });
+    let proxy = createStorageProxy("listatactos", defaultfiltro);
+
     //Datos tacto
     let tacto = $state(null)
     let idtacto = $state("")
@@ -290,8 +308,33 @@
         nombreveterinario = ""
         nuevoModal.close()
     }
+    function setFilters() {
+buscar=proxyfiltros.buscar
+fechadesde=proxyfiltros.fechadesde
+fechahasta=proxyfiltros.fechahasta
+buscarcategoria=proxyfiltros.buscarcategoria
+buscarestado=proxyfiltros.buscarestado
+buscartipo=proxyfiltros.buscartipo
+}
+
+function setProxyFilter() {
+proxyfiltros.buscar=buscar
+proxyfiltros.fechadesde=fechadesde
+proxyfiltros.fechahasta=fechahasta
+proxyfiltros.buscarcategoria=buscarcategoria
+proxyfiltros.buscarestado=buscarestado
+proxyfiltros.buscartipo=buscartipo
+}
+
+function limpiarFiltros() {
+        proxyfiltros = { ...defaultfiltro };
+
+        setFilters();
+        filterUpdate();
+    }
     function filterUpdate(){
-        
+        setProxyFilter();
+        proxy.save(proxyfiltros);
         tactosrow = tactoscab
         totalTactosEncontrados = tactosrow.length
         if(buscar!=""){
@@ -397,6 +440,8 @@
         }
     }
     async function getDataSQL() {
+        proxyfiltros = proxy.load();
+        setFilters();
         db = await openDB()
         //Reviso el internet
         let lastinter = await getInternetSQL(db)
@@ -405,6 +450,7 @@
         comandos = rescom.lista
         let ahora = Date.now()
         let antes = ultimo_tacto.ultimo
+        await getLocalSQL()
         if (coninternet.connected){
             await updateComandos()
             let velocidad = await velocidader.medirVelocidadInternet()
@@ -425,16 +471,28 @@
             }
                         
             if(mustUpdate){
-                await updateLocalSQL() 
-            }
-            else{
-                await getLocalSQL()
+                setTimeout(async () => {
+                    try {
+                        await updateLocalSQL();
+                        // Notificar cambios solo si hay diferencias
+                        infotoast = true;
+                        setTimeout(() => {
+                            infotoast = false;
+                            if (modedebug) {
+                                loger.addTextLog("BUEN SYNC");
+                            }
+                        }, 2000); // 2 segundos
+                    } catch (err) {
+                        if (modedebug) {
+                            loger.addTextError("ERROR FALLO SYNC");
+                        }
+
+                        console.warn("Fallo en sincronización background", err);
+                        // No afecta al usuario
+                    }
+                }, 0);
             }
             
-        }
-        else{
-            await getLocalSQL()
-
         }
     }
     onMount(async ()=>{
@@ -856,6 +914,13 @@
     {/if}
     
 </Navbarr>
+{#if infotoast}
+    <div class="toast toast-top toast-center">
+        <div class="alert alert-info">
+            <span>Datos actualizados</span>
+        </div>
+    </div>
+{/if}
 <dialog id="nuevoModal" class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle">
     <div 
         class="

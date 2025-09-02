@@ -18,6 +18,7 @@
             <th 
                 onclick={()=>ordenarAnimales("caravana")}
                 class={`
+                    cursor-pointer
                     text-base p-3 border-b dark:border-gray-600 
                     hover:cursor-pointer hover:bg-gray-200 
                     dark:hover:bg-gray-800

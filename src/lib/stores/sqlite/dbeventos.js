@@ -515,6 +515,7 @@ export async function getUltimoServiciosSQL(db) {
 }
 //INSEMINACIONES va a usar servicios para el internet
 export async function updateLocalInseminacionesSQLUser(db, pb, userid) {
+
     const records = await pb.collection('inseminacion').getFullList({
         sort: '-fechainseminacion ',
         filter: `cab.user = '${userid}' && active = true`,
@@ -539,6 +540,7 @@ export async function updateLocalInseminacionesSQLUser(db, pb, userid) {
             filter: `cab = '${asociados[i]}' && active = true`,
             expand: "animal,cab"
         });
+        inseminaciones = inseminaciones.concat(record_asoc)
     }
 
     //Fin Asociados
@@ -813,6 +815,7 @@ export async function getUpdateLocalRodeosLotesSQLUser(db, pb, usuarioid, cabid)
 export async function getLotesRodeosSQL(db, cabid) {
     let resrodeos = await getRodeosSQL(db)
     let reslotes = await getLotesSQL(db)
+    
     let lotes = reslotes.lista.filter(l => l.cab == cabid)
     let rodeos = resrodeos.lista.filter(r => r.cab == cabid)
     return {

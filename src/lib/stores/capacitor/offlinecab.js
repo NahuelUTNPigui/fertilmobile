@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import { loger } from '../logs/logs.svelte';
 //debria agregar estxcolabs
 let defaultcab = {
     exist:false,
@@ -37,8 +38,12 @@ export async function getCabOffline() {
 }
 export async function updatePermisos(pb,userid){
     const c = await Preferences.get({ key: 'cab' });
+    loger.addTextLinea(41)
+    loger.addTextLinea(JSON.stringify(c.value,null,2))
     if(c.value){
+    loger.addTextLinea(44)
         let cab = JSON.parse(c.value)
+        loger.addTextLinea(JSON.stringify(cab,null,2))
         if(cab.colaborador){
             const recordcolabcab = await pb.collection('estxcolabs').getList(1,1,{
                 filter:`colab.user='${userid}' && cab='${cab.id}'`,
@@ -57,6 +62,7 @@ export async function updatePermisos(pb,userid){
             }
         }
         else{
+                
             return cab
         }
         

@@ -22,6 +22,9 @@
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos'; 
     import {updateLocalAnimalesSQLUser,getAnimalesSQL} from "$lib/stores/sqlite/dbanimales"
     import {getEstablecimientosSQL,getUpdateLocalEstablecimientosSQL} from "$lib/stores/sqlite/dballestablecimientos"
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    import { offliner } from '$lib/stores/logs/coninternet.svelte';
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"  
     //offline
     let db = $state(null)
     let usuarioid = $state("")

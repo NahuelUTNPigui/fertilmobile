@@ -349,6 +349,6 @@
         {/if}
         
     </div>
-    <Colaboradores bind:caboff bind:colabs bind:coninternet {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cabid} {cab} {usuarioid}/>
-    <ListaColabs bind:colabs={colabs} {cabid} bind:db/>
+    <Colaboradores bind:caboff bind:colabs bind:coninternet {db} {mostrarcolab} {guardarColab} {desasociar} {asociado} cabid={cabid} {cab} {usuarioid}/>
+    <ListaColabs bind:colabs {cabid} />
 </CardBase>

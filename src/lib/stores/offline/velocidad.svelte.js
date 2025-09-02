@@ -10,14 +10,21 @@ export const velocidader={
         velocidad = vel
     },
     medirVelocidadInternet:async ()=>{
-        const url = "https://www.google.com/images/phd/px.gif"; // 43 bytes
-        const inicio = Date.now();
+        //const url = "https://www.google.com/images/phd/px.gif"; // 43 bytes
+        
         try {
+            const inicio = Date.now();
             const res = await fetch(ruta+"/hello/x" );
             const fin = Date.now();
             const duracion = (fin - inicio) / 1000; // en segundos
             
             const bytes = parseInt(res.headers.get("content-length") || "22");
+            //if(modedebug){
+            //    loger.addTextLinea("size: "+res.headers.get("content-length"))
+            //    loger.addTextLinea("velocidad bps: "+(bytes / duracion))
+            //    loger.addTextLinea("velocidad mbps: "+((bytes/1_000_00)  / duracion))
+            //    
+            //}
             return bytes / duracion; // bytes por segundo
         } catch(err) {
             if(modedebug){

@@ -222,9 +222,9 @@
         //No hace falta updatear al colaborador porque lo hice
         //en la pantalla de colaboradores
         await getLocalSQL()
-        if (coninternet.connected){
-            await updateComandos()
-        }
+        //if (coninternet.connected){
+        //    await updateComandos()
+        //}
     }
     onMount(async ()=>{
         id = $page.params.id

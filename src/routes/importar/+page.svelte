@@ -31,6 +31,7 @@
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import {getUserOffline,setDefaultUserOffline} from "$lib/stores/capacitor/offlineuser"
     import {getCabOffline,setDefaultCabOffline} from "$lib/stores/capacitor/offlinecab"
+    import { getInternet,getOnlyInternet } from "$lib/stores/offline";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
         getRodeosSQL,
@@ -42,6 +43,7 @@
         updateLocalRodeosSQLUser        
     } from "$lib/stores/sqlite/dbeventos"
     import {
+        getUltimoAnimalesSQL,
         getAnimalesSQL,
         setAnimalesSQL,    
         updateLocalAnimalesSQL,
@@ -53,6 +55,7 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"  
 
     //OFLINE
+    let infotoast = $state(false)
     let db = $state(null)
     let usuarioid = $state("")
     let useroff = $state({})
@@ -129,7 +132,7 @@
         comandos = rescom.lista
         let ahora = Date.now()
         let antes = ultimo_animal.ultimo
-        
+        await getLocalSQL()
         if (coninternet.connected){
             
             try{
@@ -157,14 +160,27 @@
                 getactualizacion = await actualizacion(velocidad,confiabilidad,coninternet.connectionType)
             }
             if(mustUpdate){
-               await updateLocalSQL() 
+               setTimeout(async () => {
+                    try {
+                        await updateLocalSQL(db);
+                        // Notificar cambios solo si hay diferencias
+                        infotoast = true;
+                        setTimeout(() => {
+                            infotoast = false;
+                            if (modedebug) {
+                                loger.addTextLog("BUEN SYNC");
+                            }
+                        }, 2000); // 2 segundos
+                    } catch (err) {
+                        if (modedebug) {
+                            loger.addTextError("ERROR FALLO SYNC");
+                        }
+
+                        console.warn("Fallo en sincronización background", err);
+                        // No afecta al usuario
+                    }
+                }, 0);
             }
-            else{
-                await getLocalSQL()
-            }
-        }
-        else{
-            await getLocalSQL()
         }
     }
     async function initPage() {
@@ -254,7 +270,7 @@
         <CardImportar cardsize="max-w-2xl" titulo="Importar inseminaciones">
             <ImportarInseminaciones 
                 {db} {coninternet} {useroff} 
-                v {usuarioid} {animales}
+                bind:caboff {usuarioid} {animales}
                 {aparecerToast}
             />
         </CardImportar>
@@ -280,3 +296,10 @@
         </div>
     {/if}
 </Navbarr>
+{#if infotoast}
+    <div class="toast toast-top toast-center">
+        <div class="alert alert-info">
+            <span>Datos actualizados</span>
+        </div>
+    </div>
+{/if}

@@ -54,6 +54,26 @@
     let malcorreo = $state(false)
     let codigoasociar = $state("")
 
+    async function crearNotificacion(usuarioid,cab,origenusuarioid,userid) {
+        //Creo las notificaciones
+        try{
+            let data = {
+                texto:"Se te asoció al establecimiento "+ cab.nombre,
+                titulo:"Asociado a "+ cab.nombre,
+                tipo:tiponoti[0].id,
+                origen:origenusuarioid,
+                destino:userid,
+                leido:false
+            }
+            const record = await pb.collection('notificaciones').create(data);
+        }
+        catch(err){
+            console.error(err)
+            if(modedebug){
+                loger.addTextError(JSON.stringify(err,null,2))
+            }
+        }
+    }
     async function asociarOnline() {
         caboff = await updatePermisos(pb,usuarioid)
         let listapermisos = getPermisosList(caboff.permisos)
@@ -67,10 +87,12 @@
         }
         //let verificar = await verificarNivelColab(cabid)
         let verificar = true
+
         if(!verificar){
             Swal.fire("Error guardar",`No tienes el nivel de la cuenta para tener más colaboradores`,"error")
             return
         }
+
         const resultList = await pb.collection('users').getList(1, 1, {
             filter: `codigo ~ '${correoasociar}'`,
             skipTotal:true
@@ -94,6 +116,7 @@
             Swal.fire("Error colaborador","No puedes asociarte al establecimiento","error")
             return
         }
+
         const resultcolab = await pb.collection('colaboradores').getList(1,1,{
             filter:`user = '${userid}'`,
             skipTotal:true
@@ -117,12 +140,14 @@
                     colab:colabid
                 }
                 let recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+
                 //Debo crear los permisos para el colaborador
                 let datapermisos = {
                     estxcolab:recordestxcolab.id,
                     permisos:""
                 }
                 const recordpermisos = await pb.collection('permisos').create(datapermisos);
+
                 recordestxcolab = {
                     ...recordestxcolab,
                     permisos:"",
@@ -138,8 +163,12 @@
                     }
 
                 }
+
                 colabs.push(recordestxcolab)
                 await setColabSQL(db,colabs)
+                
+                await crearNotificacion(db,usuarioid,caboff,origenusuarioid,userid)
+                
                 Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
                 //const records = await pb.collection('estxcolabs').getFullList({
                 //    expand:"colab",
@@ -174,12 +203,14 @@
                     colab:record.id
                 }
                 let recordestxcolab = await pb.collection('estxcolabs').create(dataestxcolab);
+
                 //Debo crear los permisos para el colaborador
                 let datapermisos = {
                     estxcolab:recordestxcolab.id,
                     permisos:""
                 }
                 const recordpermisos = await pb.collection('permisos').create(datapermisos);
+
                 recordestxcolab = {
                     ...recordestxcolab,
                     permisos:"",
@@ -197,6 +228,7 @@
                 }
                 colabs.push(recordestxcolab)
                 await setColabSQL(db,colabs)
+                await crearNotificacion(db,usuarioid,caboff,origenusuarioid,userid)
                 Swal.fire("Éxito asociar","Se pudo asociar el usuario","success")
                 
             }   
@@ -207,24 +239,7 @@
 
             }
         }
-        //Creo las notificaciones
-        try{
-            let data = {
-                texto:"Se te asoció al establecimiento "+ cab.nombre,
-                titulo:"Asociado a "+ cab.nombre,
-                tipo:tiponoti[0].id,
-                origen:origenusuarioid,
-                destino:userid,
-                leido:false
-            }
-            const record = await pb.collection('notificaciones').create(data);
-        }
-        catch(err){
-            console.error(err)
-            if(modedebug){
-                loger.addTextError(JSON.stringify(err,null,2))
-            }
-        }
+        
 
     }
     async function asociar() {

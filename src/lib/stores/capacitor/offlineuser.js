@@ -1,15 +1,15 @@
 import { Preferences } from '@capacitor/preferences';
 const CURRENT_SCHEMA_VERSION = 3;
 let userdefault = {
-    id:"",
-    nombre:"",
-    apellido:"",
-    username:"",
-    token:"",
+    id: "",
+    nombre: "",
+    apellido: "",
+    username: "",
+    token: "",
     codigo: "", // nuevo campo
     schemaVersion: 0,
-    lastupdate:0,
-    nivel:0
+    lastupdate: 0,
+    nivel: 0
 }
 function migrateV1toV2(user) {
     return {
@@ -28,7 +28,7 @@ function migrateV2toV3(user) {
 function applyMigrations(user) {
     if (!user.schemaVersion) user.schemaVersion = 1;
     let i = 0
-    while (user.schemaVersion < CURRENT_SCHEMA_VERSION || i <  5) {
+    while (user.schemaVersion < CURRENT_SCHEMA_VERSION || i < 5) {
         if (user.schemaVersion === 1) {
             user = migrateV1toV2(user);
         }
@@ -43,22 +43,27 @@ function applyMigrations(user) {
 }
 export async function setDefaultUserOffline() {
     await Preferences.set({
-        key:"usuario",
-        value:JSON.stringify(userdefault)
+        key: "usuario",
+        value: JSON.stringify(userdefault)
     })
 }
 export async function editUserCommonData(data) {
     let u = await Preferences.get({ key: 'usuario' });
-     u = {
-        ...u,
-        ...data
-     }
-    await Preferences.set({key:"usuario",value:JSON.stringify(u)})
-    return u
-}
-export async function setUserOffline(id,nombre,apellido,username,token,nivel,codigo) {
+    if (u.value) {
+        let user = JSON.parse(u.value)
+        user = {
+            ...user,
+            ...user
+        }
+        
+        await Preferences.set({ key: "usuario", value: JSON.stringify(user) })
+        return user
+    }
 
-    let u ={
+}
+export async function setUserOffline(id, nombre, apellido, username, token, nivel, codigo) {
+
+    let u = {
         id,
         nombre,
         apellido,
@@ -66,11 +71,11 @@ export async function setUserOffline(id,nombre,apellido,username,token,nivel,cod
         token,//Para que quiero el token
         nivel,
         codigo,
-        lastupdate:0,
-        schemaVersion:2
+        lastupdate: 0,
+        schemaVersion: 2
     };
 
-    await Preferences.set({key:"usuario",value:JSON.stringify(u)})
+    await Preferences.set({ key: "usuario", value: JSON.stringify(u) })
 }
 export async function updateLocalSQLUser(pb) {
     const authData = await pb.collection('users').authRefresh();
@@ -95,7 +100,7 @@ export async function updateLocalSQLUser(pb) {
 }
 export async function getUserOffline() {
     const u = await Preferences.get({ key: 'usuario' });
-    if(u.value){
+    if (u.value) {
         let user = JSON.parse(u.value);
         let copia = JSON.parse(u.value);
         user = applyMigrations(user);
@@ -104,7 +109,7 @@ export async function getUserOffline() {
         }
         return user
     }
-    else{
+    else {
         return userdefault
     }
 }

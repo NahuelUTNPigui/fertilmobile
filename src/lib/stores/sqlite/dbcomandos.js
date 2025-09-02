@@ -258,7 +258,6 @@ export async function flushComandosSQL(db,pb) {
     
     // Aca guardo los id de los nuevos registros con su id en la base de datos
     let tablaids = {}
-    
     // Aca paso los comandos a un array,
     // La prioridad no sirve porque estan conectados
     for(let i = 0;i<rescoms.lista.length;i++){
@@ -271,15 +270,17 @@ export async function flushComandosSQL(db,pb) {
 
     let caboff = await getCabOffline()
     let useroff = await getUserOffline()
-
-    usuarioid = useroff.id
+    
+    let usuarioid = useroff.id
     let listapermisos = getPermisosList(caboff.permisos)
-    if(!listapermisos[4]){
+    
+    if(!listapermisos[4] && listacomandos.length>0){
 
+        
         let nuevoeventos = listacomandos.filter(c=>{
             let lista = c.idprov.split("_")
             if(lista.length>1){
-                let esnuevo = !lista.includes("animal")
+                let esnuevo = !(lista.includes("animal")||lista.includes("histo"))
                 return esnuevo
             }
             else{
@@ -287,6 +288,7 @@ export async function flushComandosSQL(db,pb) {
             }
             
         });
+        
         //Debo verificar los update y eliminar
         if(nuevoeventos.length > 0){
             Swal.fire("Error actualización","Para actualizar, no tienes permisos para registrar eventos","error")
@@ -299,12 +301,12 @@ export async function flushComandosSQL(db,pb) {
         
 
     }
-    if(!listapermisos[5]){
+    if(!listapermisos[5] && listacomandos.length>0){
         let mensaje = false
         let nuevoanimales = listacomandos.filter(c=>{
             let lista = c.idprov.split("_")
             if(lista.length>1){
-                let nuevoanimal = lista.includes("animal")
+                let nuevoanimal = lista.includes("animal") || lista.includes("histo")
                 return nuevoanimal
             }
             else{
@@ -344,7 +346,6 @@ export async function flushComandosSQL(db,pb) {
                 return !incluido
             })
         }
-
 
     }
     
