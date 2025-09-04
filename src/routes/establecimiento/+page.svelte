@@ -621,10 +621,13 @@
     async function getLocalSQL() {
         getlocal = true;
         let rescolabs = await getColabSQL(db);
+        
         let resestablecimientos = await getEstablecimientosSQL(db);
+        
         establecimientos = resestablecimientos.lista;
         colabs = rescolabs.lista.filter((colab) => colab.cab == caboff.id);
         let res = await getEsblecimientoSQL(db);
+        
         datosviejos = { ...res };
 
         establecimiento = res;
@@ -639,6 +642,7 @@
         mail = res.mail;
         localidadesProv = localidades.filter((lo) => lo.idProv == provincia);
         cargado = true;
+        
     }
     async function updateLocalSQL() {
         await setUltimoEstablecimientosSQL(db);
@@ -688,6 +692,7 @@
         let ahora = Date.now();
         let antes = ultimo_establecimiento.ultimo;
         await getLocalSQL();
+        
         if (coninternet.connected) {
             let velocidad = await velocidader.medirVelocidadInternet();
             try {

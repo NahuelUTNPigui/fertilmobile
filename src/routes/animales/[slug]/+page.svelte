@@ -507,9 +507,7 @@
             let n_idx = pariciones.findIndex(n=>n.id==nacimiento)
             if(n_idx != -1){
                 nacimientoobj = pariciones[n_idx]
-                //if(modedebug){
-                //    loger.addTextLog(JSON.stringify(nacimientoobj,null,2))
-                //}
+
             }
             
         }

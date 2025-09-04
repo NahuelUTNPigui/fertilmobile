@@ -77,6 +77,7 @@
   //let rol = "cab"
   onMount(async ()=>{
     coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffliner)
+    //await cabuserSQL()
     let caber = createCaber()
     nombreestablecimiento = caber.cab.nombre
     //if (window.innerWidth <= 600) { // Pantallas pequeñas

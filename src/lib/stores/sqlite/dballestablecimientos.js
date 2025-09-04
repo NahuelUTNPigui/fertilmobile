@@ -79,7 +79,7 @@ export async function getUpdateLocalEstablecimientosSQL(db,pb,userid) {
     for(let i = 0;i<asociados.length;i++){
         //Necesito los permisos
         let est_asociados = await pb.collection('cabs').getFullList({
-            filter:`id='${asociados[i]}' && active=true`,
+            filter:`id='${asociados[i]}'`,
             
         });
         if(est_asociados.length > 0){

@@ -223,8 +223,7 @@
                 let idx_nacimiento = buscarNacimiento(datanacimiento);
                 let id_nacimiento = "";
 
-                if (idx_nacimiento == -1) {
-                    loger.addTextLog("nuevo");
+                if (idx_nacimiento == -1) { 
                     let futuroanimal = {
                         id: "",
                         caravana: "",
@@ -264,9 +263,9 @@
                     record = crearRecord(record, datanacimiento, futuroanimal);
                     
                     id_nacimiento = record.id;
-                    loger.addTextLog(nacimientos.length);
+                    
                     nacimientos.push(record);
-                    loger.addTextLog(nacimientos.length);
+                    
                 } else {
                     id_nacimiento = nacimientos[idx_nacimiento].id;
                     await pb
@@ -284,7 +283,7 @@
                 errores = true;
             }
         }
-        loger.addTextLog(nacimientos.length);
+
         await setNacimientosSQL(db, nacimientos);
 
         return errores;

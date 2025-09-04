@@ -19,12 +19,7 @@ export const velocidader={
             const duracion = (fin - inicio) / 1000; // en segundos
             
             const bytes = parseInt(res.headers.get("content-length") || "22");
-            //if(modedebug){
-            //    loger.addTextLinea("size: "+res.headers.get("content-length"))
-            //    loger.addTextLinea("velocidad bps: "+(bytes / duracion))
-            //    loger.addTextLinea("velocidad mbps: "+((bytes/1_000_00)  / duracion))
-            //    
-            //}
+
             return bytes / duracion; // bytes por segundo
         } catch(err) {
             if(modedebug){

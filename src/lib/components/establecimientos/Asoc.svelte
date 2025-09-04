@@ -16,18 +16,14 @@
     function toggleMenu(){
         openMenu = !openMenu
     }
-    async function clickAgregar(){
-        await agregarCab(e.cab)
-    }
-    async function clickQuitar(){
-        await quitarCab(e.cab)
-    }
+    
     function esSincronizada(){
         
-        return sincronizadas.includes(e.cab)
+        return sincronizadas.includes(e.id)
     }
 </script>
 <div class="flex items-center justify-center">
+    
     <div 
         class={`
                 bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 w-full 
@@ -38,7 +34,7 @@
 		<div class="flex items-start justify-between p-2">
             
             <h2 class="flex items-center gap-2 text-2xl font-bold  mb-1 text-start p-2">
-                {shorterWord(e.expand.cab.nombre)}
+                {shorterWord(e.nombre)}
                 {#if esSincronizada()}
                     <!--Sincronizada-->
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-6">
@@ -54,7 +50,7 @@
             
             
             <!-- Botón de tres puntos -->
-			<div class="relative">
+			<div class="hidden relative">
                 <button 
                     onclick={toggleMenu}
                     class="rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
@@ -92,7 +88,7 @@
         <div class="p-2 grid grid-cols-1">
             <span class="text-xl font-semibold text-start">Direccion:</span>
             
-            <span class="text-xl font-medium text-end">{e.expand.cab.direccion}</span>
+            <span class="text-xl font-medium text-end">{e.direccion}</span>
         </div>
         <div class="p-2 grid grid-cols-3 lg:grid-cols-6">
             <span class="text-xl font-semibold text-start">Animales:</span>

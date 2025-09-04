@@ -10,6 +10,7 @@
   import { createDarker } from "$lib/stores/dark.svelte";
   import { page } from "$app/stores";
   import { createCaber } from "$lib/stores/cab.svelte";
+  import {createPer} from "$lib/stores/permisos.svelte"
   import { randomString } from "$lib/stringutil/lib";
   import { codigoSinRepetirEstablecimiento } from "$lib/pbutils/lib";
   import cuentas from "$lib/stores/cuentas";
@@ -54,6 +55,7 @@
     nombre: "",
     id: "",
   });
+  let per = createPer()
   let concab = false;
   let textColorClass = "";
 

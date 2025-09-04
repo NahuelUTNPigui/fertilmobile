@@ -62,12 +62,16 @@
         getEstablecimientosAsociadosSQL,
         addNewEstablecimientoAsosciadoSQL,
         deleteEstablecimientosAsociadosSQL,
+        updateLocalIDAsociadosSQL,
     } from "$lib/stores/sqlite/dbasociados";
     import {
         getComandosSQL,
         setComandosSQL,
         flushComandosSQL,
     } from "$lib/stores/sqlite/dbcomandos";
+    import {
+        setEstablecimientoSQL
+    } from "$lib/stores/sqlite/dbestablecimiento";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
@@ -103,17 +107,18 @@
         let per = createPer();
         let est = establecimientoscolab.filter((e) => e.id == id)[0];
 
-        caber.setCab(est.expand.cab.nombre, est.expand.cab.id);
+        caber.setCab(est.nombre, est.id);
         //Ver los permisos
         let permisos = await getPermisosCabUser(
             pb,
             usuarioid,
-            est.expand.cab.id,
+            est.id,
         );
         per.setPer(permisos.permisos, usuarioid);
+        await setEstablecimientoSQL(db,est)
         await setCabOffline(
-            est.expand.cab.id,
-            est.expand.cab.nombre,
+            est.id,
+            est.nombre,
             true,
             permisos.permisos,
             true,
@@ -129,6 +134,7 @@
         let per = createPer();
         let est = establecimientos.filter((e) => e.id == id)[0];
         caber.setCab(est.nombre, est.id);
+        await setEstablecimientoSQL(db,est)
         await setCabOffline(est.id, est.nombre, true, "0,1,2,3,4,5", false);
         //await setInternetSQL(db,0,Date.now())
         //await updateLocalAnimalesSQL(db,pb,est.id)
@@ -142,7 +148,7 @@
     }
     async function getTotalAnimales(cabid) {
         const record = await pb.collection("animales").getList(1, 2, {
-            filter: `active=True && delete=false && cab='${cabid}'`,
+            filter: `cab='${cabid}'`,
         });
         return record.totalItems;
     }
@@ -151,10 +157,10 @@
         return total.length;
     }
     async function eliminar(id) {
-        coninternet = await getOnlyInternet();
-        intermitenter.addIntermitente(coninternet.connected);
+        let isOnline = await getOnlyInternet();
+        intermitenter.addIntermitente(isOnline);
 
-        if (coninternet.connected) {
+        if (isOnline) {
             Swal.fire({
                 title: "Eliminar establecimiento",
                 text: "¿Seguro que deseas eliminar el establecimiento?",
@@ -232,52 +238,42 @@
         useroff = await getUserOffline();
         caboff = await getCabOffline();
         usuarioid = useroff.id;
+        loger.addTextLinea(263);
         cab = caber.cab;
+        loger.addTextLinea(238);
     }
     async function getLocalSQL() {
         getlocal = true;
         //Aca se van a guardar todos los estableciemientos
         //colaborador o no
+        loger.addTextLinea(244);
         let resestablecimientos = await getEstablecimientosSQL(db);
-
+        loger.addTextLinea(246);
         establecimientos = resestablecimientos.lista.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
             //Osea que el user es igual a u id
             return e.user == usuarioid;
             //return !sincronizadas.includes(s => s == e.id)
         });
-        
-        if (coninternet.connected) {
-            await getOnlineColabs();
-        } else {
-            establecimientoscolab = resestablecimientos.lista.filter((e) => {
-                //Reviso que los establecimientos si sean colaborador
-                return e.user != usuarioid;
-                //return sincronizadas.includes(s => s == e.id)
-            });
-        }
-
+        loger.addTextLinea(253);
+        establecimientoscolab = resestablecimientos.lista.filter((e) => {
+            //Reviso que los establecimientos si sean colaborador
+            return e.user != usuarioid;
+            //return sincronizadas.includes(s => s == e.id)
+        });
+        loger.addTextLinea(257);
         let resanimales = await getAnimalesSQL(db);
         let animales = resanimales.lista;
         for (let i = 0; i < establecimientos.length; i++) {
             totales.push(getTotalAnimalesSQL(establecimientos[i].id, animales));
         }
-        if (coninternet.connected) {
-            for (let i = 0; i < establecimientoscolab.length; i++) {
-                totalescolab.push(
-                    await getTotalAnimales(
-                        establecimientoscolab[i].expand.cab.id,
-                    ),
-                );
-            }
-        } else {
-            for (let i = 0; i < establecimientoscolab.length; i++) {
-                totalescolab.push(
-                    getTotalAnimalesSQL(establecimientoscolab[i].id, animales),
-                );
-            }
+        loger.addTextLinea(263);
+        for (let i = 0; i < establecimientoscolab.length; i++) {
+            totalescolab.push(
+                getTotalAnimalesSQL(establecimientoscolab[i].id, animales),
+            );
         }
-
+        loger.addTextLinea(263);
         cargado = true;
     }
     async function getOnlineColabs() {
@@ -288,21 +284,34 @@
         establecimientoscolab = restxcolab;
     }
     async function updateLocalSQL() {
+        loger.addTextLinea(280);
+        await updateLocalIDAsociadosSQL(db, pb, usuarioid);
         await setUltimoEstablecimientosSQL(db);
+        loger.addTextLinea(283);
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(
             db,
             pb,
             usuarioid,
         );
-        establecimientos = resestablecimientos.filter(
-            (e) => e.user == usuarioid,
-        );
-
-        await getOnlineColabs();
-
+        loger.addTextLinea(288);
+        establecimientos = resestablecimientos.filter((e) => {
+            //Reviso que los establecimientos no sea colaborador
+            //Osea que el user es igual a u id
+            return e.user == usuarioid;
+            //return !sincronizadas.includes(s => s == e.id)
+        });
+loger.addTextLinea(296);
+        establecimientoscolab = resestablecimientos.filter((e) => {
+            //Reviso que los establecimientos si sean colaborador
+            return e.user != usuarioid;
+            //return sincronizadas.includes(s => s == e.id)
+        });
+        //await getOnlineColabs();
+        loger.addTextLinea(302);
         for (let i = 0; i < establecimientos.length; i++) {
             totales.push(await getTotalAnimales(establecimientos[i].id));
         }
+        loger.addTextLinea(306);
         for (let i = 0; i < establecimientoscolab.length; i++) {
             totalescolab.push(
                 await getTotalAnimales(establecimientoscolab[i].expand.cab.id),
@@ -350,12 +359,16 @@
         let antes = ultimo_establecimiento.ultimo;
         await getLocalSQL();
         if (coninternet.connected) {
+            loger.addTextLinea(357)
             await actualizarComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
+            loger.addTextLinea(360)
             if (modedebug) {
                 getvelocidad = velocidad;
             }
+            loger.addTextLinea(364)
             let confiabilidad = intermitenter.calculateIntermitente();
+            loger.addTextLinea(366)
             let mustUpdate = await deboActualizar(
                 velocidad,
                 confiabilidad,
@@ -372,7 +385,7 @@
                 );
             }
 
-            if (mustUpdate) {
+            if (false && mustUpdate) {
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
@@ -525,7 +538,7 @@
                                 </svg>
                             </button>
                         </div>
-                        {#if e.id != cab.id}
+                        {#if e.id != caboff.id}
                             <button
                                 aria-label="Eliminar"
                                 onclick={() => eliminar(e.id)}
@@ -577,6 +590,7 @@
         <div class="grid grid-cols-1 gap-2 mb-2">
             {#if establecimientoscolab.length != 0}
                 {#each establecimientoscolab as e, i}
+                    
                     <Asoc
                         {e}
                         {i}

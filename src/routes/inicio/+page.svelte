@@ -132,6 +132,7 @@
     const HOY = new Date().toISOString().split("T")[0];
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -1505,7 +1506,7 @@
             };
             if (coninternet.connected) {
                 //caboff = await updatePermisos(pb, usuarioid);
-                
+
                 //getpermisos = caboff.permisos;
                 let listapermisos = getPermisosList(caboff.permisos);
                 if (!listapermisos[4]) {
@@ -1694,12 +1695,13 @@
         //await setUltimoTotalSQL(db)
         await setUltimosSQL(db);
     }
-    async function updateLocalSQL(db) {
+    async function updateLocalSQL() {
         let inicio = Date.now();
 
         await setInternetSQL(db, 1, Date.now());
         let totales = await getTotalesEventosOnlineCab(pb, caboff.id);
-        await updateLocalIDAsociadosSQL(db,pb,usuarioid)
+        await updateLocalIDAsociadosSQL(db, pb, usuarioid);
+
         totaleventos.tactos = totales.tactos;
         totaleventos.inseminaciones = totales.inseminaciones;
         totaleventos.nacimientos = totales.nacimientos;
@@ -1709,13 +1711,7 @@
         totaleventos.servicios = totales.servicios;
 
         let tipotrats = await updateLocalTiposTratSQLUser(db, pb, usuarioid);
-        let animalesuser = await updateLocalAnimalesSQLUser(
-            db,
-            pb,
-            usuarioid,
-            lastinter.ultimo,
-        );
-
+        let animalesuser = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animales = animalesuser;
 
         onChangeAnimales();
@@ -1741,30 +1737,29 @@
         getlocal = true;
         let dataanimales = await getAnimalesSQL(db);
         let data = await getEventosSQL(db);
-        
+
         animales = dataanimales.lista;
-        
+
         onChangeAnimales();
-        
         //En este caso si va la lista porque es data que viene de SQL
         totaleventos.tactos = data.tactos.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
-        
+
         totaleventos.inseminaciones = data.inseminaciones.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
         totaleventos.nacimientos = data.nacimientos.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
-        
+
         totaleventos.tratamientos = data.trats.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
         totaleventos.observaciones = data.observaciones.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
-        
+
         totaleventos.pesajes = data.pesajes.lista.filter(
             (t) => t.expand.animal.cab == caboff.id,
         ).length;
@@ -1774,7 +1769,7 @@
         totaleventos.lotes = data.lotes.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
-        
+
         totaleventos.rodeos = data.rodeos.lista.filter(
             (t) => t.cab == caboff.id,
         ).length;
@@ -1782,11 +1777,12 @@
         tipotratamientos = data.tipostrat.lista.filter(
             (t) => (t.cab == caboff.id && t.active) || t.generico,
         );
-        
+
         totaleventos.animales = animalescab.filter(
             (a) => a.cab == caboff.id && a.active,
         ).length;
         cargados = true;
+        //loger.addTextError(JSON.stringify(data,null,2))
     }
     function onChangeAnimales() {
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
@@ -1872,13 +1868,16 @@
 
         let ahora = Date.now();
         let antes = lastinter.ultimo;
+
         await getLocalSQL(db);
+
         if (coninternet.connected) {
             let velocidad = await velocidader.medirVelocidadInternet();
 
             try {
                 caboff = await updatePermisos(pb, usuarioid);
                 getpermisos = caboff.permisos;
+
                 await flushComandosSQL(db, pb);
                 comandos = [];
             } catch (err) {
@@ -1906,14 +1905,16 @@
                     coninternet.connectionType,
                 );
             }
-
             if (hasLoggedIn || mustUpdate) {
                 //await updateLocalSQL(db);
+                nubetoast=true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL(db);
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -2200,7 +2201,14 @@
 {#if infotoast}
     <div class="toast toast-top toast-center">
         <div class="alert alert-info">
-            <span>Datos actualizado.</span>
+            <span class="text-white">Datos actualizado.</span>
+        </div>
+    </div>
+{/if}
+{#if nubetoast}
+    <div class="toast toast-top toast-center">
+        <div class="alert alert-success">
+            <span class="text-white">Actualizando con la nube.</span>
         </div>
     </div>
 {/if}

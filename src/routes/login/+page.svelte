@@ -112,6 +112,7 @@
                         caber.setCab(establecimiento.nombre,establecimiento.id,true)
                         per.setPer("0,1,2,3,4,5",authData.record.id)
                         await setCabOffline(establecimiento.id,establecimiento.nombre,true,"0,1,2,3,4,5",false)
+                        
                         localStorage.setItem('hasLoggedIn', 'si');
                         
                     }

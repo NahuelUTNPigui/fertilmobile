@@ -382,15 +382,9 @@
                         },
                     },
                 };
-                //if(modedebug){
-                //    loger.addTextLog(pesajes.length)
-                //    loger.addTextLog(JSON.stringify(p,null,2))
-                //
-                //}
+
                 pesajes.push(p);
-                //if(modedebug){
-                //    loger.addTextLog(pesajes.length)
-                //}
+
             } catch (err) {
                 pesajeserror.push(ps.id);
                 console.error(err);

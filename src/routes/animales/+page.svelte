@@ -406,11 +406,9 @@
     }
     async function guardarOnline() {
         caboff = await updatePermisos(pb, usuarioid);
-        loger.addTextLinea(417);
-        loger.addTextLinea(caboff.permisos);
+
         getpermisos = caboff.permisos;
         let listapermisos = getPermisosList(caboff.permisos);
-        loger.addTextLinea(JSON.stringify(listapermisos, null, 2));
         if (!listapermisos[5]) {
             Swal.fire("Error permisos", getPermisosMessage(5), "error");
             return;
