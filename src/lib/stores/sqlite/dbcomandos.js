@@ -274,7 +274,7 @@ export async function flushComandosSQL(db,pb) {
     let usuarioid = useroff.id
     let listapermisos = getPermisosList(caboff.permisos)
     
-    if(!listapermisos[4] && listacomandos.length>0){
+    if(false && !listapermisos[4] && listacomandos.length>0){
 
         
         let nuevoeventos = listacomandos.filter(c=>{
@@ -301,7 +301,8 @@ export async function flushComandosSQL(db,pb) {
         
 
     }
-    if(!listapermisos[5] && listacomandos.length>0){
+
+    if(false && !listapermisos[5] && listacomandos.length>0){
         let mensaje = false
         let nuevoanimales = listacomandos.filter(c=>{
             let lista = c.idprov.split("_")
@@ -360,7 +361,7 @@ export async function flushComandosSQL(db,pb) {
         
         if(accion=="add"){
             try{
-                if(validarPermisos(c.coleccion,listapermisos)){
+                if(true || validarPermisos(c.coleccion,listapermisos)){
                     let datanuevo = await addComando(pb,c,tablaids)
                     tablaids[id] = datanuevo.id
                 }
@@ -376,7 +377,7 @@ export async function flushComandosSQL(db,pb) {
         }
         else if(accion=="update"){
             try{
-                if(validarPermisos(c.coleccion,listapermisos)){
+                if(true || validarPermisos(c.coleccion,listapermisos)){
                     await modComando(pb,c,tablaids)
                 }
             }
@@ -390,7 +391,7 @@ export async function flushComandosSQL(db,pb) {
         else if(accion=="delete"){
             
             try{
-                if(validarPermisos(c.coleccion,listapermisos)){
+                if(true || validarPermisos(c.coleccion,listapermisos)){
                     await delComando(pb,c,tablaids)
                 }
                 

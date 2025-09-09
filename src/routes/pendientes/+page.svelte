@@ -192,7 +192,7 @@
         </div>
     </div>
     {#if comandos.length == 0}
-        <div>
+        <div class="mx-1 lg:mx-10 mt-1 w-11/12">
             No tienes operaciones pendientes
         </div>
     {:else}

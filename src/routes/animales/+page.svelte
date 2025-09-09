@@ -321,6 +321,14 @@
         let esnuevonac = conparicion;
         let camposprov = "";
         let vacio = true;
+        let nombrerodeo = "";
+        if (rodeo != "") {
+            nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
+        }
+        let nombrelote = "";
+        if (lote != "") {
+            nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
+        }
         if (esnuevonac) {
             vacio = false;
             camposprov = "nacimientos";
@@ -354,6 +362,8 @@
             cab: cab.id,
             rp,
             id: idprov,
+            fechafallecimiento: "",
+            nacimiento: "",
         };
         if (conparicion) {
             data.nacimiento = recordparicion.id;
@@ -368,7 +378,7 @@
             camposprov,
         };
         comandos.push(comandoani);
-        await setAnimalesSQL(db, animales);
+
         if (fechanacimiento) {
             let datapesaje = {
                 animal: idprov,
@@ -390,7 +400,23 @@
             await addNewPesajeSQL(db, datapesaje);
         }
         await setComandosSQL(db, comandos);
+        data = {
+            ...data,
+            expand: {
+                lote: { nombre: nombrelote },
+                rodeo: { nombre: nombrerodeo },
+                cab: { nombre: caboff.nombre },
+            },
+        };
+        if (conparicion) {
+            data.expand.nacimiento = {
+                madre,
+                padre,
+                fecha: fechanacimiento + " 03:00:00",
+            };
+        }
         animales.push(data);
+        await setAnimalesSQL(db, animales);
         animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
         madres = animales.filter((a) => a.sexo == "H");
         padres = animales.filter((a) => a.sexo == "M");
@@ -414,7 +440,14 @@
             Swal.fire("Error permisos", getPermisosMessage(5), "error");
             return;
         }
-
+        let nombrerodeo = "";
+        if (rodeo != "") {
+            nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
+        }
+        let nombrelote = "";
+        if (lote != "") {
+            nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
+        }
         try {
             let recordparicion = null;
             if (conparicion) {
@@ -464,7 +497,21 @@
                 };
                 await pb.collection("pesaje").create(datapesaje);
             }
-
+            recorda = {
+                ...recorda,
+                expand: {
+                    lote: { nombre: nombrelote },
+                    rodeo: { nombre: nombrerodeo },
+                    cab: { nombre: caboff.nombre },
+                },
+            };
+            if (conparicion) {
+                recorda.expand.nacimiento = {
+                    madre,
+                    padre,
+                    fecha: fechanacimiento + " 03:00:00",
+                };
+            }
             animales.push(recorda);
             await setAnimalesSQL(db, animales);
             animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
@@ -1344,7 +1391,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 <dialog
     id="nuevoModal"
