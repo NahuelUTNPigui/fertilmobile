@@ -40,8 +40,13 @@
     import {updateLocalColabSQL, updateLocalColabSQLUser} from '$lib/stores/sqlite/dbcolaboradores'; 
     
     import { loger } from '$lib/stores/logs/logs.svelte';
+    //toast
+    import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let infotoast = $state(false);
+    let nubetoast = $state(false)
     let actualizando = $state(false)
     let classbutton = $state("w-full flex items-center justify-center space-x-4 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 dark:bg-green-700 dark:hover:bg-green-600")
     let pre = ""
@@ -83,7 +88,8 @@
 
     async function actualizarDatos() {
         actualizando = true
-        
+        nubetoast = true
+        infotoast = false
         await setInternetSQL(db,1,Date.now())
         let animalesuser = await updateLocalAnimalesSQLUser(db,pb,usuarioid)  
         await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
@@ -92,6 +98,11 @@
         let datauser = await updateLocalEventosSQLUser(db,pb,usuarioid)
         await updateLocalColabSQLUser(db,pb,usuarioid)
         actualizando = false
+        nubetoast = false
+        infotoast = true
+        setTimeout(() => {
+            infotoast = false;
+        }, 2000); // 2 segundos
         
     }
 </script>
@@ -144,3 +155,9 @@
         </div>
     </CardBase>
 </Navbarr>
+{#if infotoast}
+    <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
+{/if}

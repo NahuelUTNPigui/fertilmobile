@@ -75,6 +75,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import Info from "$lib/components/toast/Info.svelte";
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
@@ -238,42 +239,36 @@
         useroff = await getUserOffline();
         caboff = await getCabOffline();
         usuarioid = useroff.id;
-        loger.addTextLinea(263);
         cab = caber.cab;
-        loger.addTextLinea(238);
     }
     async function getLocalSQL() {
         getlocal = true;
         //Aca se van a guardar todos los estableciemientos
         //colaborador o no
-        loger.addTextLinea(244);
         let resestablecimientos = await getEstablecimientosSQL(db);
-        loger.addTextLinea(246);
+        
         establecimientos = resestablecimientos.lista.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
             //Osea que el user es igual a u id
             return e.user == usuarioid;
             //return !sincronizadas.includes(s => s == e.id)
         });
-        loger.addTextLinea(253);
+        
         establecimientoscolab = resestablecimientos.lista.filter((e) => {
             //Reviso que los establecimientos si sean colaborador
             return e.user != usuarioid;
             //return sincronizadas.includes(s => s == e.id)
         });
-        loger.addTextLinea(257);
         let resanimales = await getAnimalesSQL(db);
         let animales = resanimales.lista;
         for (let i = 0; i < establecimientos.length; i++) {
             totales.push(getTotalAnimalesSQL(establecimientos[i].id, animales));
         }
-        loger.addTextLinea(263);
         for (let i = 0; i < establecimientoscolab.length; i++) {
             totalescolab.push(
                 getTotalAnimalesSQL(establecimientoscolab[i].id, animales),
             );
         }
-        loger.addTextLinea(263);
         cargado = true;
     }
     async function getOnlineColabs() {
@@ -284,34 +279,28 @@
         establecimientoscolab = restxcolab;
     }
     async function updateLocalSQL() {
-        loger.addTextLinea(280);
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
         await setUltimoEstablecimientosSQL(db);
-        loger.addTextLinea(283);
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(
             db,
             pb,
             usuarioid,
         );
-        loger.addTextLinea(288);
         establecimientos = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
             //Osea que el user es igual a u id
             return e.user == usuarioid;
             //return !sincronizadas.includes(s => s == e.id)
         });
-loger.addTextLinea(296);
         establecimientoscolab = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos si sean colaborador
             return e.user != usuarioid;
             //return sincronizadas.includes(s => s == e.id)
         });
         //await getOnlineColabs();
-        loger.addTextLinea(302);
         for (let i = 0; i < establecimientos.length; i++) {
             totales.push(await getTotalAnimales(establecimientos[i].id));
         }
-        loger.addTextLinea(306);
         for (let i = 0; i < establecimientoscolab.length; i++) {
             totalescolab.push(
                 await getTotalAnimales(establecimientoscolab[i].expand.cab.id),
@@ -359,16 +348,14 @@ loger.addTextLinea(296);
         let antes = ultimo_establecimiento.ultimo;
         await getLocalSQL();
         if (coninternet.connected) {
-            loger.addTextLinea(357)
             await actualizarComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
-            loger.addTextLinea(360)
+            
             if (modedebug) {
                 getvelocidad = velocidad;
             }
-            loger.addTextLinea(364)
             let confiabilidad = intermitenter.calculateIntermitente();
-            loger.addTextLinea(366)
+            
             let mustUpdate = await deboActualizar(
                 velocidad,
                 confiabilidad,
@@ -385,7 +372,7 @@ loger.addTextLinea(296);
                 );
             }
 
-            if (false && mustUpdate) {
+            if (mustUpdate) {
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
@@ -610,9 +597,5 @@ loger.addTextLinea(296);
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}

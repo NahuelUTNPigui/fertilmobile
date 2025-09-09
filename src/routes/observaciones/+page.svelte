@@ -75,6 +75,7 @@
     import Animal from "$lib/svgs/animal.svelte";
     import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
+    import Info from "$lib/components/toast/Info.svelte";
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
@@ -853,7 +854,7 @@
             }
 
             if (mustUpdate) {
-                etTimeout(async () => {
+                setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
@@ -1132,11 +1133,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"

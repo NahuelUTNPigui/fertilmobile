@@ -324,7 +324,7 @@ export async function getAnimalesElegirSQL(db) {
 //SET
 //PESAJES
 export async function addNewPesajeSQL(db, pesaje) {
-    let pesajes = await getTactosSQL(db)
+    let pesajes = await getPesajesSQL(db)
     let lista = pesajes.lista
     lista.push(pesaje)
     await setPesajesSQL(db, lista)
@@ -497,9 +497,10 @@ export async function updateLocalServiciosSQL(db, pb, cabid) {
     return servicios
 }
 export async function addNewServicioSQL(db, ser) {
-    let servicios = await getTactosSQL(db)
+    let servicios = await getServiciosSQL(db)
     let lista = servicios.lista
     lista.push(ser)
+    
     await setServiciosSQL(db, lista)
 }
 export async function setServiciosSQL(db, servicios) {
@@ -560,7 +561,7 @@ export async function updateLocalInseminacionesSQL(db, pb, cabid) {
     return inseminaciones
 }
 export async function addnewInseminacionSQL(db, ins) {
-    let inseminaciones = await getTactosSQL(db)
+    let inseminaciones = await getInseminacionesSQL(db)
     let lista = inseminaciones.lista
     lista.push(ins)
     await setInseminacionesSQL(db, lista)

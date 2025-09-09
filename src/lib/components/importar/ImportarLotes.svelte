@@ -132,7 +132,7 @@
 
                 if (lidx == -1) {
                     if (modedebug) {
-                        loger.addTextLog(JSON.stringify(dataadd, null, 2));
+                        //loger.addTextLog(JSON.stringify(dataadd, null, 2));
                     }
                     let record = await pb.collection("lotes").create(dataadd);
                     record = {

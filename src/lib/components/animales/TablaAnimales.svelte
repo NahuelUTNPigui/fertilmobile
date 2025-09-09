@@ -1,5 +1,6 @@
 <script>
     import { goto }  from '$app/navigation';
+    import estilos from '$lib/stores/estilos';
     let {
         animalesrows=$bindable([]),
         shorterWord,

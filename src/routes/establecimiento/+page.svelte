@@ -82,6 +82,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import Info from "$lib/components/toast/Info.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
@@ -238,12 +239,13 @@
                 permisos: "",
             };
 
-            await pb.collection("permisos").create(permisosdata);
+            let recordper = await pb.collection("permisos").create(permisosdata);
             let colabsql = {
                 id: recordexc.id,
                 colab: recordcolab.id,
                 cab: cab.id,
                 permisos: "",
+                permiso:recordper.id,
                 expand: {
                     colab: {
                         id: recordcolab.id,
@@ -656,6 +658,7 @@
         establecimiento = establecimientos.filter(
             (est) => est.id == caboff.id,
         )[0];
+        await setEstablecimientoSQL(db,establecimiento)
         datosviejos = { ...establecimiento };
         nombre = establecimiento.nombre;
         direccion = establecimiento.direccion;
@@ -833,9 +836,5 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}

@@ -74,6 +74,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import Info from "$lib/components/toast/Info.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
@@ -1547,11 +1548,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"

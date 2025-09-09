@@ -1032,8 +1032,28 @@
         intermitenter.addIntermitente(isOnline);
         if (coninternet.connected) {
             await guardarOnline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         } else {
             await guardarOffline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         }
     }
     function validarBoton() {
@@ -1294,7 +1314,7 @@
         </button>
         <div class="flex justify-between items-center px-1">
             <h3 class=" text-md py-2">
-                Animales seleccionados: {Object.keys(selecthashmap).length > 0}
+                Animales seleccionados: {Object.keys(selecthashmap).length}
             </h3>
         </div>
         {#if isOpenFilter}

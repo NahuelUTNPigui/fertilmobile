@@ -26,7 +26,7 @@
         padres =  $bindable([]),
         listapadres  = $bindable([]),
         madres =  $bindable([]),
-        animales,
+        animales = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarServicio,
         guardarInseminacion

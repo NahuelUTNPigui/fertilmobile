@@ -86,6 +86,7 @@
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
+    let infotoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -674,8 +675,28 @@
                 return;
             }
             await crearTactosOnline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         } else {
             await crearTactosOffline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         }
     }
     function inputObsGeneral() {

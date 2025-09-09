@@ -151,6 +151,7 @@
                 recordestxcolab = {
                     ...recordestxcolab,
                     permisos:"",
+                    permiso:recordpermisos.id,
                     expand:{
                         colab:{
                             id:userid,
@@ -360,7 +361,7 @@
     }
     onMount(()=>{
         if(modedebug){
-            loger.addTextLog(JSON.stringify(colabs.filter(c=>c.cab == cabid)))
+            //loger.addTextLog(JSON.stringify(colabs.filter(c=>c.cab == cabid)))
         }
     })
 </script>

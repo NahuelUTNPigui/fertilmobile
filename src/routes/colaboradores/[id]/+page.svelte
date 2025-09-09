@@ -106,6 +106,7 @@
             permisos:removeLastChar(per)
         }
         try{
+            
             await pb.collection('permisos').update(idpermiso, data);
             await setPermisoColabSQL(db,id,data.permisos)
             Swal.fire("Éxitos permisos","Permisos guardados con éxito","success")

@@ -17,7 +17,7 @@
         agregaranimal=$bindable(false),
 
         observacion = $bindable({}),
-        animales,
+        animales = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarObservacion
     } = $props()

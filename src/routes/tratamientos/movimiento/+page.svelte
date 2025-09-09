@@ -586,8 +586,28 @@
                 return;
             }
             await guardarTratamientoOnline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         } else {
             await guardarTratamientoOffline();
+            if(Object.keys(selecthashmap).length>0){
+                todos =false
+                algunos = true
+                ninguno = false
+            }
+            else{
+                todos =false
+                algunos = false
+                ninguno = true
+            }
         }
     }
     async function onmountoriginal() {

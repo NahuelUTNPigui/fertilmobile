@@ -30,6 +30,9 @@
     import Servicio from "$lib/svgs/servicio.svelte";
     import Tratamiento from "$lib/svgs/tratamiento.svelte";
     import Observacion from "$lib/svgs/observacion.svelte";
+    //toast
+    import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     //Permisos
     import { getPermisosMessage, getPermisosList } from "$lib/permisosutil/lib";
     //Formularios
@@ -115,6 +118,11 @@
         setComandosSQL,
         flushComandosSQL,
     } from "$lib/stores/sqlite/dbcomandos";
+    import {
+        setEstablecimientoSQL,
+        getEsblecimientoSQL,
+        updateLocalEstablecimientoSQL,
+    } from "$lib/stores/sqlite/dbestablecimiento";
     //asociados
     import { updateLocalIDAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
 
@@ -123,6 +131,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import { setEstablecimientosAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
+
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     let ruta = import.meta.env.VITE_RUTA;
@@ -137,7 +146,7 @@
     let usuarioid = $state("");
     let useroff = $state({});
     let caboff = $state({});
-    let coninternet = $state({ connected: false });
+    let coninternet = $state({connected:false});
     let comandos = $state([]);
     let lastinter = $state({});
     let getlocal = $state(false);
@@ -390,6 +399,8 @@
         }
 
         let data = {
+            rp:"",
+            prenada:0,
             caravana,
             active: true,
             categoria,
@@ -397,6 +408,14 @@
             sexo,
             peso,
             cab: caboff.id,
+            fechafallecimiento:"",
+            nacimiento:"",
+            lote:"",
+            rodeo:"",
+            fechanacimiento:"",
+            expand:{
+                cab:{id:caboff.id,nombre:caboff.nombre}
+            }
         };
         if (fechanacimiento) {
             data.fechanacimiento = fechanacimiento + " 03:00:00";
@@ -418,6 +437,7 @@
                 return { id: -1 };
             }
             let recorda = await pb.collection("animales").create(data);
+            totaleventos.animales += 1;
             return recorda;
         } else {
             data.id = idprov;
@@ -485,6 +505,7 @@
                 };
 
                 await addNewTactoSQL(db, record);
+                totaleventos.tactos += 1
                 Swal.fire(
                     "Éxito guardar",
                     "Se pudo guardar el tacto",
@@ -519,12 +540,12 @@
                 },
             };
             await addNewTactoSQL(db, data);
-
+            totaleventos.tactos += 1
             Swal.fire("Éxito guardar", "Se pudo guardar el tacto", "success");
         }
     }
     async function guardarTacto() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_tacto_" + generarIDAleatorio();
@@ -795,7 +816,7 @@
         await setComandosSQL(db, comandos);
     }
     async function guardarNacimiento() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_nac_" + generarIDAleatorio();
@@ -884,6 +905,7 @@
                     cab: { nombre: caboff.nombre },
                 },
             };
+            await addNewTrataSQL(db, record);
             Swal.fire(
                 "Éxito guardar",
                 "Se pudo guardar el tratamiento con exito",
@@ -924,7 +946,7 @@
         }
     }
     async function guardarTrat() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_trat_" + generarIDAleatorio();
@@ -1132,7 +1154,7 @@
         }
     }
     async function guardarInseminacion() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_ins_" + generarIDAleatorio();
@@ -1306,14 +1328,14 @@
         }
     }
     async function guardarServicio() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_serv_" + generarIDAleatorio();
+        //Animal seleccionado
         if (agregaranimal) {
             await guardarServicioAnimal(idprov);
         }
-        //Animal seleccionado
         else {
             let dataser = {
                 fechadesde: servicio.fechadesdeserv + " 03:00:00",
@@ -1487,7 +1509,7 @@
         }
     }
     async function guardarObservacion() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_obs_" + generarIDAleatorio();
@@ -1635,6 +1657,7 @@
         await setDefaultCabOffline();
         await setDefaultUserOffline();
     }
+    
     async function oldUpdateLocalSQL(db) {
         await setInternetSQL(db, 1, Date.now());
         let inicio = Date.now();
@@ -1800,23 +1823,15 @@
         cargadoanimales = true;
     }
     async function initPage() {
-        //
-        //coninternet = await Network.getStatus();
-        //if(modedebug){
-        //    coninternet = {connected:false} // await Network.getStatus();
-        //    if(!offliner.offline){
-        //        coninternet = await Network.getStatus();
-        //    }
-        //}
-        //else{
-        //    coninternet = await Network.getStatus();
-        //}
+        
         coninternet = await getInternet(
             modedebug,
             offliner.offline,
             customoffliner.customoffline,
         );
+
         let isOnline = await getOnlyInternet();
+
         intermitenter.addIntermitente(isOnline);
         useroff = await getUserOffline();
         caboff = await getCabOffline();
@@ -1846,6 +1861,12 @@
         }
     }
     async function getDataSQL() {
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+
         db = await openDB();
         //Reviso el internet
         lastinter = await getUltimoAnimalesSQL(db);
@@ -1853,7 +1874,7 @@
         //let ultimo_animal = await getUltimoAnimalesSQL(db)
         //verifica si venis del login
         const hasLoggedIn = localStorage.getItem("hasLoggedIn") === "si";
-
+  
         if (hasLoggedIn) {
             //Elimino la lista de asociados y si quiero no eliminarla?
             await setEstablecimientosAsociadosSQL(db, []);
@@ -1873,6 +1894,7 @@
 
         if (coninternet.connected) {
             let velocidad = await velocidader.medirVelocidadInternet();
+            
 
             try {
                 caboff = await updatePermisos(pb, usuarioid);
@@ -1897,13 +1919,16 @@
                 ahora,
                 antes,
             );
-
+            await getTotales()
             if (modedebug) {
                 getactualizacion = await actualizacion(
                     velocidad,
                     confiabilidad,
                     coninternet.connectionType,
                 );
+            }
+            if(hasLoggedIn){
+                await updateLocalEstablecimientoSQL(db,pb,caboff.id)
             }
             if (hasLoggedIn || mustUpdate) {
                 //await updateLocalSQL(db);
@@ -2199,18 +2224,10 @@
     <span>La versión de la aplicación es {version} </span>
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span class="text-white">Datos actualizado.</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 {#if nubetoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-success">
-            <span class="text-white">Actualizando con la nube.</span>
-        </div>
-    </div>
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModalTacto"

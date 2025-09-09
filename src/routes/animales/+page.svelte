@@ -13,6 +13,7 @@
     import { createCaber } from "$lib/stores/cab.svelte";
     import { createUserer } from "$lib/stores/user.svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
+    import Info from "$lib/components/toast/Info.svelte";
     //filtros
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -508,7 +509,11 @@
     async function guardar() {
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         //let totalanimals = await getTotalSQL(db)
         let verificar = true;
 
@@ -708,8 +713,8 @@
             offliner.offline,
             customoffliner.customoffline,
         );
-
-        intermitenter.addIntermitente(coninternet.connected);
+        let isOnline = await Network.getStatus();
+        intermitenter.addIntermitente(isOnline.connected);
         useroff = await getUserOffline();
         caboff = await getCabOffline();
         getpermisos = caboff.permisos;
@@ -1339,11 +1344,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"

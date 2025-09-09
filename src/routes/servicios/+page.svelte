@@ -80,6 +80,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import Info from "$lib/components/toast/Info.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     let ruta = import.meta.env.VITE_RUTA;
     let pre = "";
@@ -614,6 +615,7 @@ let filtroservicio = $state(0);
         setProxyFilter();
         proxy.save(proxyfiltros);
         serviciosrow = [];
+
         if (filtroservicio == 0) {
             serviciosrow = servicioscab;
             serviciosrow = serviciosrow.concat(inseminacionescab);
@@ -1366,11 +1368,7 @@ let filtroservicio = $state(0);
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"

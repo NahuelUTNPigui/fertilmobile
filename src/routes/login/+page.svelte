@@ -55,7 +55,7 @@
     }
     //Aca deberia borrar los de las cabañas
     async function ingresar(){
-        
+        coninternet = await Network.getStatus();
         if(!coninternet.connected){
             Swal.fire("Sin intenet","Para ingresar necesitas internet","info")
             return

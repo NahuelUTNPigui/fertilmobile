@@ -77,6 +77,7 @@
     } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
+    
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { loger } from "$lib/stores/logs/logs.svelte";
@@ -105,6 +106,7 @@
     let caravana = $state("")
     let active = $state(true)
     let fechanacimiento = $state("")
+    let connacimiento = $state(false)
     let sexo = $state("")
     let nacimiento = $state("")
     let rodeo = $state("")
@@ -179,7 +181,9 @@
             camposprov:""
         }
         comandos.push(comando)
+
         let esnuevo = slug.split("_").length > 1
+
         if(!esnuevo){
             let c = await guardarHistorialOffline(db,slug,useroff.id)
             comandos.push(c)
@@ -292,7 +296,7 @@
                 lote:"",
                 rodeo:""
             }
-            
+            await guardarHistorial(pb,slug)
             const record = await pb.collection('animales').update(slug, data);
             await editarAnimalSQL(db,slug,data)
             let pb_json = JSON.parse(localStorage.getItem('pocketbase_auth'))
@@ -336,55 +340,8 @@
         
         
     }
-
-    async function onMountOriginal() {
-        slug = $page.params.slug
-        if(slug != ""){
-            try{
-                const recorda = await pb.collection('animales').getOne(slug, {
-                    expand:"nacimiento"
-                });
-                caravana = recorda.caravana
-                active = recorda.active
-                fechanacimiento = recorda.fechanacimiento.split(" ")[0]
-                
-                nacimiento = ""
-                nacimientoobj = {}
-                if(recorda.nacimiento != ""){
-                    nacimiento =recorda.nacimiento
-                    nacimientoobj = recorda.expand.nacimiento
-                }
-                peso = recorda.peso
-                sexo = recorda.sexo
-                rodeo = recorda.rodeo
-                lote = recorda.lote
-                categoria = recorda.categoria
-                prenada = recorda.prenada==1?0:recorda.prenada
-                if(recorda.fechafallecimiento != ""){
-                    fechafall = recorda.fechafallecimiento.split(" ")[0]
-                    motivobaja = recorda.motivobaja
-                }
-                cargado = true
-                
-            }
-            catch(err){
-                
-
-                Swal.fire('Error animal', 'No existe el animal', 'error');
-            }
-
-        }
-    }
     async function initPage(){
-        if(modedebug){
-            coninternet = {connected:false} // await Network.getStatus();
-            if(!offliner.offline){
-                coninternet = await Network.getStatus();
-            }
-        }
-        else{
-            coninternet = await Network.getStatus();
-        }
+        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
         useroff = await getUserOffline()
         caboff = await getCabOffline()
         usuarioid = useroff.id
@@ -452,65 +409,58 @@
         rodeos = lotesrodeos.rodeos
 
     }
-    async function getDataSQLOriginal() {
-        let lastinter = await getInternetSQL(db)
-        if (coninternet.connected){
-            if(lastinter.internet == 0){
-                await setInternetSQL(db,1,Date.now())
-                await updateLocalSQL()
-            }
-            else{
-                let ahora = Date.now()
-                let antes = lastinter.ultimo
-                const cincoMinEnMs = 300000;
-                if((ahora - antes) >= cincoMinEnMs){
-                    await setInternetSQL(db,1,Date.now())
-                    await updateLocalSQL()
-                }
-                else{
-                    await getLocalSQL()            
-                }
-            }
-            
-        }
-        else{
-            await getLocalSQL()
-            await setInternetSQL(db,0,Date.now())
-        }
-        cargado = true
-    }
     async function getDataSQL() {
         db = await openDB()
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         let data = await getAnimalSQLByID(db,slug)
-        caravana = data.caravana
-        active = data.active
-        fechanacimiento = data.fechanacimiento.split(" ")[0]
         
+        caravana = data.caravana
+        
+        
+        active = data.active
+
+        fechanacimiento = data.fechanacimiento.split(" ")[0]
+
         peso = data.peso
+
         sexo = data.sexo
+
         rodeo = data.rodeo
+
         lote = data.lote
+
         rp  = data.rp
+
         categoria = data.categoria
+
         prenada = data.prenada==1?0:data.prenada
-        if(data.fechafallecimiento != ""){
+
+        if( data.fechafallecimiento != ""){
+
             fechafall = data.fechafallecimiento.split(" ")[0]
+
             motivobaja = data.motivobaja
+
         }
         await getLocalSQL()
+
         nacimiento = ""
         nacimientoobj = {}
+
         if(data.nacimiento != ""){
             nacimiento = data.nacimiento
-            let n_idx = pariciones.findIndex(n=>n.id==nacimiento)
-            if(n_idx != -1){
-                nacimientoobj = pariciones[n_idx]
 
+            
+            let n_idx = pariciones.findIndex(n=>n.id==nacimiento)
+            
+            if(n_idx != -1){
+                connacimiento = true
+                nacimientoobj = pariciones[n_idx]
             }
             
         }
+        
         cargado = true
     }
     //Necesito una funcion que traiga toda la informacion del animal
@@ -567,15 +517,32 @@
         {#if tab == "datos"}
             <!--Datos animal-->
             <CardAnimal cardsize="max-w-7xl" titulo="Datos básicos">
-                <DatosBasicos {rp} {peso} {prenada} 
-                    {categoria} {lote} {rodeo} sexo={sexo} caravana={caravana} 
-                    {lotes} {rodeos}{useroff} 
-                    {db} animales = {animales}
+                <DatosBasicos 
+                    bind:rp
+                    bind:peso
+                    bind:prenada
+                    bind:categoria
+                    bind:lote
+                    bind:rodeo
+                    bind:sexo
+                    bind:caravana
+
+                    {lotes}
+                    {rodeos}
+                    bind:useroff
+                    {db} 
+                    {animales}
+
                     bind:caboff
+
                     bind:coninternet
                     bind:comandos
-                    connacimiento={nacimiento != ""} nacimiento={nacimientoobj} 
-                    fechanacimiento = {fechanacimiento} bind:modohistoria={modohistoria}
+
+                    bind:connacimiento
+                    bind:nacimiento={nacimientoobj} 
+                    bind:fechanacimiento
+                    
+                    bind:modohistoria
                 />
             </CardAnimal>
             <Acciones 

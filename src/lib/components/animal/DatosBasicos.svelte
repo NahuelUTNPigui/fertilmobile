@@ -12,7 +12,7 @@
     import estados from "$lib/stores/estados";
     import RadioButton from "$lib/components/RadioButton.svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
-
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     import {
         guardarHistorial,
         guardarHistorialOffline,
@@ -48,7 +48,10 @@
         addNewNacimientoSQL,
         editarNacimientoSQL,
     } from "$lib/stores/sqlite/dbeventos";
-    import { editarAnimalSQL } from "$lib/stores/sqlite/dbanimales";
+    import {
+        editarAnimalSQL,
+        editarAnimalExpandSQL,
+    } from "$lib/stores/sqlite/dbanimales";
     import {
         getTotalSQL,
         setTotalSQL,
@@ -70,29 +73,35 @@
     //let coninternet = $state({connected:false})
     //let comandos = $state([])
     let {
-        caravana,
-        rodeo,
-        lote,
-        connacimiento,
-        peso,
-        sexo,
-        nacimiento,
-        fechanacimiento,
-        categoria,
-        prenada,
-        rp,
+        rp = $bindable(""),
+        peso = $bindable(""),
+        prenada = $bindable(0),
+        categoria = $bindable(""),
+        lote = $bindable(""),
+        rodeo = $bindable(""),
+        sexo = $bindable(""),
+        caravana = $bindable(""),
+
         lotes,
         rodeos,
-        coninternet = $bindable({}),
-        useroff,
-        caboff = $bindable({}),
-        animales,
-        comandos = $bindable([]),
+        useroff = $bindable({}),
         db,
-        modohistoria = $bindable(),
+        animales,
+
+        caboff = $bindable({}),
+
+        coninternet = $bindable({}),
+        comandos = $bindable([]),
+
+        connacimiento = $bindable(false),
+        nacimiento = $bindable({}),
+        fechanacimiento = $bindable(""),
+
+        modohistoria = $bindable(false),
     } = $props();
     let ruta = import.meta.env.VITE_RUTA;
     //pre
+    let pre = "";
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0];
     let caber = createCaber();
@@ -212,20 +221,6 @@
         categoriavieja = categoria;
         prenadaviejo = prenada;
         rpviejo = rp;
-        //if(true || userpermisos[5]){
-        //    modoedicion = true
-        //    pesoviejo = peso
-        //    sexoviejo = sexo
-        //    loteviejo = lote
-        //    rodeovieja = rodeo
-        //    caravanavieja = caravana
-        //    categoriavieja = categoria
-        //    prenadaviejo  = prenada
-        //    rpviejo = rp
-        //}
-        //else{
-        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        //}
     }
     function cancelarEditar() {
         modoedicion = false;
@@ -251,13 +246,6 @@
     function openNewModal() {
         fecha = fechanacimiento;
         nuevoModal.showModal();
-        //if(true || userpermisos[5]){
-        //    fecha  = fechanacimiento
-        //    nuevoModal.showModal()
-        //}
-        //else{
-        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        //}
     }
     function openEditModal() {
         fechaviejo = fecha;
@@ -268,19 +256,6 @@
         observacionviejo = observacion;
 
         nuevoModal.showModal();
-        //if(true || userpermisos[5]){
-        //    fechaviejo =  fecha
-        //    nombremadreviejo = nombremadre
-        //    nombrepadreviejo = nombrepadre
-        //    madreviejo = madre
-        //    padreviejo = padre
-        //    observacionviejo = observacion
-        //
-        //    nuevoModal.showModal()
-        //}
-        //else{
-        //    Swal.fire("Sin permisos","No tienes permisos para administrar animales","error")
-        //}
     }
     async function guardarNacimientoOnline() {
         caboff = await updatePermisos(pb, usuarioid);
@@ -308,6 +283,11 @@
                 ...recordparicion,
             };
             await addNewNacimientoSQL(db, recordparicion);
+            let expand = {
+                nacimiento: {
+                    ...recordparicion,
+                },
+            };
             let datanimal = {
                 nacimiento: recordparicion.id,
                 fechanacimiento: fecha + " 03:00:00",
@@ -330,6 +310,8 @@
             const record = await pb
                 .collection("animales")
                 .update(id, datanimal);
+
+            await editarAnimalExpandSQL(db, id, datanimal, expand);
             //NO va porque tengo que evaluar las fechas
             await pb.collection("historialanimales").create(datahistorial);
             //await guardarHistorial(pb,madre)
@@ -397,6 +379,11 @@
             nacimiento: idprov,
             fechanacimiento: fecha + " 03:00:00",
         };
+        let expand = {
+            nacimiento: {
+                ...dataparicion,
+            },
+        };
         let comandoani = {
             tipo: "update",
             coleccion: "animales",
@@ -407,7 +394,7 @@
             camposprov: "nacimientos",
         };
         await guardarHistorialOffline(db, id, usuarioid);
-        await editarAnimalSQL(db, id, dataani);
+        await editarAnimalSQL(db, id, dataani, expand);
         //Es importante respetar el orden
         comandos.push(comandonac);
         comandos.push(comandoani);
@@ -424,7 +411,11 @@
         Swal.fire("Éxito guardar", "Se pudo guardar el nacimiento", "success");
     }
     async function guardarNacimiento() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         if (coninternet.connected) {
             await guardarNacimientoOnline();
         } else {
@@ -468,8 +459,14 @@
             data: { ...dataani },
             hora: Date.now(),
             prioridad: 2,
-            idprov,
+            idprov: id,
             camposprov: "nacimientos",
+        };
+        let expand = {
+            nacimiento: {
+                id: idnacimiento,
+                ...dataparicion,
+            },
         };
         await guardarHistorialOffline(db, id, usuarioid);
         await editarAnimalSQL(db, id, dataani);
@@ -522,12 +519,18 @@
             let recordparicion = await pb
                 .collection("nacimientos")
                 .update(idnacimiento, data);
+
             recordparicion = {
                 ...recordparicion,
                 animalid: id,
                 caravana: caravana,
             };
-            await editarNacimientoSQL(db, recordparicion, idnacimiento);
+            let expand = {
+                nacimiento: {
+                    ...recordparicion,
+                },
+            };
+            await editarNacimientoSQL(db, recordparicion, idnacimiento, expand);
             await pb.collection("historialanimales").create(datahistorial);
             Swal.fire(
                 "Éxito editar",
@@ -547,7 +550,12 @@
         }
     }
     async function editarNacimiento() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
+
         if (coninternet.connected) {
             await editarNacimientoOnline();
         } else {
@@ -603,7 +611,11 @@
             } else {
                 nombrelote = "";
             }
-            await editarAnimalSQL(db, id, data);
+            let expand = {
+                lote: { nombre: nombrelote },
+                rodeo: { nombre: nombrerodeo },
+            };
+            await editarAnimalSQL(db, id, data, expand);
             Swal.fire("Éxito editar", "Se pudo editar el animal", "success");
             modoedicion = false;
         } catch (err) {
@@ -623,7 +635,21 @@
             rp,
         };
         let comandohis = await guardarHistorialOffline(db, id, usuarioid);
-        await editarAnimalSQL(db, id, data);
+        if (rodeo != "") {
+            nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
+        } else {
+            nombrerodeo = "";
+        }
+        if (lote != "") {
+            nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
+        } else {
+            nombrelote = "";
+        }
+        let expand = {
+            lote: { nombre: nombrelote },
+            rodeo: { nombre: nombrerodeo },
+        };
+        await editarAnimalSQL(db, id, data, expand);
         let nuevolote = lote.split("_").length > 1;
         let nuevorodeo = rodeo.split("_").length > 1;
         let camposprov = `${nuevolote && nuevorodeo ? "lote,rodeo" : nuevolote ? "lote" : nuevorodeo ? "rodeo" : ""}`;
@@ -643,7 +669,11 @@
         modoedicion = false;
     }
     async function editarAnimal() {
-        coninternet = await getInternet(modedebug, offliner.offline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         if (coninternet.connected) {
             await editarAnimalOnline();
         } else {
@@ -679,6 +709,7 @@
     function processAnimales() {
         madres = animales.filter((a) => a.sexo == "H" && a.delete == false);
         padres = animales.filter((a) => a.sexo == "M" && a.delete == false);
+
         listamadres = madres.map((item) => {
             return {
                 id: item.id,
@@ -691,19 +722,24 @@
                 nombre: item.caravana,
             };
         });
+
         cargadoanimales = true;
     }
     async function getLocalSQL() {
         id = $page.params.slug;
+
         processAnimales();
+
         nombrelote = "";
         nombrerodeo = "";
+
         if (lote != "") {
             let l_idx = lotes.findIndex((l) => l.id == lote);
             if (l_idx != -1) {
                 nombrelote = lotes[l_idx].nombre;
             }
         }
+
         if (rodeo != "") {
             let r_idx = rodeos.findIndex((r) => r.id == rodeo);
             if (r_idx != -1) {
@@ -720,6 +756,7 @@
                     a.id != id,
             )
             .map((a) => ({ id: a.id, nombre: a.caravana }));
+
         listapadres = animales
             .filter(
                 (a) =>
@@ -743,7 +780,9 @@
         await getDataSQL();
         if (connacimiento) {
             idnacimiento = nacimiento.id;
+
             fecha = nacimiento.fecha.split(" ")[0];
+
             nombremadre = nacimiento.nombremadre;
             nombrepadre = nacimiento.nombrepadre;
             padre = nacimiento.padre;
@@ -756,6 +795,13 @@
     //Editar animal class="btn text-lg px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
 </script>
 
+{#if modedebug}
+    <div class="grid grid-cols-2">
+        <div>
+            <p>Custom offline{JSON.stringify(customoffliner.customoffline)}</p>
+        </div>
+    </div>
+{/if}
 <div class="grid grid-cols-2 lg:grid-cols-2">
     <button onclick={() => goto("/animales")}>
         <h2 class="flex text-2xl mx-1 font-bold mb-2 text-left mt-2">
@@ -1122,26 +1168,12 @@
             <label for="nombremadre" class="label">
                 <span class="label-text text-base">Madre: {nombremadre}</span>
             </label>
-            <a
-                class="cursor-pointer hover:font-bold hover:text-xl text-start px-1 block text-sm text-gray-700 dark:text-gray-300 mb-1"
-                href={`${pre}/animales/${madre}`}
-                data-sveltekit-reload
-            >
-                Visitar perfil
-            </a>
         </div>
 
         <div>
             <label for="nombrepadre" class="label">
                 <span class="label-text text-base">Padre: {nombrepadre}</span>
             </label>
-            <a
-                class="cursor-pointer hover:font-bold hover:text-xl text-start px-1 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                href={`${pre}/animales/${padre}`}
-                data-sveltekit-reload
-            >
-                Visitar perfil
-            </a>
         </div>
     </div>
 {:else}
@@ -1158,6 +1190,23 @@
             >
                 <span class="text-lg">Crear nacimiento</span>
             </button>
+            <div>
+                {#if fechanacimiento.length > 0}
+                    <label for="fechanacimiento" class="label">
+                        <span class="label-text text-base"
+                            >Fecha Nacimiento</span
+                        >
+                    </label>
+                    <label
+                        for="fechanacimiento"
+                        class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-2`}
+                    >
+                        {new Date(
+                            fechanacimiento + " 03:00:00",
+                        ).toLocaleDateString()}
+                    </label>
+                {/if}
+            </div>
         </div>
     </div>
 {/if}

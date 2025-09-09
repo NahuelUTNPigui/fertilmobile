@@ -3,27 +3,27 @@ import { getCabOffline } from "../capacitor/offlinecab"
 import { loger } from "$lib/stores/logs/logs.svelte";
 //Encima creo que aca va el animalesacto
 //Aca estaria la logica de traer animales
-export async function getAnimalesSQL(db){
+export async function getAnimalesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 1")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
-    let coleccion = {...fila}
+    let coleccion = { ...fila }
     coleccion.lista = lista
     return coleccion
 }
-export async function getAnimalSQLByID(db,id) {
+export async function getAnimalSQLByID(db, id) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 1")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
     let animals = lista.filter((a) => a.id == id)
-    if(animals.length > 0){
-       return animals[0]
+    if (animals.length > 0) {
+        return animals[0]
     }
-    else{
+    else {
         return null
     }
 }
-export async function setAnimalesSQL(db,animales) {
+export async function setAnimalesSQL(db, animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 1`)
 }
 export async function getUltimoAnimalesSQL(db) {
@@ -34,16 +34,32 @@ export async function getUltimoAnimalesSQL(db) {
 export async function setUltimoAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 1`)
 }
-
-export async function editarAnimalSQL(db,id,animal) {
+export async function editarAnimalExpandSQL(db, id, p_expand = null) {
     let animales = await getAnimalesSQL(db);
     let lista = animales.lista;
 
     // Busca el índice del animal a editar
     let idx = lista.findIndex(a => a.id == id);
     if (idx !== -1) {
+        let animal = lista[idx]
         // Reemplaza los datos del animal en la posición encontrada
-        lista[idx] = { ...lista[idx], ...animal }; 
+        let expand = lista[idx].expand
+        if (expand == null) {
+            if (p_expand == null) { }
+            else {
+                expand = {
+                    ...p_expand
+                }
+            }
+        }
+        else {
+            expand = {
+                ...expand,
+                ...p_expand
+            }
+        }
+        lista[idx].expand = expand
+        lista[idx] = { ...lista[idx] };
         // Guarda la lista actualizada
         await setAnimalesSQL(db, lista);
         return true; // Edición exitosa
@@ -51,28 +67,60 @@ export async function editarAnimalSQL(db,id,animal) {
         return false; // Animal no encontrado
     }
 }
-export async function deleteAnimalSQL(db,id) {
+export async function editarAnimalSQL(db, id, animal, p_expand = null) {
+    let animales = await getAnimalesSQL(db);
+    let lista = animales.lista;
+
+    // Busca el índice del animal a editar
+    let idx = lista.findIndex(a => a.id == id);
+    if (idx !== -1) {
+        // Reemplaza los datos del animal en la posición encontrada
+        let expand = lista[idx].expand
+        if (expand == null) {
+            if (p_expand == null) { }
+            else {
+                expand = {
+                    ...p_expand
+                }
+            }
+        }
+        else {
+            expand = {
+                ...expand,
+                ...p_expand
+            }
+        }
+        lista[idx].expand = expand
+        lista[idx] = { ...lista[idx], ...animal };
+        // Guarda la lista actualizada
+        await setAnimalesSQL(db, lista);
+        return true; // Edición exitosa
+    } else {
+        return false; // Animal no encontrado
+    }
+}
+export async function deleteAnimalSQL(db, id) {
     let animales = await getAnimalesSQL(db)
     let lista = animales.lista
-    lista = lista.filter(a=>a.id!= id)
-    await setAnimalesSQL(db,lista)
+    lista = lista.filter(a => a.id != id)
+    await setAnimalesSQL(db, lista)
 }
 
 //Que hacemos con los expand?, deberia ser en el momento de crear el animal
-export async function addNewAnimalSQL(db,animal) {
+export async function addNewAnimalSQL(db, animal) {
     let animales = await getAnimalesSQL(db)
     let lista = animales.lista
     lista.push(animal)
-    await setAnimalesSQL(db,animales)
+    await setAnimalesSQL(db, animales)
     return animales
-    
+
 }
-export async function updateLocalAnimalesSQLUser(db,pb,userid) {
-    
+export async function updateLocalAnimalesSQLUser(db, pb, userid) {
+
     //Con esta linea puedo dar velocidad
     const recordsa = await pb.collection("animales").getFullList({
-        filter:`delete=false && cab.user='${userid}'`,
-        expand:"rodeo,lote,nacimiento,cab"
+        filter: `delete=false && cab.user='${userid}'`,
+        expand: "rodeo,lote,nacimiento,cab"
     })
     let animales = recordsa
 
@@ -80,159 +128,159 @@ export async function updateLocalAnimalesSQLUser(db,pb,userid) {
 
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
-    let caboff = await getCabOffline() 
-    
-    if(caboff.colaborador){
-        if(!asociados.includes(caboff.id)){
+    let caboff = await getCabOffline()
+
+    if (caboff.colaborador) {
+        if (!asociados.includes(caboff.id)) {
             asociados.push(caboff.id)
         }
     }
 
-    for(let i = 0;i<asociados.length;i++){
+    for (let i = 0; i < asociados.length; i++) {
         const animal_colab = await pb.collection("animales").getFullList({
-            filter:`delete=false && cab='${asociados[i]}'`,
-            expand:"rodeo,lote,nacimiento,cab",
-            
+            filter: `delete=false && cab='${asociados[i]}'`,
+            expand: "rodeo,lote,nacimiento,cab",
+
         })
         animales = animales.concat(animal_colab)
     }
     //---fin
-    await setAnimalesSQL(db,animales)
+    await setAnimalesSQL(db, animales)
     await setUltimoAnimalesSQL(db)
     return animales
 }
-export async function updateLocalAnimalesSQLUserUltimo(db,pb,userid,ultimo) {
+export async function updateLocalAnimalesSQLUserUltimo(db, pb, userid, ultimo) {
     let animales = await getAnimalesSQL(db)
     let dateultimo = new Date(ultimo)
     //Con esta linea puedo dar velocidad
     const recordsa = await pb.collection("animales").getFullList({
-        filter:`delete=false && cab.user='${userid}'`,
-        expand:"rodeo,lote,nacimiento,cab"
+        filter: `delete=false && cab.user='${userid}'`,
+        expand: "rodeo,lote,nacimiento,cab"
 
     })
-    
+
 
     //---- Asociados
 
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
-    let caboff = await getCabOffline() 
-    
-    if(caboff.colaborador){
-        if(!asociados.includes(caboff.id)){
+    let caboff = await getCabOffline()
+
+    if (caboff.colaborador) {
+        if (!asociados.includes(caboff.id)) {
             asociados.push(caboff.id)
         }
     }
 
-    for(let i = 0;i<asociados.length;i++){
+    for (let i = 0; i < asociados.length; i++) {
         const animal_colab = await pb.collection("animales").getFullList({
-            filter:`delete=false && cab='${asociados[i]}'`,
-            expand:"rodeo,lote,nacimiento,cab",
-            
+            filter: `delete=false && cab='${asociados[i]}'`,
+            expand: "rodeo,lote,nacimiento,cab",
+
         })
         animales = animales.concat(animal_colab)
     }
     //---fin
-    await setAnimalesSQL(db,animales)
+    await setAnimalesSQL(db, animales)
     await setUltimoAnimalesSQL(db)
     return animales
 }
-export async function updateLocalAnimalesSQL(db,pb,cabid) {
+export async function updateLocalAnimalesSQL(db, pb, cabid) {
     const recordsa = await pb.collection("animales").getFullList({
-        filter:`active=true && delete=false && cab='${cabid}'`,
-        expand:"rodeo,lote,cab,nacimiento"
+        filter: `active=true && delete=false && cab='${cabid}'`,
+        expand: "rodeo,lote,cab,nacimiento"
     })
     let animales = recordsa
-    await setAnimalesSQL(db,animales)
+    await setAnimalesSQL(db, animales)
     await setUltimoAnimalesSQL(db)
     return animales
 }
-export async function getUpdateLocalAnimalesSQLUser(db,pb,userid,cabid) {
-    let animales = await updateLocalAnimalesSQLUser(db,pb,userid)
-    animales  = animales.filter(a=>a.active && a.cab == cabid)
+export async function getUpdateLocalAnimalesSQLUser(db, pb, userid, cabid) {
+    let animales = await updateLocalAnimalesSQLUser(db, pb, userid)
+    animales = animales.filter(a => a.active && a.cab == cabid)
     return animales
 }
-export async function getAnimalesCabSQL(db,cabid) {
+export async function getAnimalesCabSQL(db, cabid) {
     let resanimal = await getAnimalesSQL(db)
-    let animales = resanimal.lista.filter(a=>a.active && a.cab == cabid)
+    let animales = resanimal.lista.filter(a => a.active && a.cab == cabid)
     return animales
-    
+
 }
 // Historial de cambios
 export async function getHistorialAnimalesSQL(db) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 13")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
-    let coleccion = {...fila}
+    let coleccion = { ...fila }
     coleccion.lista = lista
     return coleccion
 }
-export async function setHistorialAnimalesSQL(db,animales) {
+export async function setHistorialAnimalesSQL(db, animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 13`)
 }
 export async function setUltimoHistorialAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 13`)
 }
-export async function addNewHistorialAnimalesSQL(db,animal) {
+export async function addNewHistorialAnimalesSQL(db, animal) {
     let animales = await getHistorialAnimalesSQL(db)
     let lista = animales.lista
     lista.push(animal)
-    await setHistorialAnimalesSQL(db,lista)
+    await setHistorialAnimalesSQL(db, lista)
     return animales
 }
-export async function deleteHistorialAnimalesSQL(db,id) {
+export async function deleteHistorialAnimalesSQL(db, id) {
     let animales = await getHistorialAnimalesSQL(db)
     let lista = animales.lista
-    lista = lista.filter(a=>a.id!= id)
-    await setHistorialAnimalesSQL(db,lista)
+    lista = lista.filter(a => a.id != id)
+    await setHistorialAnimalesSQL(db, lista)
     return animales
 }
 //Esto de los historiales no seria filtrado por establecimiento sino por  el  usuario que le pertenece el animal
-export async function updateLocalHistorialAnimalesSQLUser(db,pb,userid) {
+export async function updateLocalHistorialAnimalesSQLUser(db, pb, userid) {
     const recordsa = await pb.collection("historialanimales").getFullList({
-        filter:`active=true && delete=false && user='${userid}'`,
-        expand:"rodeo,lote,nacimiento,animal"
+        filter: `active=true && delete=false && user='${userid}'`,
+        expand: "rodeo,lote,nacimiento,animal"
     })
     let historial = recordsa
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
-    let caboff = await getCabOffline() 
-        
-    if(caboff.colaborador){
-        if(!asociados.includes(caboff.id)){
+    let caboff = await getCabOffline()
+
+    if (caboff.colaborador) {
+        if (!asociados.includes(caboff.id)) {
             asociados.push(caboff.id)
         }
     }
 
-    for(let i = 0;i<asociados.length;i++){
+    for (let i = 0; i < asociados.length; i++) {
         let records_asociados = await pb.collection("historialanimales").getFullList({
-            filter:`active=true && delete=false && animal.cab='${asociados[i]}'`,
-            expand:"rodeo,lote,nacimiento,animal"
+            filter: `active=true && delete=false && animal.cab='${asociados[i]}'`,
+            expand: "rodeo,lote,nacimiento,animal"
         })
         historial = historial.concat(records_asociados)
     }
 
     //Fin Asociados
-    await setHistorialAnimalesSQL(db,historial)
+    await setHistorialAnimalesSQL(db, historial)
     await setUltimoHistorialAnimalesSQL(db)
     return historial
 }
-export async function updateLocalHistorialAnimalesSQL(db,pb,cabid) {
+export async function updateLocalHistorialAnimalesSQL(db, pb, cabid) {
     const recordsa = await pb.collection("historialanimales").getFullList({
-        filter:`active=true && delete=false && cab='${cabid}'`,
-        expand:"rodeo,lote,cab,nacimiento"
+        filter: `active=true && delete=false && cab='${cabid}'`,
+        expand: "rodeo,lote,cab,nacimiento"
     })
     let animales = recordsa
-    await setHistorialAnimalesSQL(db,animales)
+    await setHistorialAnimalesSQL(db, animales)
     await setUltimoHistorialAnimalesSQL(db)
     return animales
 }
-export async function getHistorialesAnimalSQLByIDAnimal(db,id) {
+export async function getHistorialesAnimalSQLByIDAnimal(db, id) {
     let lista_json = await db.query("select id,lista,nombre,ultimo from Colecciones where id = 13")
     let fila = lista_json.values[0]
     let lista = JSON.parse(fila.lista)
     let animals = lista.filter((a) => a.animal == id)
     return animals
-    
+
 }

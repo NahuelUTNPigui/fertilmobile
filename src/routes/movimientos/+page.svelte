@@ -89,6 +89,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Listamove from "$lib/components/movimientos/Listamove.svelte";
+    import Info from "$lib/components/toast/Info.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
@@ -326,30 +327,22 @@
     }
     function openNewModal() {
         listaanimales = [];
-        if (true || userpermisos[3]) {
-            for (const [key, value] of Object.entries(selecthashmap)) {
-                if (value != null) {
-                    listaanimales.push(value);
-                }
+        for (const [key, value] of Object.entries(selecthashmap)) {
+            if (value != null) {
+                listaanimales.push(value);
             }
-            if (listaanimales.length == 0) {
-                Swal.fire(
-                    "Error movimiento",
-                    "No hay animales seleccionados",
-                    "error",
-                );
-                nuevorodeo = "";
-                nuevolote = "";
-                nuevacategoria = "";
-            } else {
-                nuevoModal.showModal();
-            }
-        } else {
+        }
+        if (listaanimales.length == 0) {
             Swal.fire(
                 "Error movimiento",
-                "No tienes permisos para hacer movimientos",
+                "No hay animales seleccionados",
                 "error",
             );
+            nuevorodeo = "";
+            nuevolote = "";
+            nuevacategoria = "";
+        } else {
+            nuevoModal.showModal();
         }
     }
     async function moverAnimalOffline(a, data) {
@@ -1254,9 +1247,7 @@
             </label>
         </div>
         <div class="w-11/12">
-            <Limpiar
-                {limpiarFiltros}
-            />
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1397,11 +1388,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"

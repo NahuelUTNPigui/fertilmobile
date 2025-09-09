@@ -57,6 +57,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
+    import Info from "$lib/components/toast/Info.svelte";
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
@@ -125,17 +126,9 @@
         }
     }
     function openNewModal() {
-        if (true || userpermisos[1]) {
-            idlote = "";
+        idlote = "";
             nombre = "";
             nuevoModal.showModal();
-        } else {
-            Swal.fire(
-                "Error lotes",
-                "No tienes permisos para guardar lotes",
-                "error",
-            );
-        }
     }
     async function guardarOnline() {
         caboff = await updatePermisos(pb, usuarioid);
@@ -734,11 +727,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <div class="toast toast-top toast-center">
-        <div class="alert alert-info">
-            <span>Datos actualizados</span>
-        </div>
-    </div>
+    <Info/>
 {/if}
 <dialog
     id="nuevoModal"
