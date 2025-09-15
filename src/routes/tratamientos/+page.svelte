@@ -292,7 +292,7 @@
                 id: idtratamiento,
             };
             let tidx = tratamientos.findIndex((t) => t.id == idtratamiento);
-            let tt_idx = tipotratamientos.findIndex((tipo) => tipo.id == tipo);
+            let tt_idx = tipotratamientoscab.findIndex((ttipo) => ttipo.id == tipo);
             if (tidx != -1) {
                 tratamientos[tidx].categoria = data.categoria;
                 tratamientos[tidx].tipo = data.tipo;
@@ -314,8 +314,8 @@
                 await setComandosSQL(db, comandos);
 
                 if (tt_idx != -1) {
-                    tratamientos[t_idx].expand.tipo.id = tipo;
-                    tratamientos[t_idx].expand.tipo.nombre =
+                    tratamientos[tidx].expand.tipo.id = tipo;
+                    tratamientos[tidx].expand.tipo.nombre =
                         tipotratamientos[tt_idx].nombre;
                 }
                 await setTratsSQL(db, tratamientos);
@@ -353,15 +353,15 @@
             };
             let t_idx = tratamientos.findIndex((t) => t.id == idtratamiento);
             await pb.collection("tratamientos").update(idtratamiento, data);
-            tratamientos[t_idx] = {
-                ...tratamientos[t_idx],
-                ...data,
-            };
-            let tt_idx = tipotratamientos.findIndex((tipo) => tipo.id == tipo);
+            
+            let tt_idx = tipotratamientoscab.findIndex((ttipo) => ttipo.id == tipo);
             if (tt_idx != -1) {
                 tratamientos[t_idx].expand.tipo.id = tipo;
                 tratamientos[t_idx].expand.tipo.nombre =
                     tipotratamientos[tt_idx].nombre;
+            }
+            else{
+                loger.addTextLog("tt_idx: "+tt_idx)
             }
             await setTratsSQL(db, tratamientos);
             actualizarDatos();
@@ -964,7 +964,7 @@
                         // No afecta al usuario
                     }
                 }, 0);
-            } 
+            }
         }
     }
     onMount(async () => {
@@ -1070,9 +1070,7 @@
             </label>
         </div>
         <div class="w-11/12">
-            <Limpiar
-                {limpiarFiltros}
-            />
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1291,7 +1289,7 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 <dialog
     id="nuevoModal"

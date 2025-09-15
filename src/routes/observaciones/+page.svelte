@@ -293,6 +293,7 @@
                         (o) => o.id != idobservacion,
                     );
                     changeObservacion();
+                    await setObservacionesSQL(db,observaciones)
                     filterUpdate();
                     Swal.fire(
                         "Observación eliminada!",
@@ -452,6 +453,7 @@
     }
     async function guardarConAnimal() {
         let a = await guardarAnimal2();
+        let idprov = "nuevo_obs_" + generarIDAleatorio();
         if (a.id == -1) {
             return;
         }
@@ -480,6 +482,9 @@
             let record = await pb.collection("observaciones").create(data);
             record.expand = { animal: a, cab: { id: caboff.id } };
             observaciones.push(record);
+            observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
             changeObservacion();
             await setObservacionesSQL(db, observaciones);
             filterUpdate();
@@ -504,6 +509,9 @@
             await setComandosSQL(db, comandos);
             data.expand = { animal: a, cab: { id: caboff.id } };
             observaciones.push(data);
+            observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
             changeObservacion();
             await setObservacionesSQL(db, observaciones);
             Swal.fire(
@@ -514,6 +522,7 @@
         }
     }
     async function guardarSinAnimal() {
+        let idprov = "nuevo_obs_" + generarIDAleatorio();
         let data = {
             animal,
             fecha: fecha + " 03:00:00",
@@ -536,7 +545,11 @@
                 animal: animales.filter((an) => an.id == animal)[0],
                 cab: { id: caboff.id },
             };
+            
             observaciones.push(record);
+            observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
             changeObservacion();
             filterUpdate();
             await setObservacionesSQL(db, observaciones);
@@ -547,7 +560,7 @@
             );
         } else {
             let nuevoanimal = animal.split("_")[0] == "nuevo";
-            data.id = idprov;
+            
             let comando = {
                 tipo: "add",
                 coleccion: "observaciones",
@@ -558,8 +571,12 @@
                 camposprov: nuevoanimal ? "animal" : "",
             };
             comandos.push(comando);
+            data.id = idprov;
             await setComandosSQL(db, comandos);
             observaciones.push(record);
+            observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
             changeObservacion();
             filterUpdate();
             Swal.fire(
@@ -579,7 +596,7 @@
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
 
-        let idprov = "nuevo_obs_" + generarIDAleatorio();
+        
         if (agregaranimal) {
             await guardarConAnimal();
         }
@@ -591,7 +608,6 @@
     async function editarOffline() {
         try {
             let data = {
-                animal,
                 fecha: fecha + " 03:00:00",
                 categoria,
                 observacion,
@@ -604,19 +620,24 @@
                 data: { ...data },
                 hora: Date.now(),
                 prioridad: 0,
-                idprov: id,
+                idprov: idobservacion,
                 camposprov: animal.split("_").length > 1 ? "animal" : "",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
             let a = animales.filter((an) => an.id == animal)[0];
             let idx = observaciones.findIndex((o) => o.id == idobservacion);
-            observaciones[idx] = data;
+            observaciones[idx] = {
+                ...observaciones[idx],
+                ...data
+
+            };
             observaciones[idx].expand = { animal: a };
             observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
             );
             await setObservacionesSQL(db, observaciones);
+            changeObservacion();
             filterUpdate();
             Swal.fire(
                 "Éxito editar",
@@ -642,7 +663,6 @@
         }
         try {
             let data = {
-                animal,
                 fecha: fecha + " 03:00:00",
                 categoria,
                 observacion,
@@ -652,11 +672,19 @@
                 .update(idobservacion, data);
             let a = animales.filter((an) => an.id == animal)[0];
             let idx = observaciones.findIndex((o) => o.id == idobservacion);
-            observaciones[idx] = record;
-            observaciones[idx].expand = { animal: a };
+            
+            observaciones[idx] = {
+                ...observaciones[idx],
+                ...data
+
+            };
+            
+            
             observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
             );
+            changeObservacion();
+            await setObservacionesSQL(db,observaciones)
             filterUpdate();
             Swal.fire(
                 "Éxito editar",

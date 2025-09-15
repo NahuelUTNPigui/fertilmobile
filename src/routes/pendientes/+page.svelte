@@ -148,7 +148,8 @@
             db = await openDB()
             let rescom = await getComandosSQL(db)
             comandos = rescom.lista
-            
+            loger.addTextLogArray(comandos,20)
+            //Tengo dudas y si son muchas comandos y se rompe
             if (coninternet.connected){
                 try{
                     await flushComandosSQL(db,pb)

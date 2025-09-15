@@ -269,6 +269,7 @@
     }
     async function editarOffline(id) {
         let data = {
+            id,
             nombre,
         };
         let comando = {
@@ -318,6 +319,7 @@
                 idlote = id;
                 try {
                     let data = {
+                        id,
                         active: false,
                     };
                     let comando = {

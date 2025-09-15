@@ -110,7 +110,7 @@
     let cargado = $state(false);
     let esservicio = $state(false);
     let esinseminacion = $state(false);
-    
+
     let opcionservicio = [
         { id: 0, nombre: "Todos" },
         { id: 1, nombre: "Solo servicios" },
@@ -161,7 +161,7 @@
     let fechapartodesde = $state("");
     let fechapartohasta = $state("");
     let buscarpadre = $state("");
-let filtroservicio = $state(0);
+    let filtroservicio = $state(0);
     let defaultfiltro = {
         buscar: "",
         fechaservhastafiltro: "",
@@ -169,7 +169,7 @@ let filtroservicio = $state(0);
         fechapartodesde: "",
         fechapartohasta: "",
         buscarpadre: "",
-        filtroservicio :0
+        filtroservicio: 0,
     };
     let proxyfiltros = $state({
         ...defaultfiltro,
@@ -185,6 +185,18 @@ let filtroservicio = $state(0);
     function clickFilter() {
         isOpenFilter = !isOpenFilter;
     }
+    function limpiarPadres(serpadres){
+        let padresnotransferidos = []
+        for(let i = 0;i<serpadres.length;i++){
+            let valor = serpadres[i]
+            let lista_padres =  padres.filter((p) => p.id == valor).map(p=>p.id)
+            if(lista_padres.length>0){
+                padresnotransferidos = padresnotransferidos.concat(lista_padres)
+            }
+            
+        }
+        return padresnotransferidos
+    }
     function openEditModal(id) {
         esservicio = true;
         idserv = id;
@@ -195,7 +207,7 @@ let filtroservicio = $state(0);
             fechahastaserv = ser.fechahasta.split(" ")[0];
             fechaparto = ser.fechaparto.split(" ")[0];
             observacion = ser.observacion;
-            padreslist = ser.padres.split(",");
+            padreslist = limpiarPadres(ser.padres.split(","));
             nuevoModal.showModal();
         }
     }
@@ -233,6 +245,7 @@ let filtroservicio = $state(0);
             try {
                 let dataser = {
                     fechadesde: fechadesdeserv + " 03:00:00",
+                    fechahasta: fechahastaserv + " 03:00:00",
                     fechaparto: fechaparto + " 03:00:00",
                     observacion,
                     padres: padreslist.join(),
@@ -242,6 +255,7 @@ let filtroservicio = $state(0);
                 }
                 let s_idx = servicios.findIndex((s) => s.id == idserv);
                 servicios[s_idx].fechadesde = dataser.fechadesde;
+                servicios[s_idx].fechahasta = dataser.fechahasta;
                 servicios[s_idx].fechaparto = dataser.fechaparto;
                 servicios[s_idx].observacion = dataser.observacion;
                 servicios[s_idx].padres = dataser.padres;
@@ -307,6 +321,7 @@ let filtroservicio = $state(0);
             try {
                 let dataser = {
                     fechadesde: fechadesdeserv + " 03:00:00",
+                    fechahasta: fechahastaserv + " 03:00:00",
                     fechaparto: fechaparto + " 03:00:00",
                     observacion: observacion,
                     madre: madre,
@@ -315,6 +330,7 @@ let filtroservicio = $state(0);
                 let sidx = servicios.findIndex((s) => s.id == idserv);
                 if (sidx != -1) {
                     servicios[sidx].fechadesde = dataser.fechadesde;
+                    servicios[sidx].fechahasta = dataser.fechahasta;
                     servicios[sidx].fechaparto = dataser.fechaparto;
                     servicios[sidx].observacion = dataser.observacion;
                     servicios[sidx].madre = dataser.madre;
@@ -368,15 +384,17 @@ let filtroservicio = $state(0);
                 let idx = inseminaciones.findIndex((ins) => ins.id == idserv);
                 if (idx != -1) {
                     inseminaciones[idx].fechaparto = data.fechaparto;
-                    inseminaciones[idx].fechainseminacion =
-                        data.fechainseminacion;
+                    inseminaciones[idx].fechainseminacion = data.fechainseminacion;
                     inseminaciones[idx].padre = data.padre;
                     inseminaciones[idx].pajuela = data.pajuela;
                     inseminaciones[idx].observacion = data.observacion;
                     inseminaciones[idx].categoria = data.categoria;
                     await setInseminacionesSQL(db, inseminaciones);
-                    let nuevamadre = dataser.madre.split("_").length > 1;
-                    let nuevopadre = dataser.padres.split("_").length > 1;
+                    
+                    let nuevamadre = inseminaciones[idx].animal.split("_").length > 1;
+                    
+                    let nuevopadre = data.padre.split("_").length > 1;
+                    
                     let comando = {
                         tipo: "update",
                         coleccion: "inseminacion",
@@ -490,6 +508,7 @@ let filtroservicio = $state(0);
             try {
                 await pb.collection("servicios").update(id, { active: false });
                 servicios = servicios.filter((s) => s.id != id);
+                await setServiciosSQL(db,servicios)
                 Swal.fire(
                     "Éxito eliminar",
                     "Se eliminó con éxito el servicio",
@@ -504,6 +523,7 @@ let filtroservicio = $state(0);
                     .collection("inseminacion")
                     .update(id, { active: false });
                 inseminaciones = inseminaciones.filter((s) => s.id != id);
+                await setInseminacionesSQL(db,inseminaciones)
                 Swal.fire(
                     "Éxito eliminar",
                     "Se eliminó con éxito la inseminación",
@@ -591,7 +611,7 @@ let filtroservicio = $state(0);
         fechapartodesde = proxyfiltros.fechapartodesde;
         fechapartohasta = proxyfiltros.fechapartohasta;
         buscarpadre = proxyfiltros.buscarpadre;
-        filtroservicio = proxyfiltros.filtroservicio
+        filtroservicio = proxyfiltros.filtroservicio;
     }
 
     function setProxyFilter() {
@@ -601,7 +621,7 @@ let filtroservicio = $state(0);
         proxyfiltros.fechapartodesde = fechapartodesde;
         proxyfiltros.fechapartohasta = fechapartohasta;
         proxyfiltros.buscarpadre = buscarpadre;
-        proxyfiltros.filtroservicio=filtroservicio
+        proxyfiltros.filtroservicio = filtroservicio;
     }
 
     function limpiarFiltros() {
@@ -664,13 +684,16 @@ let filtroservicio = $state(0);
                 return incluidoPadre(buscarpadre, s_padres);
             });
         }
-        if (buscar != ""){
-            serviciosrow = serviciosrow.filter((s)=>{
-                return  s.fechadesde?
-                    s.expand.madre.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase()):
-                    s.expand.animal.caravana.toLocaleLowerCase().includes(buscar.toLocaleLowerCase())
-                
-            })
+        if (buscar != "") {
+            serviciosrow = serviciosrow.filter((s) => {
+                return s.fechadesde
+                    ? s.expand.madre.caravana
+                          .toLocaleLowerCase()
+                          .includes(buscar.toLocaleLowerCase())
+                    : s.expand.animal.caravana
+                          .toLocaleLowerCase()
+                          .includes(buscar.toLocaleLowerCase());
+            });
         }
 
         ordenarServicios(forma);
@@ -699,12 +722,23 @@ let filtroservicio = $state(0);
             TIPO: item.fechadesde ? "Servicio" : "Artificial",
         };
     }
+    function getNombrePadre(valor){
+        let lista_padre = padres.filter((p) => p.id == valor)
+        if(lista_padre.length>0){
+            return lista_padre[0].caravana
+        }
+        else{
+            return "Transferido"
+        }
+        
+
+    }
     function getNombrePadres(p_padres) {
         let ids = p_padres.split(",");
 
         let nombres = ids.reduce(
             (acc, valor) =>
-                padres.filter((p) => p.id == valor)[0].caravana + " , " + acc,
+                getNombrePadre(valor) + " , " + acc,
             "",
         );
 
@@ -777,9 +811,12 @@ let filtroservicio = $state(0);
 
         servicios = resservicios.lista;
 
+        
         let resinseminaciones = await getInseminacionesSQL(db);
         inseminaciones = resinseminaciones.lista;
+
         onChangeServicios();
+
         onChangeInseminaciones();
         filterUpdate();
         cargado = true;
@@ -1244,13 +1281,15 @@ let filtroservicio = $state(0);
                                           ).toLocaleDateString()
                                         : ""}</td
                                 >
+                                
                                 <td
                                     class="text-base mx-1 px-1 border-b dark:border-gray-600"
                                 >
                                     {s.fechadesde
-                                        ? shorterWord(s.expand.madre.caravana)
-                                        : shorterWord(s.expand.animal.caravana)}
+                                        ? shorterWord(s.expand.madre.caravana?s.expand.madre.caravana:"")
+                                        : shorterWord(s.expand.animal.caravana?s.expand.animal.caravana:"")}
                                 </td>
+                                
                                 <td
                                     class="text-base mx-1 px-1 border-b dark:border-gray-600"
                                 >
@@ -1270,6 +1309,7 @@ let filtroservicio = $state(0);
             </div>
             <div class="block w-full md:hidden justify-items-center mx-1">
                 {#each serviciosrow as s}
+                    
                     <div
                         class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900"
                     >
@@ -1331,18 +1371,27 @@ let filtroservicio = $state(0);
                                             </span>
                                         </div>
                                     {/if}
+
                                     <div class="flex items-start">
                                         <span>Madre:</span>
+                                        
                                         <span class="mx-1 font-semibold">
                                             {s.fechadesde
                                                 ? shorterWord(
-                                                      s.expand.madre.caravana,
+                                                      s.expand.madre.caravana
+                                                          ? s.expand.madre
+                                                                .caravana
+                                                          : "",
                                                   )
                                                 : shorterWord(
-                                                      s.expand.animal.caravana,
+                                                      s.expand.animal.caravana
+                                                          ? s.expand.animal
+                                                                .caravana
+                                                          : "",
                                                   )}
                                         </span>
                                     </div>
+                                    
                                     <div class="flex items-start">
                                         <span>Padres:</span>
                                         <span class="mx-1 font-semibold">
@@ -1368,7 +1417,7 @@ let filtroservicio = $state(0);
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 <dialog
     id="nuevoModal"

@@ -53,6 +53,7 @@
             `}
             bind:value={animal}
             onchange={() => oninput("ANIMAL")}
+            disabled={idobservacion != ""}
         >
             {#each animalescab as a}
                 <option value={a.id}>{a.caravana}</option>
