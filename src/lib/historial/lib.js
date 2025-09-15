@@ -52,7 +52,9 @@ export async function guardarHistorialOffline(db,idanimal,user) {
         hora:Date.now(),
         prioridad:0,
         idprov:"nuevo_histo_"+generarIDAleatorio(),
-        camposprov
+        camposprov,
+        show:{...histo},
+        motivo:"Nuevo historial"
     }
     return comando
 }

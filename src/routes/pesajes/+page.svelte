@@ -464,6 +464,8 @@
                     prioridad: 2,
                     idprov,
                     camposprov: nanimal ? "animal" : "",
+                    show:{...data,caravana:animales[aidx].caravana},
+                    motivo:"Nuevo pesaje"
                 };
                 let comandoani = {
                     tipo: "update",
@@ -473,6 +475,8 @@
                     prioridad: 2,
                     idprov: idanimal,
                     camposprov: "",
+                    show:{...dataupdate},
+                    motivo:"Nuevo pesaje"
                 };
                 comandos.push(comandopesaje);
                 comandos.push(comandoani);

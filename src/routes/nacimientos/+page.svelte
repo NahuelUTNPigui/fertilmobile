@@ -257,6 +257,8 @@
                 prioridad: 0,
                 idprov,
                 camposprov: `${esnuevomadre && esnuevopadre ? "madre,padre" : esnuevomadre ? "madre" : esnuevopadre ? "padre" : ""}`,
+                show:{...dataparicion},
+                motivo:"Nuevo nacimiento"
             };
             //Agrego el nacimiento
             comandos.push(comando);
@@ -287,6 +289,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `nacimiento${nlote & nrodeo ? ",lote,rodeo" : nlote ? ",lote" : nrodeo ? ",rodeo" : ""}`,
+                    show: { ...dataanimal, caravana},
+                    motivo:"Nuevo animal"
                 };
 
                 //Agrego el aniaml
@@ -631,6 +635,8 @@
                     prioridad: 0,
                     idprov: idnacimiento,
                     camposprov: `${esnuevomadre && esnuevopadre ? "madre,padre" : esnuevomadre ? "madre" : esnuevopadre ? "padre" : ""}`,
+                    show:{ ...dataparicion },
+                    motivo:"Editar parición"
                 };
                 comandos.push(comandonac);
                 nacimientos[nidx].madre = dataparicion.madre;
@@ -666,6 +672,8 @@
                     prioridad: 0,
                     idprov: idanimal,
                     camposprov: `${esnuevonacimiento ? "nacimiento" : ""}`,
+                    show:{...datanimal,caravana:animales[aidx].caravana},
+                    motivo:"Editar animal"
                 };
                 comandos.push(comandoani);
                 await setComandosSQL(db, comandos);
@@ -934,6 +942,8 @@
                         prioridad: 0,
                         idprov: idnacimiento,
                         camposprov: "",
+                        data:{...n},
+                        motivo:"Eliminar parición"
                     };
 
                     comandos.push(comando);
@@ -958,6 +968,8 @@
                                 prioridad: 0,
                                 idprov: idanimal,
                                 camposprov: `${esnuevonacimiento ? "nacimiento" : ""}`,
+                                data:{...dataanimal},
+                                motivo:"Eliminar parición"
                             };
                             comandos.push(comandoani);
                             await setAnimalesSQL(db, animales);

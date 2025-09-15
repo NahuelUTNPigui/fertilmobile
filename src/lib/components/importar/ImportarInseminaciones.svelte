@@ -133,6 +133,8 @@
                         prioridad: 0,
                         idprov,
                         camposprov: `${nuevamadre && nuevopadre ? "madre,padre" : nuevamadre ? "madre" : nuevopadre ? "padre" : ""}`,
+                        show:{...datains},
+                        motivo:"Guardar inseminacion"
                     };
                     comandos.push(comando);
                 } catch (err) {

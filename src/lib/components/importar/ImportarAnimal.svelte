@@ -19,6 +19,7 @@
     import { concatComandosSQL } from "$lib/stores/sqlite/dbcomandos";
     import { setAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import motivos from "$lib/stores/motivos";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     let {
@@ -208,6 +209,8 @@
                     prioridad: 0,
                     idprov: idprov,
                     camposprov: ``,
+                    show:{...data},
+                    motivo:"Guardar animal"
                 };
                 comandos.push(comando);
             } else {
@@ -229,6 +232,8 @@
                     prioridad: 0,
                     idprov: idprov,
                     camposprov: ``,
+                    show:{...data},
+                    motivo:"Editar animal"
                 };
                 comandos.push(comando);
             }

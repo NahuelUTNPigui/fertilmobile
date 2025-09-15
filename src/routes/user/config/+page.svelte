@@ -76,7 +76,9 @@
             hora:Date.now(),
             prioridad:0,
             idprov:usuarioid,
-            camposprov:""
+            camposprov:"",
+            show:{...data},
+            motivo:"Editar usuario"
         }
         comandos.push(comando)
         try{

@@ -764,6 +764,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nmadre && npadres ? "madre,padres" : nmadre ? "madre" : npadres ? "padres" : ""}`,
+                    show:{...dataser},
+                    motivo:"Nuevo servicio"
                 };
                 comandos.push(comando);
                 dataser = {
@@ -896,6 +898,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nmadre && npadre ? "animal,padre" : nmadre ? "animal" : npadre ? "padre" : ""}`,
+                    show:{...data},
+                    motivo:"Nueva inseminación"
                 };
                 comandos.push(comando);
                 data = {

@@ -175,7 +175,10 @@
                 prioridad: 2,
                 idprov: idpesaje,
                 camposprov: nanimal ? "animal" : "",
+                show:{...data},
+                motivo:"Editar pesaje"
             };
+            comandos.push(comando)
             Swal.fire(
                 "Éxito editar pesaje",
                 "Se pudo editar el pesaje",
@@ -272,6 +275,8 @@
                         prioridad: 2,
                         idprov: idpesaje,
                         camposprov: "",
+                        show:{...pes},
+                        motivo:"Eliminar pesaje"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);

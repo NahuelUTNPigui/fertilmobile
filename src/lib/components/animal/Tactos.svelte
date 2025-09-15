@@ -10,7 +10,7 @@
     import {guardarHistorial} from "$lib/historial/lib"
     import RadioButton from "../RadioButton.svelte";
     import { getEstadoNombre,getEstadoColor } from "$lib/components/estadosutils/lib";
-    import { generarIDAleatorio } from "$lib/stringutil/lib";
+    import { generarIDAleatorio, shorterWord } from "$lib/stringutil/lib";
     import Swal from "sweetalert2";
     import {  setComandosSQL} from '$lib/stores/sqlite/dbcomandos';
     import {
@@ -90,7 +90,7 @@
                     active:false
                 }
                 try{
-
+                    let eliminartacto = tactos.filter(t=>t.id==idtacto)[0]
                     let nanimal = animal.split("_").length > 1
                     let comando = {
                         tipo:"update",
@@ -99,7 +99,10 @@
                         hora:Date.now(),
                         prioridad:2,
                         idprov:idtacto,
-                        camposprov:nanimal?"animal":""
+                        camposprov:nanimal?"animal":"",
+                        show:{...eliminartacto},
+                        motivo:"Eliminar tacto"
+
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)
@@ -182,7 +185,9 @@
                 hora:Date.now(),
                 prioridad:2,
                 idprov:idtacto,
-                camposprov:nanimal?"animal":""
+                camposprov:nanimal?"animal":"",
+                show:{...data},
+                motivo:"Editar tacto"
             }
             comandos.push(comando)
             await setComandosSQL(db,comandos)
@@ -277,7 +282,9 @@
             hora:Date.now(),
             prioridad:3,
             idprov,
-            camposprov:`${nanimal?"animal":""}`
+            camposprov:`${nanimal?"animal":""}`,
+            show:{...data},
+            motivo:"Agregar tacto"
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)

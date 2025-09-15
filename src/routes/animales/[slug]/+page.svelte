@@ -178,7 +178,9 @@
             hora:Date.now(),
             prioridad:0,
             idprov:slug,
-            camposprov:""
+            camposprov:"",
+            show:{...data,caravana},
+            motivo:"Dar baja animal"
         }
         comandos.push(comando)
 
@@ -243,7 +245,9 @@
             hora:Date.now(),
             prioridad:0,
             idprov:slug,
-            camposprov:""
+            camposprov:"",
+            show:{...data,caravana},
+            motivo:"Eliminar animal"
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
@@ -498,6 +502,9 @@
         
     })
 </script>
+{#if modedebug}
+    <Barrainternet bind:coninternet />
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">

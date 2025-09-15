@@ -175,6 +175,8 @@
                 prioridad: 0,
                 idprov,
                 camposprov: "",
+                show:{...data},
+                motivo:"Nuevo lote"
             };
             comandos.push(comando);
 
@@ -280,6 +282,8 @@
             prioridad: 0,
             idprov: id,
             camposprov: "",
+            show:{...data},
+            motivo:"Editar lote"
         };
         //Creo que esto es lo correcot
         let idx = lotes.findIndex((r) => r.id == id);
@@ -317,6 +321,7 @@
         }).then(async (result) => {
             if (result.value) {
                 idlote = id;
+                let eliminarlote  = lotes.filter((r) => r.id == idlote)[0];
                 try {
                     let data = {
                         id,
@@ -330,6 +335,8 @@
                         prioridad: 0,
                         idprov: id,
                         camposprov: "",
+                        show:{...data,nombre:eliminarlote.nombre},
+                        motivo:"Eliminar lote"
                     };
 
                     lotes = lotes.filter((r) => r.id != idlote);

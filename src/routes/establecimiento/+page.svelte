@@ -389,6 +389,8 @@
                 prioridad: 2,
                 idprov: caboff.id,
                 camposprov: "",
+                show:{...data},
+                motivo:"Editar cabaña"
             };
             comandos.push(comandodata);
             await setComandosSQL(db, comandos);

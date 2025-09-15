@@ -342,6 +342,7 @@
                     await setServiciosSQL(db, servicios);
                     let nuevamadre = dataser.madre.split("_").length > 1;
                     let nuevopadre = dataser.padres.split("_").length > 1;
+                   
                     let comando = {
                         tipo: "update",
                         coleccion: "servicios",
@@ -350,6 +351,8 @@
                         prioridad: 0,
                         idprov: idserv,
                         camposprov: `${nuevamadre && nuevopadre ? "madre,padres" : nuevamadre ? "madre" : nuevopadre ? "padres" : ""}`,
+                        show:{...dataser},
+                        motivo:"Editar servicio"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -398,11 +401,14 @@
                     let comando = {
                         tipo: "update",
                         coleccion: "inseminacion",
-                        data: { active: false },
+                        data: { ...data },
                         hora: Date.now(),
                         prioridad: 0,
                         idprov: idserv,
                         camposprov: `${nuevamadre && nuevopadre ? "madre,padre" : nuevamadre ? "madre" : nuevopadre ? "padre" : ""}`,
+                        show:{...data},
+                        motivo:"Editar inseminación"
+
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -446,6 +452,8 @@
     async function eliminarOffline(id, esInseminacion) {
         if (!esInseminacion) {
             try {
+                let eliminarservicio = servicios.filter((s) => s.id == id)[0];
+                
                 servicios = servicios.filter((s) => s.id != id);
                 await setServiciosSQL(db, servicios);
                 let comando = {
@@ -456,6 +464,9 @@
                     prioridad: 0,
                     idprov: id,
                     camposprov: "",
+                    show:{...eliminarservicio},
+                    motivo:"Eliminar servicio"
+                    
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -469,6 +480,8 @@
             }
         } else {
             try {
+                let eliminarinseminacion = inseminaciones.filter((s) => s.id == id)[0]
+                
                 inseminaciones = inseminaciones.filter((s) => s.id != id);
                 await setInseminacionesSQL(db, inseminaciones);
                 let comando = {
@@ -479,6 +492,8 @@
                     prioridad: 0,
                     idprov: id,
                     camposprov: "",
+                    show:{...eliminarinseminacion},
+                    motivo:"Eliminar inseminación"
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);

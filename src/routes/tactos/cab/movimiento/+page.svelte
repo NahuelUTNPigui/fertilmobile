@@ -502,6 +502,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nanimal ? "animal" : ""}`,
+                    show:{...datatacto},
+                    motivo:"Nuevo tacto"
                 };
                 comandos.push(comando);
                 let comandoani = {
@@ -512,6 +514,8 @@
                     prioridad: 3,
                     idprov: animales[aidx].id,
                     camposprov: ``,
+                    show:{...animales[aidx]},
+                    motivo:"Editar animal"
                 };
                 comandos.push(comandoani);
                 datatacto = {

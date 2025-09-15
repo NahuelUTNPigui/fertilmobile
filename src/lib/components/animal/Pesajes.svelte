@@ -30,11 +30,13 @@
     const pb = new PocketBase(ruta);
     let {
         db,
-        pesoanterior,caravana,peso=$bindable(""),
+        pesoanterior,caravana=$bindable("")
+        ,peso=$bindable(""),
         coninternet = $bindable({}),
         pesajes=$bindable([]),
         comandos=$bindable([]),
         caboff=$bindable({}),
+        
         usuarioid
     } = $props()
     let pesajesrows = $state([])
@@ -113,12 +115,7 @@
             animal:id,
             pesoanterior,
             pesonuevo,
-            id:idprov,
-            expand:{
-                animal:{
-                    caravana
-                }
-            }
+            id:idprov
         }
         let dataupdate={
             peso:pesonuevo
@@ -128,9 +125,6 @@
             await addNewPesajeSQL(db,data)
         
             let nanimal = id.split("_").length > 1 
-        
-        
-        
             let comando = {
                 tipo:"add",
                 coleccion:"pesaje",
@@ -138,11 +132,15 @@
                 hora:Date.now(),
                 prioridad:2,
                 idprov,
-                camposprov:nanimal?"animal":""
+                camposprov:nanimal?"animal":"",
+                show:{...data},
+                motivo:"Guardar pesaje"
             }
         
             comandos.push(comando) 
-        
+            data.expand = {animal:{
+                    caravana
+                }}
             if(!nanimal){
                 let comandoani = {
                     tipo:"update",
@@ -151,7 +149,9 @@
                     hora:Date.now(),
                     prioridad:2,
                     idprov:id,
-                    camposprov:""
+                    camposprov:"",
+                    show:{caravana},
+                    motivo:"Crear pesaje"
                 }
         
                 comandos.push(comandoani)
@@ -227,7 +227,9 @@
                 hora:Date.now(),
                 prioridad:2,
                 idprov:idpesaje,
-                camposprov:""
+                camposprov:"",
+                show:{...data},
+                motivo:"Editar pesajes"
             }
             comandos.push(comando)
             await setComandosSQL(db,comandos)
@@ -294,7 +296,9 @@
                         hora:Date.now(),
                         prioridad:2,
                         idprov:idpesaje,
-                        camposprov:""
+                        camposprov:"",
+                        show:{...pes},
+                        show:"Eliminar pesaje"
                     }
                     comandos.push(comando)
                     await setComandosSQL(db,comandos)

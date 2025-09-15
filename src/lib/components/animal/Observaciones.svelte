@@ -53,6 +53,8 @@
                     active: false,
                 };
                 try {
+                    let o_idx = observaciones.findIndex(o=>o.id == idobservacion)
+
                     let comando = {
                         tipo: "update",
                         coleccion: "observaciones",
@@ -61,6 +63,8 @@
                         prioridad: 0,
                         idprov: id,
                         camposprov: "",
+                        show:{...observaciones[o_idx]},
+                        motivo:"Eliminar observacion"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -167,6 +171,8 @@
                 prioridad: 0,
                 idprov: id,
                 camposprov: animal.split("_").length > 1 ? "animal" : "",
+                show:{...data},
+                motivo:"Editar observacion"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -307,7 +313,9 @@
             hora:Date.now(),
             prioridad:0,
             idprov:id,
-            camposprov:nanimal?"animal":""
+            camposprov:nanimal?"animal":"",
+            show:{...data},
+            motivo:"Nueva observación"
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)

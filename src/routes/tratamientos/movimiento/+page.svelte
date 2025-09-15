@@ -541,6 +541,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov,
+                    show:{...datatratamiento},
+                    motivo:"Nuevo tratamiento"
                 };
                 trats.push(datatratamiento);
                 comandos.push(comando);

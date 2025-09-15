@@ -450,6 +450,8 @@
                 idprov,
                 //No tiene poque no lotes y rodeos
                 camposprov: "",
+                show:{...data},
+                motivo:"Nuevo animal"
             };
 
             comandos.push(comando);
@@ -529,6 +531,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
+                show:{...data},
+                motivo:"Guardar tacto"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -609,6 +613,9 @@
                     let nuevoanimal =
                         tacto.animaltacto.split("_")[0] == "nuevo";
                     data.id = idprov;
+                    let a = animales.filter(
+                        (an) => an.id == tacto.animaltacto,
+                    )[0];
                     let comando = {
                         tipo: "add",
                         coleccion: "tactos",
@@ -617,6 +624,8 @@
                         prioridad: 5,
                         idprov,
                         camposprov: nuevoanimal ? "animal" : "",
+                        show:{...data},
+                        motivo:"Guardar tacto"
                     };
                     comandos.push(comando);
                     //if(!nuevoanimal){
@@ -630,9 +639,7 @@
                     //    comandos.push(comandohisto)
                     //}
 
-                    let a = animales.filter(
-                        (an) => an.id == tacto.animaltacto,
-                    )[0];
+                    
                     await setComandosSQL(db, comandos);
                     data = {
                         ...data,
@@ -773,6 +780,8 @@
             prioridad: 2,
             idprov,
             camposprov,
+            show:{...dataparicion},
+            motivo:"Guardar nacimiento"
         };
 
         comandos.push(comandonac);
@@ -805,6 +814,8 @@
                 prioridad: 3,
                 idprov,
                 camposprov: "nacimiento",
+                show:{...dataanimal},
+                motivo:"Guardar animal"
             };
             comandos.push(comandoani);
         }
@@ -925,6 +936,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: esnuevoanimal ? "animal" : "",
+                show:{...data},
+                motivo:"Guardar tratamiento"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -1011,6 +1024,9 @@
                     let nuevoanimal =
                         tratamiento.animaltrat.split("_")[0] == "nuevo";
                     data.id = idprov;
+                    let a = animales.filter(
+                        (an) => an.id == tratamiento.animaltrat,
+                    )[0];
                     let comando = {
                         tipo: "add",
                         coleccion: "tratamientos",
@@ -1019,10 +1035,10 @@
                         prioridad: 5,
                         idprov,
                         camposprov: nuevoanimal ? "animal" : "",
+                        show:{...data},
+                        motivo:"Guardar tratamiento"
                     };
-                    let a = animales.filter(
-                        (an) => an.id == tratamiento.animaltrat,
-                    )[0];
+                    
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
                     //Add new trata
@@ -1126,6 +1142,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: "animal",
+                    show:{...data},
+                    motivo:"Nuevo animal"
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -1231,6 +1249,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: `${nuevoanimal ? "animal" : ""}`,
+                    show:{...data},
+                    motivo:"Nueva inseminación"
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -1310,6 +1330,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
+                show:{...dataser},
+                motivo:"Nuevo servicio"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -1390,6 +1412,9 @@
             } else {
                 let nuevoanimal = servicio.idanimalser.split("_")[0] == "nuevo";
                 dataser.id = idprov;
+                let animalser = animales.filter(
+                                (an) => an.id == dataser.madre,
+                            )[0]
                 let comando = {
                     tipo: "add",
                     coleccion: "servicios",
@@ -1398,6 +1423,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: nuevoanimal ? "animal" : "",
+                    show:{...dataser},
+                    motivo:"Guardar servicio"
                 };
 
                 comandos.push(comando);
@@ -1406,9 +1433,7 @@
                     ...dataser,
                     expand: {
                         madre: {
-                            caravana: animales.filter(
-                                (an) => an.id == dataser.madre,
-                            )[0].caravana,
+                            caravana: animalser.caravana,
                         },
                         cab: { nombre: caboff.nombre },
                     },
@@ -1489,6 +1514,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
+                show:{...data},
+                motivo:"Guardar observación"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -1579,6 +1606,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: nuevoanimal ? "animal" : "",
+                    show:{...data},
+                    motivo:"Guardar observación"
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);

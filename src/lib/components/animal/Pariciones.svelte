@@ -238,7 +238,9 @@
             hora:Date.now(),
             prioridad:2,
             idprov,    
-            camposprov:""
+            camposprov:"",
+            show:{...dataparicion},
+            motivo:"Nuevo nacimiento"
         }
         
         comandos.push(comando)
@@ -263,7 +265,9 @@
                     hora:Date.now(),
                     prioridad:3,
                     idprov,    
-                    camposprov:"nacimiento"
+                    camposprov:"nacimiento",
+                    show:{...data},
+                    motivo:"Nuevo animal"
             }
             dataparicion.animalid=idanimal
             data = {

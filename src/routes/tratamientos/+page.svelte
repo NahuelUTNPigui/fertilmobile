@@ -309,6 +309,8 @@
                     prioridad: 2,
                     idprov: idtratamiento,
                     camposprov: ntipo ? "tipo" : "",
+                    show:{...tratamientos[tidx]},
+                    motivo:"Editar tratamiento"
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -405,6 +407,7 @@
             if (result.value) {
                 let data = { active: false };
                 try {
+                    let eliminartratamiento = tratamientos.filter((t) => t.id = id)[0];
                     tratamientos = tratamientos.filter((t) => t.id != id);
                     await setTratsSQL(db, tratamientos);
                     actualizarDatos();
@@ -416,6 +419,8 @@
                         prioridad: 2,
                         idprov: id,
                         camposprov: "",
+                        show:{...eliminartratamiento,...data},
+                        motivo:"Eliminar tratamiento"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -561,6 +566,8 @@
                 prioridad: 1,
                 idprov,
                 camposprov: "",
+                show:{...data},
+                motivo:"Nuevo tipo tratamiento"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -578,6 +585,8 @@
                 prioridad: 1,
                 idprov: idtipotratamiento,
                 camposprov: "",
+                show:{...data},
+                motivo:"Editar tipo tratamiento"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -675,7 +684,9 @@
     }
     async function eliminarTipoOffline(id) {
         idtipotratamiento = id;
-
+        let elminartipotrata = tipotratamientos.filter(
+            (tp) => tp.id == idtipotratamiento,
+        )[0]
         tipotratamientos = tipotratamientos.filter(
             (tp) => tp.id != idtipotratamiento,
         );
@@ -692,6 +703,9 @@
             prioridad: 1,
             idprov: idtipotratamiento,
             camposprov: "",
+            show:{...elminartipotrata,...data},
+            motivo:"Eliminar tipo tratamiento"
+
         };
         comandos.push(comando);
         await setComandosSQL(db, comandos);

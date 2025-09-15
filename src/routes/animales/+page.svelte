@@ -311,6 +311,8 @@
                 prioridad: 2,
                 idprov: idnac,
                 camposprov: "",
+                show:{...dataparicion},
+                motivo:"Guardar nacimiento"
             };
             //Debo guardar el nacimiento, cuando guardo el id del nacimiento si quiero hacerle referencia
             await addNewNacimientoSQL(db, dataparicion);
@@ -376,6 +378,8 @@
             prioridad: 3,
             idprov,
             camposprov,
+            show:{...data},
+            motivo:"Guardar animal"
         };
         comandos.push(comandoani);
 
@@ -389,12 +393,15 @@
             };
             let comandope = {
                 tipo: "add",
-                coleccion: "pesajes",
+                coleccion: "pesaje",
                 data: { ...datapesaje },
                 hora: Date.now(),
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
+                show:{...datapesaje},
+                motivo:"Guardar pesaje"
+                
             };
             comandos.push(comandope);
             await addNewPesajeSQL(db, datapesaje);

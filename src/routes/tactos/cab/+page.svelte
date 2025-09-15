@@ -288,6 +288,7 @@
                     active: false,
                 };
                 try {
+                    let eliminartacto = tactos.filter((t) => t.id == idtacto)[0]
                     let nanimal = animal.split("_").length > 1;
                     let comando = {
                         tipo: "update",
@@ -297,6 +298,8 @@
                         prioridad: 2,
                         idprov: idtacto,
                         camposprov: nanimal ? "animal" : "",
+                        show:{...eliminartacto,...data},
+                        motivo:"Eliminar tacto"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -582,6 +585,8 @@
                 prioridad: 2,
                 idprov: idtacto,
                 camposprov: nanimal ? "animal" : "",
+                show:{...data},
+                motivo:"Editar tacto"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);

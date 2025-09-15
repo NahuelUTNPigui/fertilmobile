@@ -345,7 +345,7 @@
             nuevoModal.showModal();
         }
     }
-    async function moverAnimalOffline(a, data) {
+    async function moverAnimalOffline(a, data,caravana) {
         let nlote = data.lote ? data.lote.split("_").length > 1 : false;
         let nrodeo = data.rodeo ? data.rodeo.split("_").length > 1 : false;
 
@@ -357,6 +357,8 @@
             prioridad: 3,
             idprov: a.id,
             camposprov: `${nlote ? "lote" : nrodeo ? "rodeo" : ""}`,
+            show:{...data,caravana},
+            motivo:"Editar animals"
         };
         comandos.push(comando);
 
@@ -408,6 +410,8 @@
             prioridad: 0,
             idprov: "nuevo_histo_" + generarIDAleatorio(),
             camposprov,
+            show:{...histo},
+            motivo:"Nuevo historal"
         };
 
         comandos.push(comandohis);
@@ -491,7 +495,7 @@
                 }
             }
             try {
-                await moverAnimalOffline(a, data);
+                await moverAnimalOffline(a, data,animales[a_idx].caravana);
             } catch (err) {
                 conerrores.push(a.id);
                 errores = true;

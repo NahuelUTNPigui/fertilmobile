@@ -189,6 +189,8 @@
                     prioridad: 0,
                     idprov,
                     camposprov: ``,
+                    show:{...data},
+                    motivo:"Guardar lote"
                 };
                 comandos.push(comando);
             } else {
@@ -208,6 +210,8 @@
                     prioridad: 0,
                     idprov,
                     camposprov: ``,
+                    show:{...data},
+                    motivo:"Editar lote"
                 };
                 comandos.push(comando);
             }

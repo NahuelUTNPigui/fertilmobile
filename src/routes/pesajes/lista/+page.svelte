@@ -183,6 +183,8 @@
                 prioridad: 2,
                 idprov: idpesaje,
                 camposprov: nanimal ? "animal" : "",
+                show:{...data},
+                motivo:"Editar pesaje"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -283,6 +285,8 @@
                         prioridad: 2,
                         idprov: idpesaje,
                         camposprov: "",
+                        show:{...pes},
+                        motivo:"Eliminar pesaje"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);

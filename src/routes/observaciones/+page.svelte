@@ -225,6 +225,7 @@
         }).then(async (result) => {
             if (result.value) {
                 idobservacion = id;
+                let eliminarobservacion = observaciones.filter(o=>o.id==idobservacion)[0]
                 let data = {
                     active: false,
                 };
@@ -237,6 +238,8 @@
                         prioridad: 0,
                         idprov: id,
                         camposprov: "",
+                        show:{...eliminarobservacion,...data},
+                        motivo:"Eliminar observación"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -418,11 +421,19 @@
             active: true,
             categoria: categorianuevo,
             delete: false,
-            fechanacimiento: fechanacimientonuevo + " 03:00:00",
+            fechanacimiento: "",
             sexo: sexonuevo,
             peso: pesonuevo,
             cab: caboff.id,
+            rp:"",
+            fechafallecimiento:"",
+            nacimiento:"",
+            lote:"",
+            rodeo:"",
         };
+        if (fechanacimientonuevo) {
+            data.fechanacimiento = fechanacimientonuevo + " 03:00:00";
+        }
         let idprov = "nuevo_animal_" + generarIDAleatorio();
         if (coninternet.connected) {
             caboff = await updatePermisos(pb, usuarioid);
@@ -445,6 +456,8 @@
                 idprov,
                 //No tiene poque no lotes y rodeos
                 camposprov: "",
+                show:{...data},
+                motivo:"Nuevo animal"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -503,6 +516,8 @@
                 prioridad: 3,
                 idprov,
                 camposprov: "animal",
+                show:{...data},
+                motivo:"Guardar observación"
             };
 
             comandos.push(comando);
@@ -541,8 +556,9 @@
                 return;
             }
             let record = await pb.collection("observaciones").create(data);
+            let animalobservacion = animales.filter((an) => an.id == animal)[0]
             record.expand = {
-                animal: animales.filter((an) => an.id == animal)[0],
+                animal:{...animalobservacion} ,
                 cab: { id: caboff.id },
             };
             
@@ -569,6 +585,8 @@
                 prioridad: 3,
                 idprov,
                 camposprov: nuevoanimal ? "animal" : "",
+                show:{...data},
+                motivo:"Nueva observación"
             };
             comandos.push(comando);
             data.id = idprov;
@@ -613,7 +631,7 @@
                 observacion,
                 id: idobservacion,
             };
-
+            let a = animales.filter((an) => an.id == animal)[0];
             let comando = {
                 tipo: "update",
                 coleccion: "observaciones",
@@ -622,10 +640,12 @@
                 prioridad: 0,
                 idprov: idobservacion,
                 camposprov: animal.split("_").length > 1 ? "animal" : "",
+                show:{...data},
+                motivo:"Editar observación"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
-            let a = animales.filter((an) => an.id == animal)[0];
+            
             let idx = observaciones.findIndex((o) => o.id == idobservacion);
             observaciones[idx] = {
                 ...observaciones[idx],

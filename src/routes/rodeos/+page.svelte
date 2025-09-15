@@ -145,6 +145,8 @@
                 prioridad: 0,
                 idprov,
                 camposprov: "",
+                show:{...data},
+                motivo:"Nuevo rodeo"
             };
             comandos.push(comando);
 
@@ -244,6 +246,8 @@
                 prioridad: 0,
                 idprov: id,
                 camposprov: "",
+                show:{...data},
+                motivo:"Editar rodeo"
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -371,6 +375,7 @@
                     let data = {
                         active: false,
                     };
+                    let eliminarrodeo = rodeos.filter((r) => r.id == id)[0]
                     let comando = {
                         tipo: "update",
                         coleccion: "rodeos",
@@ -379,6 +384,8 @@
                         prioridad: 0,
                         idprov: id,
                         camposprov: "",
+                        show:{...eliminarrodeo},
+                        motivo:"Eliminar rodeo"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);

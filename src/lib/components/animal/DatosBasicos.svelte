@@ -374,6 +374,8 @@
                       : nuevopadre
                         ? "padre"
                         : "",
+            show: { ...dataparicion },
+            motivo: "Nuevo nacimiento",
         };
         let dataani = {
             nacimiento: idprov,
@@ -392,6 +394,8 @@
             prioridad: 2,
             idprov,
             camposprov: "nacimientos",
+            show: { ...dataani },
+            motivo: "Nuevo nacimiento",
         };
         await guardarHistorialOffline(db, id, usuarioid);
         await editarAnimalSQL(db, id, dataani, expand);
@@ -449,8 +453,21 @@
                       : nuevopadre
                         ? "padre"
                         : "",
+            show: { ...dataparicion },
+            motivo: "Editar nacimiento",
         };
         let dataani = {
+            fechanacimiento: fecha + " 03:00:00",
+        };
+        let show = {
+            peso,
+            sexo,
+            caravana,
+            rodeo,
+            lote,
+            prenada,
+            categoria,
+            rp,
             fechanacimiento: fecha + " 03:00:00",
         };
         let comandoani = {
@@ -461,6 +478,8 @@
             prioridad: 2,
             idprov: id,
             camposprov: "nacimientos",
+            show,
+            motivo: "Editar nacimiento",
         };
         let expand = {
             nacimiento: {
@@ -469,7 +488,7 @@
             },
         };
         await guardarHistorialOffline(db, id, usuarioid);
-        await editarAnimalSQL(db, id, dataani);
+        await editarAnimalSQL(db, id, dataani, expand);
         comandos.push(comandonac);
         comandos.push(comandoani);
         await setComandosSQL(db, comandos);
@@ -634,39 +653,51 @@
             categoria,
             rp,
         };
-        let comandohis = await guardarHistorialOffline(db, id, usuarioid);
-        if (rodeo != "") {
-            nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
-        } else {
-            nombrerodeo = "";
+        try {
+            let comandohis = await guardarHistorialOffline(db, id, usuarioid);
+            if (rodeo != "") {
+                nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
+            } else {
+                nombrerodeo = "";
+            }
+            if (lote != "") {
+                nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
+            } else {
+                nombrelote = "";
+            }
+            let expand = {
+                lote: { nombre: nombrelote },
+                rodeo: { nombre: nombrerodeo },
+            };
+
+            await editarAnimalSQL(db, id, data, expand);
+            let nuevolote = lote.split("_").length > 1;
+            let nuevorodeo = rodeo.split("_").length > 1;
+            let camposprov = `${nuevolote && nuevorodeo ? "lote,rodeo" : nuevolote ? "lote" : nuevorodeo ? "rodeo" : ""}`;
+            let comando = {
+                tipo: "update",
+                coleccion: "animales",
+                data,
+                hora: Date.now(),
+                prioridad: 2,
+                idprov: id,
+                camposprov,
+                show: { ...data },
+                motivo: "Editar animal",
+            };
+            comandos.push(comando);
+            comandos.push(comandohis);
+            //deo guardar el historial
+            await setComandosSQL(db, comandos);
+            Swal.fire("Éxito editar", "Se pudo editar el animal", "success");
+            modoedicion = false;
+        } catch (err) {
+            if (modedebug) {
+                loger.addTextError("Error editar animal");
+            }
+            Swal.fire("Error editar", "No se pudo editar el animal", "error");
+            modoedicion = false;
         }
-        if (lote != "") {
-            nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
-        } else {
-            nombrelote = "";
-        }
-        let expand = {
-            lote: { nombre: nombrelote },
-            rodeo: { nombre: nombrerodeo },
-        };
-        await editarAnimalSQL(db, id, data, expand);
-        let nuevolote = lote.split("_").length > 1;
-        let nuevorodeo = rodeo.split("_").length > 1;
-        let camposprov = `${nuevolote && nuevorodeo ? "lote,rodeo" : nuevolote ? "lote" : nuevorodeo ? "rodeo" : ""}`;
-        let comando = {
-            tipo: "update",
-            coleccion: "animales",
-            data,
-            hora: Date.now(),
-            prioridad: 2,
-            idprov: id,
-            camposprov,
-        };
-        comandos.push(comando);
-        comandos.push(comandohis);
-        //deo guardar el historial
-        await setComandosSQL(db, comandos);
-        modoedicion = false;
     }
     async function editarAnimal() {
         coninternet = await getInternet(

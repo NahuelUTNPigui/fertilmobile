@@ -211,7 +211,9 @@
                 hora:Date.now(),
                 prioridad:3,
                 idprov,    
-                camposprov:`${(nmadre && npadre)?"animal,padre":nmadre?"animal":npadre?"padre":""}`
+                camposprov:`${(nmadre && npadre)?"animal,padre":nmadre?"animal":npadre?"padre":""}`,
+                show:{...data},
+                motivo:"Guardar inseminación"
             }
             comandos.push(comando)
             data = {
@@ -357,7 +359,9 @@
                 hora:Date.now(),
                 prioridad:3,
                 idprov,    
-                camposprov:`${(nmadre && npadres)?"madre,padres":nmadre?"madre":npadres?"padres":""}`
+                camposprov:`${(nmadre && npadres)?"madre,padres":nmadre?"madre":npadres?"padres":""}`,
+                show:{...data},
+                motivo:"Nuevo servicio"
             }
             
             comandos.push(comando)

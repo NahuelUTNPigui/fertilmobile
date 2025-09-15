@@ -77,7 +77,7 @@
                 
                 let data = {active:false}
                 try{
-                    
+                    let eliminartratamiento = tratamientos.filter(t=>t.id == id)[0]
                     tratamientos = tratamientos.filter(t=>t.id != id)
                     await setTratsSQL(db,tratamientos)
                     onChangeTrats()
@@ -88,7 +88,9 @@
                         hora:Date.now(),
                         prioridad:2,
                         idprov:id,
-                        camposprov:""
+                        camposprov:"",
+                        show:{...eliminartratamiento},
+                        motivo:"Eliminar tratamiento"
                     }
                     comandos.push(comando)
                     await setComandosSQL(db.comandos)
@@ -307,10 +309,13 @@
             tipo:"add",
             coleccion:"tratamientos",
             id:idprov,
-            data:data,
+            data:{...data},
             hora:Date.now(),
             prioridad:0,
-            camposprov:nanimal?"animal":""
+            camposprov:nanimal?"animal":"",
+            show:{...data},
+            motivo:"Agregar tratamiento"
+
         }
         comandos.push(comando)
         await setComandosSQL(db,comandos)
