@@ -82,6 +82,7 @@
         setUltimoRodeosLotesSQL,
         getLotesRodeosSQL,
         addNewPesajeSQL,
+        addNewNacimientoSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import { getTotalAnimales } from "$lib/stores/totaldata";
@@ -101,6 +102,7 @@
     import NuevoAnimal from "$lib/components/animales/NuevoAnimal.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
     let infotoast = $state(false);
@@ -292,6 +294,10 @@
         let idnac = "nuevo_nac" + generarIDAleatorio();
         let idpes = "nuevo_pesaje" + generarIDAleatorio();
         let recordparicion = { id: idnac };
+        let dataanimal = {
+            id: idprov,
+            caravana,
+        };
         if (conparicion) {
             let dataparicion = {
                 madre,
@@ -303,6 +309,9 @@
                 cab: caboff.id,
                 id: idnac,
             };
+            let esnuevopadre = dataparicion.padre.split("_").length > 1;
+            let esnuevomadre = dataparicion.madre.split("_").length > 1;
+            let camposprov = `${esnuevomadre && esnuevopadre ? "madre,padre" : esnuevomadre ? "madre" : esnuevopadre ? "padre" : ""}`;
             let comandonac = {
                 tipo: "add",
                 coleccion: "nacimientos",
@@ -310,12 +319,28 @@
                 hora: Date.now(),
                 prioridad: 2,
                 idprov: idnac,
-                camposprov: "",
-                show:{...dataparicion},
-                motivo:"Guardar nacimiento"
+                camposprov,
+                show: { ...dataparicion },
+                motivo: "Guardar nacimiento",
             };
             //Debo guardar el nacimiento, cuando guardo el id del nacimiento si quiero hacerle referencia
-            await addNewNacimientoSQL(db, dataparicion);
+            let datanacimiento = {
+                ...dataparicion,
+                caravana: dataanimal.caravana,
+                animalid: dataanimal.id,
+                expand: {
+                    madre: {
+                        caravana: dataparicion.nombremadre,
+                    },
+                    padre: {
+                        caravana: dataparicion.nombrepadre,
+                    },
+                    cab: {
+                        nombre: caboff.nombre,
+                    },
+                },
+            };
+            await addNewNacimientoSQL(db, datanacimiento);
             comandos.push(comandonac);
         }
         let esnuevolote = lote.split("_").length > 1;
@@ -361,7 +386,7 @@
             lote,
             rodeo,
             categoria,
-            cab: cab.id,
+            cab: caboff.id,
             rp,
             id: idprov,
             fechafallecimiento: "",
@@ -370,6 +395,7 @@
         if (conparicion) {
             data.nacimiento = recordparicion.id;
         }
+
         let comandoani = {
             tipo: "add",
             coleccion: "animales",
@@ -378,12 +404,12 @@
             prioridad: 3,
             idprov,
             camposprov,
-            show:{...data},
-            motivo:"Guardar animal"
+            show: { ...data },
+            motivo: "Guardar animal",
         };
         comandos.push(comandoani);
 
-        if (fechanacimiento) {
+        if (fechanacimiento != "" && peso != "") {
             let datapesaje = {
                 animal: idprov,
                 fecha: fechanacimiento + " 03:00:00",
@@ -399,9 +425,15 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
-                show:{...datapesaje},
-                motivo:"Guardar pesaje"
-                
+                show: { ...datapesaje },
+                motivo: "Guardar pesaje",
+            };
+            datapesaje.expand = {
+                animal: {
+                    caravana: caravana,
+                    id: idprov,
+                    cab: caboff.id,
+                },
             };
             comandos.push(comandope);
             await addNewPesajeSQL(db, datapesaje);
@@ -420,6 +452,9 @@
                 madre,
                 padre,
                 fecha: fechanacimiento + " 03:00:00",
+                observacion,
+                nombremadre,
+                nombrepadre,
             };
         }
         animales.push(data);
@@ -471,6 +506,22 @@
                 recordparicion = await pb
                     .collection("nacimientos")
                     .create(dataparicion);
+                recordparicion = {
+                    ...recordparicion,
+                    caravana,
+                    animalid: "",
+                    expand: {
+                        madre: {
+                            caravana: dataparicion.nombremadre,
+                        },
+                        padre: {
+                            caravana: dataparicion.nombrepadre,
+                        },
+                        cab: {
+                            nombre: caboff.nombre,
+                        },
+                    },
+                };
             }
             let data = {
                 caravana,
@@ -485,15 +536,21 @@
                 categoria,
                 cab: caboff.id,
                 rp,
+                fechafallecimiento: "",
+                nacimiento: "",
             };
             if (conparicion) {
                 data.nacimiento = recordparicion.id;
             }
             let recorda = await pb.collection("animales").create(data);
+
             if (conparicion) {
                 recorda.expand = {
                     nacimiento: recordparicion,
                 };
+                recorda.nacimiento = recordparicion.id;
+                recordparicion.animalid = recorda.id;
+                await addNewNacimientoSQL(db, recordparicion);
             }
             if (fechanacimiento) {
                 let datapesaje = {
@@ -502,7 +559,17 @@
                     pesoanterior: 0,
                     pesonuevo: peso,
                 };
-                await pb.collection("pesaje").create(datapesaje);
+                let recordpesaje = await pb
+                    .collection("pesaje")
+                    .create(datapesaje);
+                recordpesaje.expand = {
+                    animal: {
+                        caravana: caravana,
+                        id: recorda.id,
+                        cab: caboff.id,
+                    },
+                };
+                await addNewPesajeSQL(db, recordpesaje);
             }
             recorda = {
                 ...recorda,
@@ -517,6 +584,8 @@
                     madre,
                     padre,
                     fecha: fechanacimiento + " 03:00:00",
+                    nombremadre,
+                    nombrepadre,
                 };
             }
             animales.push(recorda);
@@ -628,6 +697,12 @@
         setProxyFilter();
         proxy.save(proxyfiltros);
         animalesrows = animalescab;
+        madres = animalescab
+            .filter((a) => a.sexo == "H")
+            .map((a) => ({ id: a.id, nombre: a.caravana }));
+        padres = animalescab
+            .filter((a) => a.sexo == "M")
+            .map((a) => ({ id: a.id, nombre: a.caravana }));
         totalAnimalesEncontrados = animalesrows.length;
         if (buscar != "") {
             animalesrows = animalesrows.filter((a) =>
@@ -1433,6 +1508,7 @@
                 {rodeos}
                 {oninput}
                 {onSelectPadre}
+                cabid={caboff.id}
                 bind:madres
                 bind:padres
                 bind:caravana

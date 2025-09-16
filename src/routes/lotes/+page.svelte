@@ -222,8 +222,7 @@
             .filter((lo) => lo.cab == caboff.id)
             .map((lo) => {
                 return {
-                    id: lo.id,
-                    nombre: lo.nombre,
+                    ...lo,
                     total: 0,
                 };
             });
@@ -324,7 +323,7 @@
                 let eliminarlote  = lotes.filter((r) => r.id == idlote)[0];
                 try {
                     let data = {
-                        id,
+                        id:idlote,
                         active: false,
                     };
                     let comando = {
@@ -333,7 +332,7 @@
                         data: { ...data },
                         hora: Date.now(),
                         prioridad: 0,
-                        idprov: id,
+                        idprov: idlote,
                         camposprov: "",
                         show:{...data,nombre:eliminarlote.nombre},
                         motivo:"Eliminar lote"
@@ -343,9 +342,10 @@
 
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
+                    ordenar(lotes);
                     await setLotesSQL(db, lotes);
                     onChangeLote();
-                    ordenar(lotes);
+                    
                     filterUpdate();
                     Swal.fire(
                         "Lote eliminado!",
@@ -389,10 +389,12 @@
                     const record = await pb
                         .collection("lotes")
                         .update(idlote, data);
+                        
                     lotes = lotes.filter((r) => r.id != idlote);
+                    ordenar(lotes);
                     await setLotesSQL(db, lotes);
                     onChangeLote();
-                    ordenar(lotes);
+                    
                     filterUpdate();
                     //ver como hago para actualizar la lista
                     Swal.fire(
@@ -448,7 +450,8 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
-        lotesrows = lotescab;
+
+        lotesrows = lotescab.filter(l=>l.active);
         if (buscar != "") {
             lotesrows = lotesrows.filter((r) =>
                 r.nombre

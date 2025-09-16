@@ -4,12 +4,17 @@
     import estados from "$lib/stores/estados";
     import categorias from "$lib/stores/categorias";
     import RadioButton from "../RadioButton.svelte";
+    import PredictSelect from '$lib/components/PredictSelect.svelte';
+    import {isEmpty} from "$lib/stringutil/lib"
+    import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]    
     let {
         lotes,
         rodeos,
         oninput,
         onSelectPadre,
+        cabid,
         madres = $bindable([]),
         padres= $bindable([]),
         caravana = $bindable(""),
@@ -162,7 +167,7 @@
                 focus:ring-green-500 focus:border-green-500
                 ${estilos.bgdark2}
             `} bind:value={rodeo}>
-            {#each rodeos as r}
+            {#each rodeos.filter(r=>r.active && r.cab == cabid) as r}
                 <option value={r.id}>{r.nombre}</option>    
             {/each}
         </select>
@@ -179,7 +184,7 @@
                 focus:ring-green-500 focus:border-green-500
                 ${estilos.bgdark2}
             `} bind:value={lote}>
-            {#each lotes as r}
+            {#each lotes.filter(l=>l.active && l.cab == cabid) as r}
                 <option value={r.id}>{r.nombre}</option>    
             {/each}
         </select>
@@ -206,84 +211,102 @@
         <input type="checkbox"  disabled={idanimal!=""} class="toggle"bind:checked={conparicion} />
     </div>
     {#if idanimal=="" && conparicion}
-        <label for = "nombremadre" class="label">
-            <span class="label-text text-base">Caravana madre</span>
-        </label>
-        <label class="input-group">
-            <input 
-                id ="nombremadre" 
-                type="text"  
-                class={`
-                    input 
-                    input-bordered 
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 focus:border-green-500
-                    w-full 
-                    ${estilos.bgdark2}
-                `}
-                bind:value={nombremadre}
-            />
-        </label>
-        <label for = "madre" class="label">
-            <span class="label-text text-base">Madre</span>
-        </label>
-        <label class="input-group ">
-            <select 
-                class={`
-                    select select-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 focus:border-green-500
-                    ${estilos.bgdark2}
-                `}
-                bind:value={madre}
-                onchange={()=>onSelectPadre("F")}
-            >
-                {#each madres as m}
-                    <option value={m.id}>{m.caravana}</option>    
-                {/each}
-              </select>
-        </label>
-        <label for = "nombrepadre" class="label">
-            <span class="label-text text-base">Caravana padre</span>
-        </label>
-        <label class="input-group">
-            <input 
-                id ="nombrepadre" 
-                type="text"  
-                class={`
-                    input 
-                    input-bordered 
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                    w-full
-                    ${estilos.bgdark2}
-                `}
-                bind:value={nombrepadre}
-            />
-        </label>
-        <label for = "madre" class="label">
-            <span class="label-text text-base">Padre</span>
-        </label>
-        <label class="input-group ">
-            <select 
-                class={`
-                    select select-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 focus:border-green-500
-                    ${estilos.bgdark2}
-                `}
-                bind:value={padre}
-                onchange={()=>onSelectPadre("M")}
-            >
-                {#each padres as p}
-                    <option value={p.id}>{p.caravana}</option>    
-                {/each}
-              </select>
-        </label>
-        
+        <div class="hidden">
+            <label for = "nombremadre" class="label">
+                <span class="label-text text-base">Caravana madre</span>
+            </label>
+            <label class="input-group">
+                <input 
+                    id ="nombremadre" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        w-full 
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={nombremadre}
+                />
+            </label>
+            <label for = "madre" class="label">
+                <span class="label-text text-base">Madre</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={madre}
+                    onchange={()=>onSelectPadre("F")}
+                >
+                    {#each madres as m}
+                        <option value={m.id}>{m.caravana}</option>    
+                    {/each}
+                </select>
+            </label>
+        </div>
+        <PredictSelect 
+            bind:valor={madre} 
+            etiqueta = {"Madre"} bind:cadena={nombremadre} 
+            lista = {madres} 
+            
+        >    
+        </PredictSelect>
+        <div class="hidden">
+            <label for = "nombrepadre" class="label">
+                <span class="label-text text-base">Caravana padre</span>
+            </label>
+            <label class="input-group">
+                <input 
+                    id ="nombrepadre" 
+                    type="text"  
+                    class={`
+                        input 
+                        input-bordered 
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+                        w-full
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={nombrepadre}
+                />
+            </label>
+            <label for = "madre" class="label">
+                <span class="label-text text-base">Padre</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    bind:value={padre}
+                    onchange={()=>onSelectPadre("M")}
+                >
+                    {#each padres as p}
+                        <option value={p.id}>{p.caravana}</option>    
+                    {/each}
+                </select>
+            </label>
+        </div>
+        <PredictSelect 
+            bind:valor={padre} 
+            etiqueta = {"Padre"} 
+            bind:cadena={nombrepadre} 
+            lista = {padres} 
+            
+        >
+        </PredictSelect>
         <label class="form-control">
             <div class="label">
                 <span class="label-text">Observacion</span>                    

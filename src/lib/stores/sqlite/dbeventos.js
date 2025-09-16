@@ -638,7 +638,7 @@ export async function getUltimoObservacionesSQL(db) {
 
 export async function updateLocalLotesSQLUser(db, pb, userid) {
     const records = await pb.collection('lotes').getFullList({
-        filter: `active = true && cab.user='${userid}'`,
+        filter: `cab.user='${userid}'`,
         sort: 'nombre',
         expand: "cab"
     });
@@ -657,7 +657,7 @@ export async function updateLocalLotesSQLUser(db, pb, userid) {
     for (let i = 0; i < asociados.length; i++) {
         //asociados[i]
         let records_asoc = await pb.collection('lotes').getFullList({
-            filter: `active = true && cab='${asociados[i]}'`,
+            filter: `cab='${asociados[i]}'`,
             sort: 'nombre',
             expand: "cab"
         });
@@ -722,7 +722,7 @@ export async function getUltimoLotesSQL(db) {
 //RODEOS
 export async function updateLocalRodeosSQLUser(db, pb, userid) {
     const records = await pb.collection('rodeos').getFullList({
-        filter: `active = true && cab.user='${userid}'`,
+        filter: `cab.user='${userid}'`,
         sort: 'nombre',
         expand: "cab"
     });
@@ -741,7 +741,7 @@ export async function updateLocalRodeosSQLUser(db, pb, userid) {
     for (let i = 0; i < asociados.length; i++) {
         //asociados[i]
         let records_asoc = await pb.collection('rodeos').getFullList({
-            filter: `active = true && cab='${asociados[i]}'`,
+            filter: `cab='${asociados[i]}'`,
             sort: 'nombre',
             expand: "cab"
         });

@@ -1,7 +1,7 @@
 <script>
     import estilos from "$lib/stores/estilos";
 
-    let {lista,etiqueta,valor=$bindable(""),cadena=$bindable(""),onelegir,onwrite,size="w-4/5"} = $props()
+    let {lista,etiqueta,valor=$bindable(""),cadena=$bindable(""),onelegir=()=>{},onwrite=()=>{},size="w-4/5"} = $props()
     let listarow = $state(lista)
     let isOpen = $state(false)
     let nombre = $state("")

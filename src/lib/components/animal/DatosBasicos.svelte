@@ -647,8 +647,9 @@
             peso,
             sexo,
             caravana,
-            rodeo: rodeo,
+            rodeo,
             lote,
+            
             prenada,
             categoria,
             rp,
@@ -972,7 +973,7 @@
                     `}
                     bind:value={rodeo}
                 >
-                    {#each rodeos as t}
+                    {#each rodeos.filter(r=>r.active && r.cab == caboff.id) as t}
                         <option value={t.id}>{t.nombre}</option>
                     {/each}
                 </select>
@@ -1002,7 +1003,7 @@
                     `}
                     bind:value={lote}
                 >
-                    {#each lotes as l}
+                    {#each lotes.filter(l=>l.active && l.cab == caboff.id) as l}
                         <option value={l.id}>{l.nombre}</option>
                     {/each}
                 </select>

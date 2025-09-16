@@ -338,7 +338,7 @@
                         active: false,
                     };
                     await pb.collection("rodeos").update(idrodeo, data);
-                    rodeos = rodeos.filter((r) => r.id != id);
+                    rodeos = rodeos.filter((r) => r.id != idrodeo);
                     await setRodeosSQL(db, rodeos);
                     //ver como hago para actualizar la lista
                     Swal.fire(
@@ -375,21 +375,21 @@
                     let data = {
                         active: false,
                     };
-                    let eliminarrodeo = rodeos.filter((r) => r.id == id)[0]
+                    let eliminarrodeo = rodeos.filter((r) => r.id == idrodeo)[0]
                     let comando = {
                         tipo: "update",
                         coleccion: "rodeos",
                         data: { ...data },
                         hora: Date.now(),
                         prioridad: 0,
-                        idprov: id,
+                        idprov: idrodeo,
                         camposprov: "",
                         show:{...eliminarrodeo},
                         motivo:"Eliminar rodeo"
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
-                    rodeos = rodeos.filter((r) => r.id != id);
+                    rodeos = rodeos.filter((r) => r.id != idrodeo);
                     await setRodeosSQL(db, rodeos);
                     ordenar(rodeos);
                     changeRodeo();
@@ -444,7 +444,7 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
-        rodeosrows = rodeoscab;
+        rodeosrows = rodeoscab.filter(r=>r.active);
         if (buscar != "") {
             rodeosrows = rodeosrows.filter((r) =>
                 r.nombre
