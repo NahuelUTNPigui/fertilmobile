@@ -20,9 +20,12 @@
     from "$lib/stores/sqlite/dbeventos";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    
     //permisos
     import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
+    import ImportarAnimal from "../importar/ImportarAnimal.svelte";
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     let ruta = import.meta.env.VITE_RUTA
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const pb = new PocketBase(ruta);
@@ -96,7 +99,7 @@
         }
         else{
             if(esServicio){
-                let ser = filas.filter(s=>s.id == id)[0]
+                let ser = serviciosrows.filter(s=>s.id == id)[0]
                 idserv = id
                 fechadesdeserv = ser.fechadesde.split(" ")[0]
                 fechahastaserv = ser.fechahasta.split(" ")[0]
@@ -106,7 +109,7 @@
             }
             else{
                 idins = id
-                let ser = filas.filter(s=>s.id == id)[0]
+                let ser = serviciosrows.filter(s=>s.id == id)[0]
                 fechainseminacion = ser.fechainseminacion.split(" ")[0]
                 padre = ser.padre
                 pajuela = ser.pajuela
@@ -389,7 +392,7 @@
         
     }
     async function guardarServicio(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(esServicio){
             if(coninternet.connected){
                 await guardarServicioOnline()

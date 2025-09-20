@@ -76,10 +76,11 @@
     import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import Info from "$lib/components/toast/Info.svelte";
-
+import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -591,7 +592,11 @@
             comandos.push(comando);
             data.id = idprov;
             await setComandosSQL(db, comandos);
-            observaciones.push(record);
+            data.expand = {
+                animal:{...animalobservacion} ,
+                cab: { id: caboff.id },
+            };
+            observaciones.push(data);
             observaciones = observaciones.filter(
                         (o) => o.id != idobservacion,
                     );
@@ -629,7 +634,6 @@
                 fecha: fecha + " 03:00:00",
                 categoria,
                 observacion,
-                id: idobservacion,
             };
             let a = animales.filter((an) => an.id == animal)[0];
             let comando = {
@@ -653,12 +657,13 @@
 
             };
             observaciones[idx].expand = { animal: a };
-            observaciones.sort((o1, o2) =>
-                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
-            );
+            observaciones = observaciones.filter(
+                        (o) => o.id != idobservacion,
+                    );
             await setObservacionesSQL(db, observaciones);
             changeObservacion();
             filterUpdate();
+            
             Swal.fire(
                 "Éxito editar",
                 "Se pudo editar la observación",
@@ -706,6 +711,7 @@
             changeObservacion();
             await setObservacionesSQL(db,observaciones)
             filterUpdate();
+            
             Swal.fire(
                 "Éxito editar",
                 "Se pudo editar la observación",
@@ -812,6 +818,7 @@
         animalescab = animales.filter((a) => a.cab == caboff.id);
     }
     async function updateLocalSQL() {
+
         await setUltimoObservacionesSQL(db);
         await setUltimoAnimalesSQL(db);
         observaciones = await updateLocalObservacionesSQLUser(
@@ -819,7 +826,9 @@
             pb,
             usuarioid,
         );
-
+        observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         changeAnimales();
         changeObservacion();
@@ -830,6 +839,9 @@
         let resobservaciones = await getObservacionesSQL(db);
         let resanimales = await getAnimalesSQL(db);
         observaciones = resobservaciones.lista;
+        observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
         animales = resanimales.lista;
         changeObservacion();
         changeAnimales();
@@ -902,11 +914,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1182,6 +1197,9 @@
 </Navbarr>
 {#if infotoast}
     <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

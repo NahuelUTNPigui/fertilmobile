@@ -40,7 +40,7 @@
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">5. Uso de Datos y Privacidad</h2>
+            <h2 class="font-semibold text-lg mb-2">5. Condiciones de Uso</h2>
             <p class="mb-4">
                 1. Por la presente, Creciente Fértil cede al usuario, y éste acepta en la, una licencia no exclusiva e intransferible para utilizar la plataforma web y/o app. Creciente Fértil se reserva todos los derechos no cedidos de manera expresa al  usuario en esta Sección.
             </p>
@@ -72,21 +72,46 @@
                 10. Si el usuario incumpliera alguna de las condiciones de uso o de sus obligaciones, Creciente Fértil se reserva el derecho de suspender inmediatamente la prestación del Servicio, comunicándole al usuario que deberá cesar en dicho incumplimiento para que el Servicio pueda ser restablecido. Si el usuario no cesa en su incumplimiento en un plazo de cuarenta y ocho (48) horas corridas desde la comunicación cursada por Creciente Fértil , o si el mismo fuera grave, Creciente Fértil quedará facultada a rescindir en forma inmediata el vínculo emergente de la aceptación de el presente, y a reclamar los daños y perjuicios ocasionados.
             </p>
         </div>
+
         <div class="mb-6">
             <h2 class="font-semibold text-lg mb-2">6. Uso de Datos y Privacidad</h2>
             <p class="mb-4">
                 El Usuario acepta y autoriza a Creciente Fértil a utilizar la información ingresada en la aplicación para gestionar los movimientos y eventos del ganado y, de manera general, para generar informes estadísticos (por ejemplo, total de animales registrados en la app), sin comprometer datos personales. Todo el manejo de la información se realiza conforme a la Política de Privacidad, la cual se integra a estos Términos y Condiciones.
             </p>
         </div>
+
         <div class="mb-6">
             <h2 class="font-semibold text-lg mb-2">7. Planes de Pago y Acceso</h2>
             <p class="mb-4">
                 La aplicación cuenta con distintos planes de pago. Por el momento, la facturación y los pagos se realizarán de forma externa a la app; una vez verificado el pago, los administradores otorgarán el acceso correspondiente. Cada plan establece límites específicos en la cantidad de datos que se pueden registrar.
             </p>
         </div>
-      
+
         <div class="mb-6">
-          <h2 class="font-semibold text-lg mb-2">8. Restricciones y Responsabilidades del Usuario</h2>
+            <h2 class="font-semibold text-lg mb-2">8. Condiciones y formas de pago</h2>
+            <p class="mb-4">
+                1. La contratación del servicio no tendrá costo de ingreso para el cliente, ni período mínimo de utilización.
+            </p>
+            <p class="mb-4">
+                2. El Cliente, al momento de contratar el servicio, tendrá la facultad de optar por el pago de una licencia anual con un descuento relativo a dos meses del valor de la unidad de medida plasmada en el anexo 1 del presente; o por abono mensual del servicio contratado del 1 al 15 de cada mes a través de los medios de pago aceptados por el Prestador.  
+                En caso de corresponder, la emisión de facturas, notas de débito y/o notas de crédito será efectuada por el Prestador dando cumplimiento a disposiciones impositivas vigentes. Consecuentemente, y cuando corresponda, a los precios se agregará el impuesto al valor agregado (IVA) así como cualquier otro impuesto, tasa o contribución que pudiere corresponder. El Cliente abonará el precio del servicio por periodo adelantado, y si el servicio incluye cargos variables, estos podrán ser facturados por períodos vencidos.
+            </p>
+            <p class="mb-4">
+                3. Los costos de contratación de los servicios estarán expresados en dólares estadounidenses (USD). El pago podrá efectuarse en moneda de curso legal en la República Argentina, aplicándose para su conversión el tipo de cambio oficial del Banco de la Nación Argentina vigente al momento de la efectiva cancelación de la obligación.
+            </p>
+            <p class="mb-4">
+                4. Los pagos podrán realizarse por débito en cuenta, transferencia bancaria, tarjeta de crédito, efectivo o cualquier medio alternativo habilitado por el Prestador. El valor de la licencia mensual será estimado al valor de la unidad de medida establecida mensualmente en el anexo 1 del presente para los pagos por transferencia bancaria; en caso de que la misma sea abonada en efectivo, tarjeta de crédito u otro medio alternativo, tendrá un incremento del 17% del valor de la unidad de medida.
+            </p>
+            <p class="mb-4">
+                5. Los valores del abono mensual por el servicio contratado podrán ser modificados por el Prestador, establecidos en el anexo 1 del presente contrato, comunicándolo al Cliente con antelación de al menos quince (15) días a su entrada en vigencia . El Cliente podrá rechazar las modificaciones de valores en la forma, el medio, y en un todo de acuerdo a lo establecido en la cláusula Tercera, punto 2, segundo párrafo.
+            </p>
+            <p class="mb-4">
+                6. La mora en el pago operará de manera automática. Asimismo, la falta de pago por el término de 3 (tres) meses consecutivos, facultará a el Prestador, a suspender la provisión del Servicio de forma inmediata, hasta su efectivo pago con más los intereses y gastos administrativos que correspondan. Por cada día de retraso se sumará el 1% del valor de la unidad de medida en concepto de intereses.
+            </p>
+        </div>
+
+        <div class="mb-6">
+          <h2 class="font-semibold text-lg mb-2">9. Restricciones y Responsabilidades del Usuario</h2>
           <p class="mb-4">El usuario se compromete a:</p>
           <ul class="list-disc pl-6 mb-4">
             <li class="mb-2">Utilizar la aplicación únicamente para fines lícitos y de acuerdo con lo establecido en estos Términos.</li>
@@ -97,53 +122,56 @@
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">9. Propiedad Intelectual</h2>
+            <h2 class="font-semibold text-lg mb-2">10. Propiedad Intelectual</h2>
             <p class="mb-4">
                 Todos los derechos de propiedad intelectual e industrial sobre “Creciente Fértil” y su contenido corresponden a sus desarrolladores. Se prohíbe la reproducción total o parcial de la aplicación o su contenido sin autorización expresa.
             </p>
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">10. Limitación de Responsabilidad</h2>
+            <h2 class="font-semibold text-lg mb-2">11. Limitación de Responsabilidad</h2>
             <p class="mb-4">
                 La aplicación se ofrece “tal cual”, sin garantías expresas o implícitas. Los desarrolladores no serán responsables por errores, interrupciones en el servicio o pérdida de datos, salvo en casos de dolo o negligencia grave. El uso de la aplicación es responsabilidad exclusiva del usuario. Asimismo, la empresa no garantiza que el uso de la aplicación genere mejoras en la gestión del ganado ni en la productividad de los usuarios. Cada usuario es responsable de la interpretación y utilización de los datos obtenidos a través de la aplicación.
             </p>
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">11. Modificaciones a los Términos y Condiciones</h2>
+            <h2 class="font-semibold text-lg mb-2">12. Modificaciones a los Términos y Condiciones</h2>
             <p class="mb-4">
                 “Creciente Fértil” se reserva el derecho de modificar estos Términos y Condiciones en cualquier momento. Las modificaciones serán notificadas a través de la aplicación o por otros medios. El uso continuado de la aplicación tras la publicación de cambios implicará la aceptación de las nuevas condiciones.
             </p>
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">12. SERVICIO DE ATENCIÓN AL CLIENTE Y SOPORTE TÉCNICO.</h2>
+            <h2 class="font-semibold text-lg mb-2">13. Servicio de atención al cliente y soporte técnico</h2>
             <p class="mb-4">
                 El Usuario podrá solicitar el servicio de soporte técnico y/o de atención al cliente mediante cualquiera de los siguientes medios: mail, teléfono, videollamada. Para más información podrá comunicarse vía mail a info@crecientefertil.com.ar. Creciente Fértil no estará obligada a ofrecer soporte técnico por reclamaciones basadas en (1) la utilización de la Plataforma  junto o en combinación con hardware, software o datos no pensados para utilizarse con la Plataforma; (2) una utilización de la Plataforma distinta a la permitida por estos Términos y Condiciones, o de una forma para la que no fue diseñado; (3) cualquier modificación realizada en la plataforma por parte del Usuario o de un tercero; o (4) si el Prestador ha notificado al Usuario que deje de utilizar la Plataforma. Los horarios de atención serán de lunes a viernes de 8 hs a 20hs. 
             </p>
         </div>
       
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">13. Legislación Aplicable y Jurisdicción</h2>
+            <h2 class="font-semibold text-lg mb-2">14. Legislación Aplicable y Jurisdicción</h2>
             <p class="mb-4">
                 Estos Términos y Condiciones se rigen por las leyes de la República Argentina. Cualquier controversia derivada del uso de la aplicación será sometida a la jurisdicción de los tribunales competentes de General Pico, La Pampa, renunciando el usuario a cualquier otro fuere que le pudiere corresponder, incluso el Federal. 
             </p>
         </div>
+
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">14. Contacto</h2>
+            <h2 class="font-semibold text-lg mb-2">15. Contacto</h2>
             <p class="mb-4">
                 Para cualquier consulta, reclamo o sugerencia sobre estos Términos y Condiciones, los usuarios pueden ponerse en contacto con el equipo de “Creciente Fértil” a través de los canales habilitados en la aplicación.
             </p>
         </div>
+
         <div class="mb-6">
-            <h2 class="font-semibold text-lg mb-2">15. Domicilio legal</h2>
+            <h2 class="font-semibold text-lg mb-2">16. Domicilio legal</h2>
             <p class="mb-4">
                 Para todos los efectos legales derivados del presente las partes constituyen los siguientes domicilios electrónicos: Creciente Fértil en el mail: admin@crecientefertil.com.ar y el Usuario fija su domicilio electrónico en el mail por el cual se registró. Las notificaciones cursadas a los domicilios electrónicos indicados son plenamente eficaces.
             </p>
         </div>
+
         <div class="text-sm italic text-gray-500">
-          <p>Fecha de última actualización: 30/07/2025</p>
+          <p>Fecha de última actualización: 04/09/2025</p>
         </div>
     </div>
     

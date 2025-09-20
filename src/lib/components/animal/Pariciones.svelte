@@ -30,6 +30,7 @@
         
     } = $props()
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     import { getInternet } from '$lib/stores/offline';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
@@ -160,7 +161,11 @@
                     sexo,
                     cab:cabid,
                     peso,
-                    nacimiento:recordparicion.id
+                    nacimiento:recordparicion.id,
+                    lote:"",
+                    rodeo:"",
+                    fechafallecimiento:"",
+                    rp:""
                 }
 
                 let recorda = await pb.collection('animales').create(data); 
@@ -256,7 +261,11 @@
                 sexo,
                 cab:cabid,
                 peso,
-                nacimiento:idprov
+                nacimiento:idprov,
+                lote:"",
+                rodeo:"",
+                fechafallecimiento:"",
+                rp:""
             }
             let comandoani = {
                     tipo:"add",
@@ -308,7 +317,7 @@
 
     }
     async function guardarParicion(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(coninternet.connected){
             await guardarParicionOnline()
         }

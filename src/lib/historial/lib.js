@@ -76,5 +76,5 @@ export async function guardarHistorial(pb,idanimal){
         prenada:record.prenada,
         rp:record.rp
     }
-    await pb.collection("historialanimales").create(histo)
+    return await pb.collection("historialanimales").create(histo)
 }

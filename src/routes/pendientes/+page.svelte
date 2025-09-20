@@ -29,11 +29,13 @@
     import { customoffliner } from "$lib/stores/offline/custom.svelte";
     import { intermitenter } from "$lib/stores/offline/intermitencia.svelte";
     import { velocidader } from "$lib/stores/offline/velocidad.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     let ruta = import.meta.env.VITE_RUTA;
     let pre = "";
     const pb = new PocketBase(ruta);
     const HOY = new Date().toISOString().split("T")[0];
+    let nubetoast = $state(false)
     let db = $state(null);
     let caboff = $state({});
     let usuarioid = $state("");
@@ -124,6 +126,9 @@
         } else if (coleccion == "cabs") {
             s = `Nombre: ${data.nombre}`;
         }
+        else if(coleccion=="users"){
+         s = "Nombre: "+data.username   
+        }
         return s;
     }
     function getNombreTipo(tipo) {
@@ -154,19 +159,24 @@
         // Devolver string en formato local
         return fecha.toLocaleString("es-AR", opciones);
     }
+    function completarExpand(){
+
+    }
     onMount(async () => {
         await initPage();
         if (caboff.exist) {
             db = await openDB();
             let rescom = await getComandosSQL(db);
             comandos = rescom.lista;
-            loger.addTextLogArray(comandos, 20);
+
             //Tengo dudas y si son muchas comandos y se rompe
             if (coninternet.connected) {
+                nubetoast = true
                 try {
                     await flushComandosSQL(db, pb);
                     comandos = [];
                     cargado = true;
+                    nubetoast = false
                 } catch (err) {
                     if (modedebug) {
                         loger.addTextError(JSON.stringify(err), null, 2);
@@ -292,3 +302,6 @@
         </div>
     {/if}
 </Navbarr>
+{#if nubetoast}
+    <Nube/>
+{/if}

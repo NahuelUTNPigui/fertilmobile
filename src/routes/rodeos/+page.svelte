@@ -52,15 +52,18 @@
         setRodeosSQL,
         setUltimoRodeosLotesSQL,
         getUltimoRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUser
     } from "$lib/stores/sqlite/dbeventos";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -427,12 +430,12 @@
     }
     function setFilters() {
         buscar = proxyfiltros.buscar;
-        mostrarVacios = proxyfiltros.mostrarVacios;
+        
     }
 
     function setProxyFilter() {
         proxyfiltros.buscar = buscar;
-        proxyfiltros.mostrarVacios = mostrarVacios;
+        
     }
 
     function limpiarFiltros() {
@@ -482,7 +485,11 @@
     async function updateLocalSQL() {
         animales = await getAnimalesCabSQL(db, caboff.id);
         await setUltimoRodeosLotesSQL(db);
-        rodeos = await updateLocalRodeosSQLUser(db, pb, usuarioid);
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        //lotes = await updateLocalLotesSQLUser(db, pb, usuarioid);
+        //let rodeos  = await updateLocalRodeosSQLUser(db, pb, usuarioid);
+        loger.addTextLog(JSON.stringify(lotesrodeos,null,2))
+        rodeos = lotesrodeos.rodeos
         ordenar(rodeos);
         changeRodeo();
         filterUpdate();
@@ -560,11 +567,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -581,6 +591,7 @@
                     }
                 }, 0);
             }
+            
         }
     }
     onMount(async () => {
@@ -677,6 +688,7 @@
                         type="checkbox"
                         class="checkbox"
                         bind:checked={mostrarVacios}
+                        
                     />
                 </label>
             </div>
@@ -728,6 +740,9 @@
 </Navbarr>
 {#if infotoast}
     <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

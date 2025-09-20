@@ -91,6 +91,7 @@
     let coninternet = $state({connected:false})
     let comandos = $state([])
     let getlocal = $state(false)
+    let nacimientoscab = $state([])
     //variables
     let getvelocidad = $state(0)
     let ruta = import.meta.env.VITE_RUTA
@@ -363,17 +364,18 @@
         let historialtodos = await getHistorialAnimalesSQL(db)
         let lotesrodeos = await getLotesRodeosSQL(db,caboff.id)
         animales = resanimales.lista
-        pesajes = pesajestodos.lista
-        tratamientos = tratstodos.lista
-        observaciones = observacionestodos.lista
-        servicios = servistodos.lista
-        inseminaciones = inseminacionestodos.lista
-        tipostrat = tipostratodos.lista
-        pariciones = nacimientostodos.lista
-        tactos = tactostodos.lista
-        historial = historialtodos.lista
-        lotes = lotesrodeos.lotes
-        rodeos = lotesrodeos.rodeos
+        pesajes = pesajestodos.lista.filter(p=>p.animal == slug)
+        tratamientos = tratstodos.lista.filter(t=>t.animal == slug)
+        observaciones = observacionestodos.lista.filter(o=>o.animal == slug)
+        servicios = servistodos.lista.filter(s=>s.madre  == slug)
+        inseminaciones = inseminacionestodos.lista.filter(i=>i.animal == slug)
+        tipostrat = tipostratodos.lista.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
+        nacimientoscab = nacimientostodos.lista
+        pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
+        tactos = tactostodos.lista.filter(t=>t.animal == slug)
+        historial = historialtodos.lista.filter(h=>h.animal == slug)
+        lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
+        rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
         //propios del animal
         //pesajesanimal = pesajestodos.lista.filter(p=>p.animal == slug)
         //tratamientosanimal = tratstodos.lista.filter(t=>t.animal == slug)
@@ -406,13 +408,17 @@
         servicios = servistodos.filter(s=>s.madre  == slug)
         inseminaciones = inseminacionestodos.filter(i=>i.animal == slug)
         tipostrat = tipostratodos.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
+        nacimientoscab = nacimientostodos
+
         pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
+        
         tactos = tactostodos.filter(t=>t.animal == slug)
         historial = historialtodos.filter(h=>h.animal == slug)
-        lotes = lotesrodeos.lotes
-        rodeos = lotesrodeos.rodeos
+        lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
+        rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
 
     }
+
     async function getDataSQL() {
         db = await openDB()
         let rescom = await getComandosSQL(db)
@@ -456,16 +462,19 @@
             nacimiento = data.nacimiento
 
             
-            let n_idx = pariciones.findIndex(n=>n.id==nacimiento)
+            let n_idx = nacimientoscab.findIndex(n=>n.id==nacimiento)
             
             if(n_idx != -1){
                 connacimiento = true
-                nacimientoobj = pariciones[n_idx]
+                nacimientoobj = nacimientoscab[n_idx]
             }
             
         }
         
         cargado = true
+    }
+    function pushHistorial(histo){
+        historial.push(histo)
     }
     //Necesito una funcion que traiga toda la informacion del animal
     //Para mi es siempre get
@@ -550,12 +559,14 @@
                     bind:fechanacimiento
                     
                     bind:modohistoria
+                    {pushHistorial}
                 />
             </CardAnimal>
             <Acciones 
                     caravana = {caravana}
                     bind:fechafallecimiento  = {fechafall}
                     bind:motivo = {motivobaja}
+
                     bajar={async (fechafallecimiento,motivo)=>await darBaja(fechafallecimiento,motivo)}
                     {eliminar}
                     transferir={async (codigo)=>await transferir(codigo)}
@@ -651,13 +662,14 @@
                     bind:servicios
                     bind:inseminaciones
                     bind:historial
+                    bind:coninternet
                 />
             </CardAnimal>
         {:else if tab=="historial"}
             <!--Historial del animal-->
             <CardAnimal cardsize="max-w-7xl" titulo="Historial">
                 <!--<Historial {db} {coninternet} bind:historial />-->
-                <Historial  bind:historial/>
+                <Historial  bind:historial bind:lotes bind:rodeos bind:coninternet />
             </CardAnimal>
         {/if}
         

@@ -5,6 +5,10 @@ import { getPermisosList, getPermisosMessage } from "$lib/permisosutil/lib"
 import Swal from "sweetalert2"
 
 import { loger } from "../logs/logs.svelte"
+import { getUpdateLocalRodeosLotesSQLUser, updateLocalInseminacionesSQLUser, updateLocalNacimientosSQLUser, updateLocalObservacionesSQLUser, updateLocalPesajesSQLUser, updateLocalServiciosSQLUser, updateLocalTactosSQL, updateLocalTactosSQLUser, updateLocalTiposTratSQLUser, updateLocalTratsSQLUser } from "./dbeventos"
+import { addNewAnimalSQL, updateLocalAnimalesSQLUser, updateLocalHistorialAnimalesSQLUser } from "./dbanimales"
+import { updateLocalEstablecimientoSQL } from "./dbestablecimiento"
+
 let modedebug = import.meta.env.VITE_MODO_DEV == "si"
 
 export async function getComandosSQL(db) {
@@ -155,7 +159,11 @@ async function addComando(pb, c, tablaids) {
     }
     catch (err) {
         console.error(err)
-
+        if(modedebug){
+            loger.addTextError(coleccion)
+            loger.addTextError(JSON.stringify(data,null,2))
+            
+        }
         return res
     }
 
@@ -252,6 +260,8 @@ function validarEvento(c) {
 }
 //Si pongo aca el historial?
 export async function flushComandosSQL(db, pb) {
+
+    let listacolecciones = []
 
     let rescoms = await getComandosSQL(db)
     let listacomandos = []
@@ -359,11 +369,16 @@ export async function flushComandosSQL(db, pb) {
 
         let accion = c.tipo
 
+        listacolecciones.push(c.coleccion)
+
         if (accion == "add") {
             try {
                 if (true || validarPermisos(c.coleccion, listapermisos)) {
+
                     let datanuevo = await addComando(pb, c, tablaids)
+                    
                     tablaids[id] = datanuevo.id
+                    
                 }
 
             }
@@ -404,6 +419,39 @@ export async function flushComandosSQL(db, pb) {
             }
         }
     }
+    listacolecciones = [... new Set(listacolecciones)]
+    for (let i = 0; i < listacolecciones.length; i++) {
+        let coleccion = listacolecciones[i]
+
+        if (coleccion == "inseminacion") {
+            await updateLocalInseminacionesSQLUser(db,pb,usuarioid)
+            //s = JSON.stringify(data,null,2)
+        } else if (coleccion == "historialanimales") {
+            await updateLocalHistorialAnimalesSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "servicios") {
+            await updateLocalServiciosSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "tactos") {
+            await updateLocalTactosSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "tratamientos") {
+            await updateLocalTratsSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "tipotratamientos") {
+            await updateLocalTiposTratSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "pesaje") {
+            await updateLocalPesajesSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "animales") {
+            await updateLocalAnimalesSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "nacimientos") {
+            await updateLocalNacimientosSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "observaciones") {
+            await updateLocalObservacionesSQLUser(db,pb,usuarioid)
+        } else if (coleccion == "rodeos" || coleccion == "lotes") {
+            await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        } else if (coleccion == "cabs") {
+           await updateLocalEstablecimientoSQL(db,pb,usuarioid)
+        }
+    }
+
+
     await setComandosSQL(db, [])
 
 }

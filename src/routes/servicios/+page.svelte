@@ -81,12 +81,15 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     let ruta = import.meta.env.VITE_RUTA;
     let pre = "";
 
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false);
+    
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -897,10 +900,12 @@
             }
 
             if (mustUpdate) {
+                nubetoast=true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast=false
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;

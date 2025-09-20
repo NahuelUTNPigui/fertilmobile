@@ -90,10 +90,13 @@
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Listamove from "$lib/components/movimientos/Listamove.svelte";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
+    import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -831,9 +834,11 @@
             }
             try {
                 await moverAnimalOnline(a, data);
+                
             } catch (err) {
                 conerrores.push(a.id);
                 errores = true;
+                
                 if (modedebug) {
                     loger.addTextError(a.caravana);
                 }
@@ -866,12 +871,13 @@
         motivo = "";
         codigo = "";
         habilitarboton = false;
-
+        await setAnimalesSQL(db,animales)
         onChangeAnimales();
         filterUpdate();
         if (conerrores.length > 0) {
             Swal.fire("Error movimiento", "Hubo animales con errores", "error");
         } else {
+            
             Swal.fire(
                 "Éxito movimiento",
                 "Se lograron mover todos los animales",
@@ -1057,6 +1063,7 @@
         animalescab = animales.filter((a) => a.active && a.cab == caboff.id);
     }
     async function updateLocalSQL() {
+
         caboff = await updatePermisos(pb, usuarioid);
         await setUltimoRodeosLotesSQL(db);
         await setUltimoAnimalesSQL(db);
@@ -1068,8 +1075,8 @@
             usuarioid,
             caboff.id,
         );
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
+        lotes = lotesrodeos.lotes.filter(l=>l.active);
+        rodeos = lotesrodeos.rodeos.filter(l=>l.active);
         onChangeAnimales();
         filterUpdate();
         cargado = true;
@@ -1079,8 +1086,8 @@
         let lotesrodeos = await getLotesRodeosSQL(db, caboff.id);
         animales = resanimales.lista;
 
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
+        lotes = lotesrodeos.lotes.filter(l=>l.active);
+        rodeos = lotesrodeos.rodeos.filter(l=>l.active);
         onChangeAnimales();
 
         filterUpdate();
@@ -1148,11 +1155,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1189,7 +1199,9 @@
         await getDataSQL();
     });
 </script>
-
+{#if modedebug}
+<Barrainternet bind:coninternet/>
+{/if}
 <Navbarr>
     {#if modedebug}
         <div class="grid grid-cols-3">
@@ -1393,6 +1405,9 @@
 </Navbarr>
 {#if infotoast}
     <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

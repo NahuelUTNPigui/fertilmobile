@@ -78,8 +78,10 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -207,7 +209,7 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
-        animalesrows = animales;
+        animalesrows = animalescab;
         if (buscar != "") {
             animalesrows = animalesrows.filter((a) =>
                 a.caravana
@@ -569,6 +571,7 @@
         cargado = true;
     }
     async function updateLocalSQL() {
+
         await setUltimoRodeosLotesSQL(db);
         await setUltimoAnimalesSQL(db);
         await setUltimoPesajesSQL(db);
@@ -655,11 +658,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1145,6 +1151,9 @@
 </Navbarr>
 {#if infotoast}
     <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

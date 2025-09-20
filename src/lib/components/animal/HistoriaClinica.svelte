@@ -19,6 +19,7 @@
         observaciones=$bindable([]),
         pariciones=$bindable([]),
         caravana=$bindable(""),
+        coninternet=$bindable({})
     } = $props()
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);

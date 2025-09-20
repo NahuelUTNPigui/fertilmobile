@@ -23,10 +23,10 @@
         fecha = $bindable(""),
         malfecha = $bindable(false),
         observacion = $bindable(""),
-
-    } = $props()
+    } = $props();
     const HOY = new Date().toISOString().split("T")[0];
 </script>
+
 {#if idobservacion == ""}
     <AgregarAnimal
         bind:agregaranimal
@@ -41,9 +41,11 @@
     <label for="animal" class="label">
         <span class="label-text text-base">Animal</span>
     </label>
+
     <label class="input-group">
-        <select
-            class={`
+        {#if idobservacion == ""}
+            <select
+                class={`
                 select select-bordered w-full
                 border border-gray-300 rounded-md
                 focus:outline-none focus:ring-2 
@@ -51,14 +53,33 @@
                 focus:border-green-500
                 ${estilos.bgdark2}
             `}
-            bind:value={animal}
-            onchange={() => oninput("ANIMAL")}
-            disabled={idobservacion != ""}
-        >
-            {#each animalescab as a}
-                <option value={a.id}>{a.caravana}</option>
-            {/each}
-        </select>
+                bind:value={animal}
+                onchange={() => oninput("ANIMAL")}
+                disabled={idobservacion != ""}
+            >
+                {#each animalescab.filter((a) => a.active) as a}
+                    <option value={a.id}>{a.caravana}</option>
+                {/each}
+            </select>
+        {:else}
+            <select
+                class={`
+                select select-bordered w-full
+                border border-gray-300 rounded-md
+                focus:outline-none focus:ring-2 
+                focus:ring-green-500 
+                focus:border-green-500
+                ${estilos.bgdark2}
+            `}
+                bind:value={animal}
+                onchange={() => oninput("ANIMAL")}
+                disabled={idobservacion != ""}
+            >
+                {#each animalescab as a}
+                    <option value={a.id}>{a.caravana}</option>
+                {/each}
+            </select>
+        {/if}
         {#if malanimal}
             <div class="label">
                 <span class="label-text-alt text-red-500"

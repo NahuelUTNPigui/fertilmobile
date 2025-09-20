@@ -1629,41 +1629,41 @@
     }
     async function getTotales() {
         let recordtactos = await pb.collection("tactos").getList(1, 1, {
-            filter: `active=True && cab='${cab.id}'`,
+            filter: `active=True && cab='${caboff.id}'`,
         });
         let recordnacimientos = await pb
             .collection("nacimientos")
             .getList(1, 1, {
-                filter: `cab='${cab.id}'`,
+                filter: `cab='${caboff.id}'`,
             });
         let recordtratamientos = await pb
             .collection("tratamientos")
             .getList(1, 1, {
-                filter: `active=True && cab='${cab.id}'`,
+                filter: `active=True && cab='${caboff.id}'`,
             });
         let recordinseminaciones = await pb
             .collection("inseminacion")
             .getList(1, 1, {
-                filter: `active=True && cab='${cab.id}'`,
+                filter: `active=True && cab='${caboff.id}'`,
             });
         let recordobservaciones = await pb
             .collection("observaciones")
             .getList(1, 1, {
-                filter: `active=True && cab='${cab.id}'`,
+                filter: `active=True && cab='${caboff.id}'`,
             });
         let recordpesajes = await pb.collection("pesaje").getList(1, 1, {
             expand: "animal",
             filter: `animal.cab='${cab.id}'`,
         });
         let recordservicios = await pb.collection("servicios").getList(1, 1, {
-            filter: `cab='${cab.id}'`,
+            filter: `cab='${caboff.id}'`,
         });
         const recordslotes = await pb.collection("lotes").getList(1, 1, {
-            filter: `active=True && cab='${cab.id}'`,
+            filter: `active=true && cab='${caboff.id}'`,
         });
 
         const recordsrodeos = await pb.collection("rodeos").getList(1, 1, {
-            filter: `active=True && cab='${cab.id}'`,
+            filter: `active=true && cab='${caboff.id}'`,
         });
         totaleventos.tactos = recordtactos.totalItems;
         totaleventos.inseminaciones = recordinseminaciones.totalItems;
@@ -1748,6 +1748,7 @@
         await setUltimosSQL(db);
     }
     async function updateLocalSQL() {
+        
         let inicio = Date.now();
 
         await setInternetSQL(db, 1, Date.now());
@@ -1763,8 +1764,10 @@
         totaleventos.servicios = totales.servicios;
 
         let tipotrats = await updateLocalTiposTratSQLUser(db, pb, usuarioid);
+        tipotrats.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
         let animalesuser = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
-        animales = animalesuser;
+        animalesuser.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
+        animales = animalesuser
 
         onChangeAnimales();
         totaleventos.animales = animales.filter(
@@ -1790,7 +1793,7 @@
         let dataanimales = await getAnimalesSQL(db);
         let data = await getEventosSQL(db);
 
-        animales = dataanimales.lista;
+        animales = dataanimales.lista.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
 
         onChangeAnimales();
         //En este caso si va la lista porque es data que viene de SQL
@@ -1819,16 +1822,16 @@
             (t) => t.cab == caboff.id,
         ).length;
         totaleventos.lotes = data.lotes.lista.filter(
-            (t) => t.cab == caboff.id,
+            (t) => t.cab == caboff.id && t.active,
         ).length;
 
         totaleventos.rodeos = data.rodeos.lista.filter(
-            (t) => t.cab == caboff.id,
+            (t) => t.cab == caboff.id && t.active,
         ).length;
 
         tipotratamientos = data.tipostrat.lista.filter(
             (t) => (t.cab == caboff.id && t.active) || t.generico,
-        );
+        ).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);;
 
         totaleventos.animales = animalescab.filter(
             (a) => a.cab == caboff.id && a.active,

@@ -254,7 +254,8 @@
         </div>
         <PredictSelect 
             bind:valor={madre} 
-            etiqueta = {"Madre"} bind:cadena={nombremadre} 
+            etiqueta = {"Madre"} 
+            bind:cadena={nombremadre} 
             lista = {madres} 
             
         >    

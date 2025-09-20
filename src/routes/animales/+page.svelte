@@ -14,6 +14,7 @@
     import { createUserer } from "$lib/stores/user.svelte";
     import { createPer } from "$lib/stores/permisos.svelte";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     //filtros
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -106,6 +107,7 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -233,26 +235,11 @@
         lotes = records;
         ordenarNombre(lotes);
     }
-    async function getAnimales() {
-        //Estaria joya que el animal venga con todos los chiches
-
-        const recordsa = await pb.collection("animales").getFullList({
-            filter: `delete=false && cab='${cab.id}'`,
-            expand: "nacimiento,lote,rodeo",
-        });
-
-        animales = recordsa;
-        animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-        animalesrows = animales;
-        madres = animales.filter((a) => a.sexo == "H");
-        padres = animales.filter((a) => a.sexo == "M");
-    }
-
     function onChangeAnimales() {
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
 
-        madres = animalescab.filter((a) => a.sexo == "H" && a.active);
-        padres = animalescab.filter((a) => a.sexo == "M" && a.active);
+        //madres = animalescab.filter((a) => a.sexo == "H" && a.active).sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
+        //padres = animalescab.filter((a) => a.sexo == "M" && a.active).sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
     }
     function openNewModal() {
         idanimal = "";
@@ -291,13 +278,14 @@
     }
     async function guardarOffline() {
         let idprov = "nuevo_animal_" + generarIDAleatorio();
-        let idnac = "nuevo_nac" + generarIDAleatorio();
-        let idpes = "nuevo_pesaje" + generarIDAleatorio();
-        let recordparicion = { id: idnac };
+        let idnac = "nuevo_nac_" + generarIDAleatorio();
+        let idpes = "nuevo_pesaje_" + generarIDAleatorio();
+
         let dataanimal = {
             id: idprov,
             caravana,
         };
+        let datanacimiento = {}
         if (conparicion) {
             let dataparicion = {
                 madre,
@@ -306,8 +294,7 @@
                 nombremadre,
                 nombrepadre,
                 observacion,
-                cab: caboff.id,
-                id: idnac,
+                cab: caboff.id
             };
             let esnuevopadre = dataparicion.padre.split("_").length > 1;
             let esnuevomadre = dataparicion.madre.split("_").length > 1;
@@ -323,8 +310,9 @@
                 show: { ...dataparicion },
                 motivo: "Guardar nacimiento",
             };
+            dataparicion.id = idnac
             //Debo guardar el nacimiento, cuando guardo el id del nacimiento si quiero hacerle referencia
-            let datanacimiento = {
+            datanacimiento = {
                 ...dataparicion,
                 caravana: dataanimal.caravana,
                 animalid: dataanimal.id,
@@ -356,9 +344,9 @@
         if (lote != "") {
             nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
         }
-        if (esnuevonac) {
+        if (conparicion) {
             vacio = false;
-            camposprov = "nacimientos";
+            camposprov = "nacimiento";
         }
         if (esnuevolote) {
             if (vacio) {
@@ -388,12 +376,11 @@
             categoria,
             cab: caboff.id,
             rp,
-            id: idprov,
             fechafallecimiento: "",
             nacimiento: "",
         };
         if (conparicion) {
-            data.nacimiento = recordparicion.id;
+            data.nacimiento = datanacimiento.id;
         }
 
         let comandoani = {
@@ -409,13 +396,14 @@
         };
         comandos.push(comandoani);
 
+        data.id= idprov
         if (fechanacimiento != "" && peso != "") {
             let datapesaje = {
                 animal: idprov,
                 fecha: fechanacimiento + " 03:00:00",
                 pesoanterior: 0,
                 pesonuevo: peso,
-                id: idpes,
+                
             };
             let comandope = {
                 tipo: "add",
@@ -428,10 +416,10 @@
                 show: { ...datapesaje },
                 motivo: "Guardar pesaje",
             };
+            datapesaje.id= idpes,
             datapesaje.expand = {
                 animal: {
                     caravana: caravana,
-                    id: idprov,
                     cab: caboff.id,
                 },
             };
@@ -460,8 +448,9 @@
         animales.push(data);
         await setAnimalesSQL(db, animales);
         animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-        madres = animales.filter((a) => a.sexo == "H");
-        padres = animales.filter((a) => a.sexo == "M");
+        //madres = animales.filter((a) => a.sexo == "H").sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
+        //padres = animales.filter((a) => a.sexo == "M").sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
+        onChangeAnimales()
         filterUpdate();
         caravana = "";
         nacimiento = "";
@@ -591,8 +580,7 @@
             animales.push(recorda);
             await setAnimalesSQL(db, animales);
             animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-            madres = animales.filter((a) => a.sexo == "H");
-            padres = animales.filter((a) => a.sexo == "M");
+            onChangeAnimales()
             filterUpdate();
             caravana = "";
             nacimiento = "";
@@ -699,10 +687,10 @@
         animalesrows = animalescab;
         madres = animalescab
             .filter((a) => a.sexo == "H")
-            .map((a) => ({ id: a.id, nombre: a.caravana }));
+            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1);
         padres = animalescab
             .filter((a) => a.sexo == "M")
-            .map((a) => ({ id: a.id, nombre: a.caravana }));
+            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1);
         totalAnimalesEncontrados = animalesrows.length;
         if (buscar != "") {
             animalesrows = animalesrows.filter((a) =>
@@ -793,14 +781,6 @@
             botonhabilitado = false;
         }
     }
-    async function onMountOriginal() {
-        let pb_json = JSON.parse(localStorage.getItem("pocketbase_auth"));
-        usuarioid = pb_json.record.id;
-        await getAnimales();
-        await getRodeos();
-        await getLotes();
-        filterUpdate();
-    }
     // y siquiero get y luego update
     async function updateLocalSQL() {
         await setUltimoAnimalesSQL(db);
@@ -817,8 +797,8 @@
         );
         caboff = await updatePermisos(pb, usuarioid);
         getpermisos = caboff.permisos;
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
+        lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+        rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
 
         filterUpdate();
         cargado = true;
@@ -827,8 +807,8 @@
         getlocal = true;
         let resanimales = await getAnimalesSQL(db);
         let lotesrodeos = await getLotesRodeosSQL(db, caboff.id);
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
+        lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+        rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
 
         animales = resanimales.lista;
         animalescab = animales.filter((a) => a.cab == caboff.id);
@@ -907,11 +887,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast=true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL(db);
                         // Notificar cambios solo si hay diferencias
+                        nubetoast=false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1474,6 +1457,9 @@
 </Navbarr>
 {#if infotoast}
     <Info />
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

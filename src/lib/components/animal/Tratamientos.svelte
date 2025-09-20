@@ -13,6 +13,7 @@
     //permisos
     import{verificarNivel,getPermisosList,getPermisosMessage} from "$lib/permisosutil/lib"
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     let{
         cabid,categoria,
         caravana=$bindable(""),
@@ -339,7 +340,7 @@
         Swal.fire("Éxito guardar","Se logró guardar el tratamiento","success")
     }
     async function guardarTratamiento(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(coninternet.connected){
             await guardarTratamientoOnline()
         }

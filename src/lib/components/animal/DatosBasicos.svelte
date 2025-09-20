@@ -51,6 +51,7 @@
     import {
         editarAnimalSQL,
         editarAnimalExpandSQL,
+        addNewHistorialAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getTotalSQL,
@@ -73,6 +74,8 @@
     //let coninternet = $state({connected:false})
     //let comandos = $state([])
     let {
+        pushHistorial,
+
         rp = $bindable(""),
         peso = $bindable(""),
         prenada = $bindable(0),
@@ -194,13 +197,13 @@
                 id: item.id,
                 nombre: item.caravana,
             };
-        });
+        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
             };
-        });
+        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
         cargadoanimales = true;
     }
     function getSexo(sex) {
@@ -313,7 +316,9 @@
 
             await editarAnimalExpandSQL(db, id, datanimal, expand);
             //NO va porque tengo que evaluar las fechas
-            await pb.collection("historialanimales").create(datahistorial);
+            let histo = await pb.collection("historialanimales").create(datahistorial);
+            pushHistorial(histo)
+            await addNewHistorialAnimalesSQL(db,histo)
             //await guardarHistorial(pb,madre)
             //// Pero si las fechas no me coinciden, si guardo un nacimiento viejo
             //let datamadre = {
@@ -394,14 +399,17 @@
             prioridad: 2,
             idprov,
             camposprov: "nacimientos",
-            show: { ...dataani },
+            show: { ...dataani,caravana },
             motivo: "Nuevo nacimiento",
         };
-        await guardarHistorialOffline(db, id, usuarioid);
+        let comandoshisto = await guardarHistorialOffline(db, id, usuarioid);
         await editarAnimalSQL(db, id, dataani, expand);
+        await addNewHistorialAnimalesSQL(db,comandoshisto.data)
+        pushHistorial(comandoshisto.data)
         //Es importante respetar el orden
         comandos.push(comandonac);
         comandos.push(comandoani);
+        comandos.push(comandoshisto)
         await setComandosSQL(db, comandos);
         dataparicion = {
             animalid: id,
@@ -487,10 +495,14 @@
                 ...dataparicion,
             },
         };
-        await guardarHistorialOffline(db, id, usuarioid);
+        let comandohisto = await guardarHistorialOffline(db, id, usuarioid);
+
         await editarAnimalSQL(db, id, dataani, expand);
+        await addNewHistorialAnimalesSQL(db,comandohisto.data)
+        pushHistorial(comandohisto.data)
         comandos.push(comandonac);
         comandos.push(comandoani);
+        comandos.push(comandohisto)
         await setComandosSQL(db, comandos);
         dataparicion = {
             animalid: id,
@@ -609,9 +621,13 @@
             return;
         }
         try {
-            const record = await pb.collection("animales").update(id, data);
+            
 
-            await guardarHistorial(pb, id);
+            let his = await guardarHistorial(pb, id);
+            await addNewHistorialAnimalesSQL(db,his)
+            pushHistorial(his)
+
+            const record = await pb.collection("animales").update(id, data);
             sexo = data.sexo;
             peso = data.peso;
             caravana = data.caravana;
@@ -656,6 +672,8 @@
         };
         try {
             let comandohis = await guardarHistorialOffline(db, id, usuarioid);
+            await addNewHistorialAnimalesSQL(db,comandohis.data)
+            pushHistorial(comandohis.data)
             if (rodeo != "") {
                 nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
             } else {
@@ -747,13 +765,13 @@
                 id: item.id,
                 nombre: item.caravana,
             };
-        });
+        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
             };
-        });
+        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
 
         cargadoanimales = true;
     }
@@ -787,7 +805,7 @@
                     a.sexo == "H" &&
                     a.id != id,
             )
-            .map((a) => ({ id: a.id, nombre: a.caravana }));
+            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
 
         listapadres = animales
             .filter(
@@ -797,12 +815,8 @@
                     a.sexo == "M" &&
                     a.id != id,
             )
-            .map((a) => ({ id: a.id, nombre: a.caravana }));
-        //if(modedebug){
-        //    loger.addTextLogArray(animales)
-        //    loger.addTextLogArray(listamadres)
-        //    loger.addTextLogArray(listapadres)
-        //}
+            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+
     }
     async function getDataSQL() {
         await getLocalSQL();

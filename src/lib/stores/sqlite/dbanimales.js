@@ -221,12 +221,12 @@ export async function setHistorialAnimalesSQL(db, animales) {
 export async function setUltimoHistorialAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 13`)
 }
-export async function addNewHistorialAnimalesSQL(db, animal) {
-    let animales = await getHistorialAnimalesSQL(db)
-    let lista = animales.lista
-    lista.push(animal)
+export async function addNewHistorialAnimalesSQL(db, his) {
+    let histos = await getHistorialAnimalesSQL(db)
+    let lista = histos.lista
+    lista.push(his)
     await setHistorialAnimalesSQL(db, lista)
-    return animales
+    return lista
 }
 export async function deleteHistorialAnimalesSQL(db, id) {
     let animales = await getHistorialAnimalesSQL(db)

@@ -11,6 +11,7 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet } from '$lib/stores/offline';
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     //permisos
     import{verificarNivel,getPermisosList, getPermisosMessage} from "$lib/permisosutil/lib"
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
@@ -334,7 +335,7 @@
         Swal.fire("Éxito guardar","Se logró guardar la observación","success")  
     }
     async function guardarObservacion(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(coninternet.connected){
             await guardarObservacionOnline()
         }

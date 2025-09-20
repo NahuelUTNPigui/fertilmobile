@@ -75,9 +75,11 @@
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -177,12 +179,14 @@
             return {
                 id: item.id,
                 nombre: item.caravana,
+                active: item.active,
             };
         });
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
+                active: item.active,
             };
         });
     }
@@ -257,8 +261,8 @@
                 prioridad: 0,
                 idprov,
                 camposprov: `${esnuevomadre && esnuevopadre ? "madre,padre" : esnuevomadre ? "madre" : esnuevopadre ? "padre" : ""}`,
-                show:{...dataparicion},
-                motivo:"Nuevo nacimiento"
+                show: { ...dataparicion },
+                motivo: "Nuevo nacimiento",
             };
             //Agrego el nacimiento
             comandos.push(comando);
@@ -289,8 +293,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `nacimiento${nlote & nrodeo ? ",lote,rodeo" : nlote ? ",lote" : nrodeo ? ",rodeo" : ""}`,
-                    show: { ...dataanimal, caravana},
-                    motivo:"Nuevo animal"
+                    show: { ...dataanimal, caravana },
+                    motivo: "Nuevo animal",
                 };
 
                 //Agrego el aniaml
@@ -635,8 +639,8 @@
                     prioridad: 0,
                     idprov: idnacimiento,
                     camposprov: `${esnuevomadre && esnuevopadre ? "madre,padre" : esnuevomadre ? "madre" : esnuevopadre ? "padre" : ""}`,
-                    show:{ ...dataparicion },
-                    motivo:"Editar parición"
+                    show: { ...dataparicion },
+                    motivo: "Editar parición",
                 };
                 comandos.push(comandonac);
                 nacimientos[nidx].madre = dataparicion.madre;
@@ -672,8 +676,8 @@
                     prioridad: 0,
                     idprov: idanimal,
                     camposprov: `${esnuevonacimiento ? "nacimiento" : ""}`,
-                    show:{...datanimal,caravana:animales[aidx].caravana},
-                    motivo:"Editar animal"
+                    show: { ...datanimal, caravana: animales[aidx].caravana },
+                    motivo: "Editar animal",
                 };
                 comandos.push(comandoani);
                 await setComandosSQL(db, comandos);
@@ -690,12 +694,14 @@
                     return {
                         id: item.id,
                         nombre: item.caravana,
+                        active:item.active
                     };
                 });
                 listapadres = padres.map((item) => {
                     return {
                         id: item.id,
                         nombre: item.caravana,
+                        active: item.active,
                     };
                 });
                 await setAnimalesSQL(db, animales);
@@ -804,11 +810,11 @@
         }
         if (buscarpadre != "") {
             nacimientosrow = nacimientosrow.filter((t) =>
-            t.nombrepadre.length==0?
-            false:    
-            t.nombrepadre
-                    .toLocaleLowerCase()
-                    .includes(buscarpadre.toLocaleLowerCase()),
+                t.nombrepadre.length == 0
+                    ? false
+                    : t.nombrepadre
+                          .toLocaleLowerCase()
+                          .includes(buscarpadre.toLocaleLowerCase()),
             );
             totalNacimientosEncontrados = nacimientosrow.length;
         }
@@ -942,8 +948,8 @@
                         prioridad: 0,
                         idprov: idnacimiento,
                         camposprov: "",
-                        data:{...n},
-                        motivo:"Eliminar parición"
+                        data: { ...n },
+                        motivo: "Eliminar parición",
                     };
 
                     comandos.push(comando);
@@ -968,8 +974,8 @@
                                 prioridad: 0,
                                 idprov: idanimal,
                                 camposprov: `${esnuevonacimiento ? "nacimiento" : ""}`,
-                                data:{...dataanimal},
-                                motivo:"Eliminar parición"
+                                data: { ...dataanimal },
+                                motivo: "Eliminar parición",
                             };
                             comandos.push(comandoani);
                             await setAnimalesSQL(db, animales);
@@ -1039,18 +1045,21 @@
             return {
                 id: item.id,
                 nombre: item.caravana,
+                active:item.active
             };
         });
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
+                active: item.active,
             };
         });
         filterUpdate();
         cargado = true;
     }
     async function updateLocalSQL() {
+
         await setUltimoNacimientosSQL(db);
         await setUltimoAnimalesSQL(db);
         await setUltimoRodeosLotesSQL(db);
@@ -1073,12 +1082,14 @@
             return {
                 id: item.id,
                 nombre: item.caravana,
+                active:item.active
             };
         });
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
+            active: item.active,
             };
         });
         cargadoanimales = true;
@@ -1141,6 +1152,7 @@
         let ahora = Date.now();
         let antes = ultimo_nacimiento.ultimo;
         await getLocalSQL();
+        
         if (coninternet.connected) {
             await updateComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
@@ -1165,11 +1177,14 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
+                        
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1329,9 +1344,7 @@
             </label>
         </div>
         <div class="w-11/12">
-            <Limpiar
-                {limpiarFiltros}
-            />
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1560,7 +1573,10 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"
@@ -1636,22 +1652,41 @@
                 {/if}
             </label>
             {#if cargadoanimales}
-                <PredictSelect
-                    bind:valor={madre}
-                    etiqueta={"Madre"}
-                    bind:cadena={nombremadre}
-                    lista={listamadres}
-                    onelegir={onelegirMadre}
-                    onwrite={onwriteMadre}
-                />
-                <PredictSelect
-                    bind:valor={padre}
-                    etiqueta={"Padre"}
-                    bind:cadena={nombrepadre}
-                    lista={listapadres}
-                    onelegir={onelegirPadre}
-                    onwrite={onwritePadre}
-                />
+                {#if idnacimiento == ""}
+                    <PredictSelect
+                        bind:valor={madre}
+                        etiqueta={"Madre"}
+                        bind:cadena={nombremadre}
+                        lista={listamadres.filter((item) => item.active)}
+                        onelegir={onelegirMadre}
+                        onwrite={onwriteMadre}
+                    />
+                    <PredictSelect
+                        bind:valor={padre}
+                        etiqueta={"Padre"}
+                        bind:cadena={nombrepadre}
+                        lista={listapadres.filter((item) => item.active)}
+                        onelegir={onelegirPadre}
+                        onwrite={onwritePadre}
+                    />
+                {:else}
+                    <PredictSelect
+                        bind:valor={madre}
+                        etiqueta={"Madre"}
+                        bind:cadena={nombremadre}
+                        lista={listamadres}
+                        onelegir={onelegirMadre}
+                        onwrite={onwriteMadre}
+                    />
+                    <PredictSelect
+                        bind:valor={padre}
+                        etiqueta={"Padre"}
+                        bind:cadena={nombrepadre}
+                        lista={listapadres}
+                        onelegir={onelegirPadre}
+                        onwrite={onwritePadre}
+                    />
+                {/if}
             {/if}
 
             <label class="form-control">

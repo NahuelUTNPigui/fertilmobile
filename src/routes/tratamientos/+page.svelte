@@ -77,9 +77,11 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //Offline
     let infotoast = $state(false);
+    let nubetoast = $state(false)
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -357,14 +359,23 @@
             await pb.collection("tratamientos").update(idtratamiento, data);
             
             let tt_idx = tipotratamientoscab.findIndex((ttipo) => ttipo.id == tipo);
+            tratamientos[t_idx] = {
+                ...tratamientos[t_idx], 
+                ...data,
+
+            }
             if (tt_idx != -1) {
                 tratamientos[t_idx].expand.tipo.id = tipo;
                 tratamientos[t_idx].expand.tipo.nombre =
                     tipotratamientos[tt_idx].nombre;
             }
             else{
-                loger.addTextLog("tt_idx: "+tt_idx)
+                if(modedebug){
+                    loger.addTextLog("modedebug tt_idx: "+tt_idx)
+                }
+                
             }
+            
             await setTratsSQL(db, tratamientos);
             actualizarDatos();
             Swal.fire(
@@ -958,10 +969,12 @@
             }
 
             if (mustUpdate) {
+                nubetoast = true
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast = false
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;
@@ -1304,6 +1317,9 @@
 </Navbarr>
 {#if infotoast}
     <Info />
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}
 <dialog
     id="nuevoModal"

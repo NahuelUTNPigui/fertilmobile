@@ -18,6 +18,7 @@
         setTactosSQL
     } from "$lib/stores/sqlite/dbeventos"
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     import { getInternet } from '$lib/stores/offline';
     //Permisos
     import{verificarNivel,getPermisosList, getPermisosMessage} from "$lib/permisosutil/lib"
@@ -352,7 +353,7 @@
         
     }
     async function guardarTacto(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(coninternet.connected){
             await guardarTactoOnline()
         }
@@ -380,24 +381,14 @@
         }
         
     }
-    async function getTactos(){
-        const recordst = await pb.collection('tactos').getFullList({
-            filter:`animal='${id}' && active = true`,
-            sort: '-created'
-        });
-        tactos = recordst
-        
-    }
     function onChangeTactos(){
-        tactosrows = tactos.filter(t=>t.animal == id)
+        tactosrows = tactos.filter(t=>t.animal == id).sort((t1,t2)=>new Date(t1.fecha)<new Date(t2)?1:-1)
     }
     onMount(async ()=>{
         id = $page.params.slug
         prenada = prenadaori
         
         onChangeTactos()
-        
-        //await getTactos()
     })
 
 </script>

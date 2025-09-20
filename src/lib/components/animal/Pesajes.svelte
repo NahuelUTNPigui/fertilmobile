@@ -10,6 +10,7 @@
     } from "$lib/stores/sqlite/dbanimales"
     import {
         addNewPesajeSQL,
+        deletePesajeSQL,
         setPesajesSQL
     } from "$lib/stores/sqlite/dbeventos"
     import {guardarHistorial} from "$lib/historial/lib"
@@ -23,6 +24,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet,getOnlyInternet } from "$lib/stores/offline";
     //offline
+    import { customoffliner } from "$lib/stores/offline/custom.svelte";
     import { updatePermisos} from "$lib/stores/capacitor/offlinecab"
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
@@ -93,7 +95,7 @@
             await addNewPesajeSQL(db,recordopesaje)
             await pb.collection("animales").update(id,dataupdate)
             pesajes.push(recordopesaje)
-            pesajesrows = pesajes.filter(p=>p.id == id)
+            pesajesrows = pesajes.filter(p=>p.animal == id)
             peso = pesonuevo
             Swal.fire("Éxito guardar","Se logró guardar el pesaje","success")        
             nuevoPesaje.close()
@@ -179,7 +181,7 @@
         
     }
     async function guardarPesaje(){
-        coninternet = await getInternet(modedebug,offliner.offline)
+        coninternet = await getInternet(modedebug,offliner.offline,customoffliner.customoffline)
         if(coninternet.connected){
             await guardarPesajeOnline()
         }
@@ -249,6 +251,7 @@
         }
     }
     function eliminarOnline() {
+        detallePesaje.close()
         Swal.fire({
             title: 'Eliminar pesajes',
             text: '¿Seguro que deseas eliminar el pesaje?',
@@ -260,15 +263,20 @@
             if(result.value){
                 try{
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
-                    await setPesajesSQL(db,pesajes)
-                    pesajesrows = pesajes.filter(p=>p.animal == id)
+                    await deletePesajeSQL(db,idpesaje)
+                    
                     await pb.collection("pesaje").delete(idpesaje)
-                    detallePesaje.close()
+                    idpesaje = ""
+                    
                 }
                 catch(err){
+                    idpesaje = ""
                     console.error(err)
-                    detallePesaje.close()
+                    
                 }
+            }
+            else{
+                detallePesaje.showModal()
             }
             
         })
@@ -287,8 +295,8 @@
                     let p_idx = pesajes.findIndex(p=>p.id == idpesaje)
                     let pes = {...pesajes[p_idx]}
                     pesajes = pesajes.filter(p=>p.id != idpesaje)
-
-                    await setPesajesSQL(db,pesajes)
+                    await deletePesajeSQL(db,idpesaje)
+                    
                     let comando = {
                         tipo:"delete",
                         coleccion:"pesaje",
@@ -374,22 +382,14 @@
             createChart()
         }
     }
-    async function getPesajes(){
-        pesajes = await pb.collection("pesaje").getFullList({
-            filter:`animal='${id}'`,
-            sort:"-fecha",
-            expand:"animal"
-        })
-        
-        
-        
-    }
+    
     function openNewModal(){
         malfecha = false
         malpeso = false
         botonhabilitado = false
         pesonuevo = ""
         fecha = ""
+        idpesaje = ""
         nuevoPesaje.showModal()
     }
     function openDetalle(id){
@@ -402,26 +402,10 @@
 
         detallePesaje.showModal()
     }
-    async function eliminar(){
-        try{
-            
-            await pb.collection("pesaje").delete(idpesaje)
-            await getPesajes()
-            filterUpdate()
-            detallePesaje.close()
-            Swal.fire("Éxito eliminar","Se pudo eliminar el pesaje","success")
-        }
-        catch(err){
-            console.error(err)
-            Swal.fire("Error eliminar","No se pudo eliminar el pesaje","error")
-            detallePesaje.close()
-        }
-    }
     onMount(async ()=>{
         id = $page.params.slug
         pesajesrows = pesajes.filter(p=>p.animal == id)
         procesarPesajes()
-        //await getPesajes()
     })
     function validarBoton(){
         botonhabilitado = true
@@ -493,7 +477,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each pesajesrows as p}
+                    {#each pesajes as p}
                     <tr onclick={()=>openDetalle(p.id)} class="hover:bg-gray-200 dark:hover:bg-gray-900">
                             <td class="text-base ml-3 pl-3 mr-1 pr-1 lg:ml-10">{new Date(p.fecha).toLocaleDateString()}</td>
                             <td class="text-base mx-1 px-1">
@@ -508,7 +492,7 @@
             </table>
         </div>
         <div class="block w-full md:hidden justify-items-center mx-1">
-            {#each pesajesrows as p}
+            {#each pesajes as p}
             <div class="card  w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900">
                 <button onclick={()=>openDetalle(p.id)}>
                     <div class="block p-4">
@@ -730,7 +714,7 @@
         </div>
         <div class="modal-action justify-start ">
             <button class="btn btn-success text-white"  onclick={editarPesaje} >Editar</button>
-            <button class="btn btn-error text-white" onclick={eliminar}>Eliminar</button>
+            <button class="btn btn-error text-white" onclick={eliminarPesaje}>Eliminar</button>
             <button class={`
                 btn 
                 bg-transparent border rounded-lg focus:outline-none transition-colors duration-200

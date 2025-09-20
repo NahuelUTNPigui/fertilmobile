@@ -329,6 +329,12 @@ export async function addNewPesajeSQL(db, pesaje) {
     lista.push(pesaje)
     await setPesajesSQL(db, lista)
 }
+export async function deletePesajeSQL(db,idpesaje) {
+    let pesajes = await getPesajesSQL(db)
+    let lista = pesajes.lista
+    lista = lista.filter(p=>p.id != idpesaje)
+    await setPesajesSQL(db, lista)
+}
 export async function setPesajesSQL(db, pesajes) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(pesajes)}' WHERE id = 12`)
 }
