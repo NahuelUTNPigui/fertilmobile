@@ -442,13 +442,13 @@
         usuarioid = useroff.id;
     }
     async function updateLocalSQL() {
-        await setUltimoTactosSQL(db);
-        await setUltimoAnimalesSQL(db);
+        
 
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         tactos = await updateLocalTactosSQLUser(db, pb, usuarioid);
-
+        await setUltimoTactosSQL(db);
+        await setUltimoAnimalesSQL(db);
         onChangeTactos();
         filterUpdate();
 

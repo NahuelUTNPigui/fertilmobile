@@ -1751,7 +1751,7 @@
         
         let inicio = Date.now();
 
-        await setInternetSQL(db, 1, Date.now());
+        
         let totales = await getTotalesEventosOnlineCab(pb, caboff.id);
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
 
@@ -1780,7 +1780,7 @@
         tipotratamientos = tipotrats.filter(
             (t) => (t.cab == caboff.id && t.active) || t.generico,
         );
-
+        await setInternetSQL(db, 1, Date.now());
         await setUltimoAnimalesSQL(db);
         //caboff = await updatePermisos(pb, usuarioid);
         //getpermisos = caboff.permisos;

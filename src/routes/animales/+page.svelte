@@ -783,12 +783,12 @@
     }
     // y siquiero get y luego update
     async function updateLocalSQL() {
-        await setUltimoAnimalesSQL(db);
+        
         await updateLocalHistorialAnimalesSQLUser(db, pb, usuarioid);
         let resanimales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animales = resanimales;
         animalescab = animales.filter((a) => a.cab == caboff.id);
-        await setUltimoRodeosLotesSQL(db);
+        
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
             db,
             pb,
@@ -796,6 +796,8 @@
             caboff.id,
         );
         caboff = await updatePermisos(pb, usuarioid);
+        await setUltimoAnimalesSQL(db);
+        await setUltimoRodeosLotesSQL(db);
         getpermisos = caboff.permisos;
         lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
         rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);

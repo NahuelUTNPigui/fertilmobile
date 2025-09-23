@@ -1098,8 +1098,7 @@
         inseminaciones = resinseminaciones.lista;
     }
     async function updateLocalSQL() {
-        await setUltimoAnimalesSQL(db);
-        await setUltimoRodeosLotesSQL(db);
+        
         await getServiciosInseminacionesSQL();
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
             db,
@@ -1111,6 +1110,8 @@
         lotes = lotesrodeos.lotes;
         rodeos = lotesrodeos.rodeos;
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
+        await setUltimoAnimalesSQL(db);
+        await setUltimoRodeosLotesSQL(db);
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
         madres = animales.filter((a) => a.sexo == "H");

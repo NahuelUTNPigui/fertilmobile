@@ -1060,9 +1060,7 @@
     }
     async function updateLocalSQL() {
 
-        await setUltimoNacimientosSQL(db);
-        await setUltimoAnimalesSQL(db);
-        await setUltimoRodeosLotesSQL(db);
+        
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
             db,
             pb,
@@ -1075,7 +1073,9 @@
         animalescab = animales.filter((a) => a.cab == caboff.id);
         nacimientos = await updateLocalNacimientosSQLUser(db, pb, usuarioid);
         nacimientoscab = nacimientos.filter((a) => a.cab == caboff.id);
-
+        await setUltimoNacimientosSQL(db);
+        await setUltimoAnimalesSQL(db);
+        await setUltimoRodeosLotesSQL(db);
         madres = animalescab.filter((a) => a.sexo == "H" || a.sexo == "F");
         padres = animalescab.filter((a) => a.sexo == "M");
         listamadres = madres.map((item) => {

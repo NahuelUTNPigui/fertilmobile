@@ -564,9 +564,9 @@ import Nube from "$lib/components/toast/Nube.svelte";
             };
             
             observaciones.push(record);
-            observaciones = observaciones.filter(
-                        (o) => o.id != idobservacion,
-                    );
+            observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
             changeObservacion();
             filterUpdate();
             await setObservacionesSQL(db, observaciones);
@@ -597,9 +597,9 @@ import Nube from "$lib/components/toast/Nube.svelte";
                 cab: { id: caboff.id },
             };
             observaciones.push(data);
-            observaciones = observaciones.filter(
-                        (o) => o.id != idobservacion,
-                    );
+            observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
             changeObservacion();
             filterUpdate();
             Swal.fire(
@@ -657,9 +657,9 @@ import Nube from "$lib/components/toast/Nube.svelte";
 
             };
             observaciones[idx].expand = { animal: a };
-            observaciones = observaciones.filter(
-                        (o) => o.id != idobservacion,
-                    );
+            observaciones.sort((o1, o2) =>
+                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            );
             await setObservacionesSQL(db, observaciones);
             changeObservacion();
             filterUpdate();
@@ -704,12 +704,12 @@ import Nube from "$lib/components/toast/Nube.svelte";
 
             };
             
-            
+            await setObservacionesSQL(db,observaciones)
             observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
             );
             changeObservacion();
-            await setObservacionesSQL(db,observaciones)
+            
             filterUpdate();
             
             Swal.fire(
@@ -819,8 +819,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
     }
     async function updateLocalSQL() {
 
-        await setUltimoObservacionesSQL(db);
-        await setUltimoAnimalesSQL(db);
+        
         observaciones = await updateLocalObservacionesSQLUser(
             db,
             pb,
@@ -830,6 +829,8 @@ import Nube from "$lib/components/toast/Nube.svelte";
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
             );
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
+        await setUltimoObservacionesSQL(db);
+        await setUltimoAnimalesSQL(db);
         changeAnimales();
         changeObservacion();
         filterUpdate();

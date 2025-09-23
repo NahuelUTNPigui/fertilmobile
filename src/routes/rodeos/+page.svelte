@@ -484,11 +484,11 @@
     }
     async function updateLocalSQL() {
         animales = await getAnimalesCabSQL(db, caboff.id);
-        await setUltimoRodeosLotesSQL(db);
+        
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         //lotes = await updateLocalLotesSQLUser(db, pb, usuarioid);
         //let rodeos  = await updateLocalRodeosSQLUser(db, pb, usuarioid);
-        loger.addTextLog(JSON.stringify(lotesrodeos,null,2))
+        await setUltimoRodeosLotesSQL(db);
         rodeos = lotesrodeos.rodeos
         ordenar(rodeos);
         changeRodeo();

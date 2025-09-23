@@ -106,10 +106,22 @@
             primeraLetra !== primeraLetra.toLowerCase()
         );
     }
+    function normalizarParaURL(texto) {
+        return texto
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "") // Elimina símbolos
+            .replace(/\s+/g, "-"); // Convierte espacios a guiones
+    }
     async function guardar() {
         let coninternet = await Network.getStatus();
-        if(coninternet.connected == false){
-            Swal.fire("Error guardar", "No se puede crear un usuario sin internet", "error");
+        if (coninternet.connected == false) {
+            Swal.fire(
+                "Error guardar",
+                "No se puede crear un usuario sin internet",
+                "error",
+            );
             return;
         }
         if (isEmpty(usuarioemail)) {
@@ -143,11 +155,13 @@
                 .trim()
                 .split(" ")
                 .filter((w) => w !== "")
+                .map(w=>normalizarParaURL(w))
                 .join(".");
             let apellidodata = apellido
                 .trim()
                 .split(" ")
                 .filter((w) => w !== "")
+                .map(w=>normalizarParaURL(w))
                 .join(".");
             let randomnumber = randomString(5, "n");
             const data = {
@@ -162,6 +176,7 @@
                 active: true,
                 codigo: randomString(10, "n"),
             };
+            
             if (cupon.trim().length > 0) {
                 data["cupon"] = cupon;
             }
@@ -292,7 +307,8 @@
                     />
                     {#if esmay}
                         <div class="label">
-                            <span class="label-text-alt text-gray-600 dark:text-gray-200"
+                            <span
+                                class="label-text-alt text-gray-600 dark:text-gray-200"
                                 >El mail comienza con una mayúscula</span
                             >
                         </div>

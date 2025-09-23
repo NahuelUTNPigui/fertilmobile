@@ -506,7 +506,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
     }
     async function updateLocalSQL() {
 
-        await setUltimoRodeosLotesSQL(db);
+        
         await getAnimales();
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
         //lotes = await updateLocalLotesSQLUser(db, pb, usuarioid);
@@ -516,6 +516,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
         filterUpdate();
         caboff = await updatePermisos(pb, usuarioid);
         getpermisos = caboff.permisos;
+        await setUltimoRodeosLotesSQL(db);
         cargado = true;
     }
     async function updateComandos() {
@@ -598,6 +599,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
                     } catch (err) {
                         if (modedebug) {
                             loger.addTextError("ERROR FALLO SYNC");
+                            loger.addLineaNumber(601)
                         }
 
                         console.warn("Fallo en sincronización background", err);

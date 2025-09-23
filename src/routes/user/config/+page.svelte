@@ -63,9 +63,17 @@
         nombre:"",
         id:""
     })
+    function normalizarParaURL(texto) {
+        return texto
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "") // Elimina símbolos
+            .replace(/\s+/g, "-"); // Convierte espacios a guiones
+    }
     async function editarUsuarioOffline() {
         const data = {
-            username,
+            username:normalizarParaURL(username),
             nombre,
             apellido
         };
@@ -95,7 +103,7 @@
     }
     async function editarUsuarioOnline() {
         const data = {
-            username,
+            username:normalizarParaURL(username),
             nombre,
             apellido
         };

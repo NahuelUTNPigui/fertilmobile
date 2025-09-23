@@ -112,12 +112,12 @@
     async function updateLocalSQL() {
         caboff = await updatePermisos(pb,usuarioid)
         getpermisos = caboff.permisos
-        await setUltimoAnimalesSQL(db)
-        await setUltimoRodeosLotesSQL(db)
+        
         animales = await  updateLocalAnimalesSQLUser(db,pb,usuarioid)
         lotes = await  updateLocalLotesSQLUser(db,pb,usuarioid)
         rodeos = await  updateLocalRodeosSQLUser(db,pb,usuarioid)
-        
+        await setUltimoAnimalesSQL(db)
+        await setUltimoRodeosLotesSQL(db)
         animalesusuario = animales.totalItems
         cargado = true
 

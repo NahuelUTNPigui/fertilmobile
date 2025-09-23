@@ -73,3 +73,9 @@ npx capacitor-assets generate --android
 4. Select "Build apk"
 
 
+# IOS
+## INSTALL IOS
+pnpm install @capacitor/ios
+
+# add ios
+npx cap add ios

@@ -649,7 +649,7 @@
         
     }
     async function updateLocalSQL() {
-        await setUltimoEstablecimientosSQL(db);
+        
         establecimientos = await updateLocalEstablecimientosSQL(
             db,
             pb,
@@ -661,6 +661,7 @@
             (est) => est.id == caboff.id,
         )[0];
         await setEstablecimientoSQL(db,establecimiento)
+        await setUltimoEstablecimientosSQL(db);
         datosviejos = { ...establecimiento };
         nombre = establecimiento.nombre;
         direccion = establecimiento.direccion;

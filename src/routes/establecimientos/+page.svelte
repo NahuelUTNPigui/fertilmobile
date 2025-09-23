@@ -280,12 +280,13 @@
     }
     async function updateLocalSQL() {
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
-        await setUltimoEstablecimientosSQL(db);
+        
         let resestablecimientos = await getUpdateLocalEstablecimientosSQL(
             db,
             pb,
             usuarioid,
         );
+        await setUltimoEstablecimientosSQL(db);
         establecimientos = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
             //Osea que el user es igual a u id

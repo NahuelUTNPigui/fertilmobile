@@ -877,8 +877,7 @@
     // Se supone que los comandos ya fueron flush
 
     async function updateLocalSQL() {
-        await setUltimoTratsSQL(db);
-        await setUltimoAnimalesSQL(db);
+        
         tratamientos = await updateLocalTratsSQLUser(db, pb, usuarioid);
         onChangeTratamientos();
         animales = await getUpdateLocalAnimalesSQLUser(
@@ -888,6 +887,8 @@
             caboff.id,
         );
         tipotratamientos = await updateLocalTiposTratSQLUser(db, pb, usuarioid);
+        await setUltimoTratsSQL(db);
+        await setUltimoAnimalesSQL(db);
         onChangeTratamientos();
         onChangeTipos();
         filterUpdate();

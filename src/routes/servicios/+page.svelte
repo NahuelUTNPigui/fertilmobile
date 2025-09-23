@@ -783,9 +783,10 @@
         usuarioid = useroff.id;
     }
     async function updateLocalSQL() {
+        
+        let animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         await setUltimoAnimalesSQL(db);
         await setUltimoServiciosSQL(db);
-        let animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         madres = animales.filter((a) => a.sexo == "H" || a.sexo == "F");
         padres = animales.filter((a) => a.sexo == "M");

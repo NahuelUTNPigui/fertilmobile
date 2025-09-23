@@ -31,6 +31,8 @@
 		"@capacitor/app": "^7.0.1",
 		"@capacitor/core": "^7.0.1",
 		"@capacitor/filesystem": "^7.0.1",
+		"@capacitor/inappbrowser": "^2.5.0",
+		"@capacitor/ios": "^7.4.3",
 		"@capacitor/network": "^7.0.0",
 		"@capacitor/preferences": "^7.0.0",
 		"@sveltejs/adapter-static": "^3.0.8",

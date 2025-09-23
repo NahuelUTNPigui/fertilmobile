@@ -572,9 +572,7 @@
     }
     async function updateLocalSQL() {
 
-        await setUltimoRodeosLotesSQL(db);
-        await setUltimoAnimalesSQL(db);
-        await setUltimoPesajesSQL(db);
+        
         pesajes = await updateLocalPesajesSQLUser(db, pb, usuarioid);
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animalescab = animales.filter((a) => a.active && a.cab == caboff.id);
@@ -584,6 +582,9 @@
         rodeos = rodeos.filter((a) => a.active && a.cab == caboff.id);
         caboff = await updatePermisos(pb, usuarioid);
         getpermisos = caboff.permisos;
+        await setUltimoRodeosLotesSQL(db);
+        await setUltimoAnimalesSQL(db);
+        await setUltimoPesajesSQL(db);
         filterUpdate();
         cargado = true;
     }

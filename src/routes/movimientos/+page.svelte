@@ -1065,8 +1065,7 @@
     async function updateLocalSQL() {
 
         caboff = await updatePermisos(pb, usuarioid);
-        await setUltimoRodeosLotesSQL(db);
-        await setUltimoAnimalesSQL(db);
+        
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
 
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
@@ -1075,6 +1074,8 @@
             usuarioid,
             caboff.id,
         );
+        await setUltimoRodeosLotesSQL(db);
+        await setUltimoAnimalesSQL(db);
         lotes = lotesrodeos.lotes.filter(l=>l.active);
         rodeos = lotesrodeos.rodeos.filter(l=>l.active);
         onChangeAnimales();
