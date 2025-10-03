@@ -17,5 +17,6 @@ export async function setEstablecimientoSQL(db,establecimiento) {
 export async function updateLocalEstablecimientoSQL(db,pb,idcab) {
     const record = await pb.collection('cabs').getFirstListItem(`id='${idcab}' && active=true`, {});
     await setEstablecimientoSQL(db,record)
+    
     return record
 }

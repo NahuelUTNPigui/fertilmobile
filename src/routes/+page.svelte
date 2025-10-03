@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import {enabled} from '$lib/stores/enabled'
     //import {oscuro} from '$lib/oscuro'
+    //cometnario
     import {createDarker} from "$lib/stores/dark.svelte.js"
     import { goto } from '$app/navigation';
     let hab = $enabled

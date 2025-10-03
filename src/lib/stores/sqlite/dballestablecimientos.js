@@ -2,7 +2,7 @@ import { setEstablecimientoSQL } from "./dbestablecimiento"
 import { getEstablecimientosAsociadosSQL } from "./dbasociados"
 import { getCabOffline } from "../capacitor/offlinecab"
 import { loger } from "../logs/logs.svelte"
-
+import { addDays } from "$lib/stringutil/lib"
 /*
 //Asociados
 let resasociados = await getEstablecimientosAsociadosSQL(db)
@@ -88,10 +88,72 @@ export async function getUpdateLocalEstablecimientosSQL(db,pb,userid) {
     }
     //Fin Asociados
     await setEstablecimientosSQL(db,establecimientos)
-    
+    await setUltimoEstablecimientosSQL(db)
     return establecimientos
 }
 //Aca deberia hacer lo de los asociados
+export async function updateLocalEstablecimientosSQLUltimo(db,pb,userid,cabid,ultimo) {
+    
+    let fechaultimo = addDays(new Date(ultimo),-1)
+    let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
+
+    const records = await pb.collection('cabs').getFullList({
+        filter:`user='${userid}' && updated>'${fechaultimostring}'`,
+    });
+    let establecimientos = records
+
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline()
+    
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
+    
+    for(let i = 0;i<asociados.length;i++){
+        
+        let est_asociados = await pb.collection('cabs').getFullList({
+            filter:`id='${asociados[i]}' && updated>'${fechaultimostring}'`
+        });
+        
+        if(est_asociados.length > 0){
+            
+            establecimientos.push(est_asociados[0])
+        }
+    }
+    //FIN Asociados
+    let dbestablecimientos = await getEstablecimientosSQL(db)
+    let localestablecimientos = dbestablecimientos.lista
+    if(localestablecimientos.length == 0){
+        await setEstablecimientosSQL(db,establecimientos)
+        localestablecimientos = establecimientos
+    }
+    else{
+        for(let i = 0;i<establecimientos.length;i++){
+            let est = establecimientos[i]
+            let e_idx = localestablecimientos.findIndex(e=>e.id==est.id)
+            if(e_idx != -1){
+                if(!est.active){
+                    localestablecimientos.splice(e_idx,1)
+                }
+                else{
+                    localestablecimientos[e_idx] = est
+                }
+            }
+            else{
+                localestablecimientos.push(est)
+            }
+        }
+    }
+
+    let establecimiento = localestablecimientos.filter((e) => e.id == cabid)
+    
+    await setEstablecimientoSQL(db,establecimiento[0])
+    return localestablecimientos
+}
 export async function updateLocalEstablecimientosSQL(db,pb,userid,cabid) {
     
     const records = await pb.collection('cabs').getFullList({
@@ -126,6 +188,9 @@ export async function updateLocalEstablecimientosSQL(db,pb,userid,cabid) {
     await setEstablecimientosSQL(db,establecimientos)
     await setEstablecimientoSQL(db,establecimiento[0])
     return establecimientos
+}
+export async function setUltimoCeroEstablecimientosSQL(db) {
+    await db.run(`UPDATE Colecciones SET ultimo = ${0} WHERE id = 14`)
 }
 export async function setUltimoEstablecimientosSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 14`)

@@ -59,17 +59,24 @@
         updateLocalInseminacionesSQLUser,
         updateLocalServiciosSQL,
         updateLocalServiciosSQLUser,
+        updateLocalServiciosSQLUserUltimo,
         setServiciosSQL,
         setInseminacionesSQL,
         getUltimoServiciosSQL,
         setUltimoServiciosSQL,
+        updateLocalInseminacionesSQLUserUltimo,
+        
     } from "$lib/stores/sqlite/dbeventos";
     import {
         addNewAnimalSQL,
         getAnimalesSQL,
+        getUltimoAnimalesSQL,
+        getUltimoHistorialSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
+        updateLocalAnimalesSQLUserUltimo,
         updateLocalHistorialAnimalesSQLUser,
+        updateLocalHistorialAnimalesSQLUserUltimo,
         setUltimoAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {
@@ -77,6 +84,7 @@
         setComandosSQL,
         flushComandosSQL,
     } from "$lib/stores/sqlite/dbcomandos";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
@@ -87,6 +95,8 @@
     let pre = "";
 
     //offline
+    let tieneUltimo = $state(false)
+
     let infotoast = $state(false);
     let nubetoast = $state(false);
     
@@ -612,10 +622,10 @@
         cargado = true;
     }
     function onChangeInseminaciones() {
-        inseminacionescab = inseminaciones.filter((s) => s.cab == caboff.id);
+        inseminacionescab = inseminaciones.filter((s) => s.cab == caboff.id && s.active);
     }
     function onChangeServicios() {
-        servicioscab = servicios.filter((s) => s.cab == caboff.id);
+        servicioscab = servicios.filter((s) => s.cab == caboff.id && s.active);
     }
     function validarBoton() {}
     function oninput(campo) {}
@@ -783,10 +793,10 @@
         usuarioid = useroff.id;
     }
     async function updateLocalSQL() {
+        let ultimo_animal = await getUltimoAnimalesSQL(db)
+        let animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+        //await setUltimoAnimalesSQL(db);
         
-        let animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
-        await setUltimoAnimalesSQL(db);
-        await setUltimoServiciosSQL(db);
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         madres = animales.filter((a) => a.sexo == "H" || a.sexo == "F");
         padres = animales.filter((a) => a.sexo == "M");
@@ -797,12 +807,13 @@
             };
         });
 
-        servicios = await updateLocalServiciosSQLUser(db, pb, usuarioid);
+        servicios = await updateLocalServiciosSQLUserUltimo(db, pb, usuarioid,ultimo_servicio.ultimo);
 
-        inseminaciones = await updateLocalInseminacionesSQLUser(
+        inseminaciones = await updateLocalInseminacionesSQLUserUltimo(
             db,
             pb,
             usuarioid,
+            ultimo_servicio.ultimo
         );
 
         caboff = await updatePermisos(pb, usuarioid);
@@ -810,6 +821,7 @@
         onChangeServicios();
         onChangeInseminaciones();
         filterUpdate();
+        //await setUltimoServiciosSQL(db);
         cargado = true;
     }
     async function getLocalSQL() {
@@ -869,6 +881,7 @@
         setFilters();
 
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -926,7 +939,17 @@
             }
         }
     }
-
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     onMount(async () => {
         await initPage();
         await getDataSQL();

@@ -1,6 +1,8 @@
 import { getEstablecimientosAsociadosSQL } from "./dbasociados"
 import { getCabOffline } from "../capacitor/offlinecab"
 import { loger } from "$lib/stores/logs/logs.svelte";
+
+let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 //Encima creo que aca va el animalesacto
 //Aca estaria la logica de traer animales
 export async function getAnimalesSQL(db) {
@@ -31,8 +33,11 @@ export async function getUltimoAnimalesSQL(db) {
     let ultimo = ultimo_json.values[0]
     return ultimo
 }
+export async function setUltimoCeroAnimalesSQL(db) {
+    await db.run(`UPDATE Colecciones SET ultimo = ${0} WHERE id = 1`)
+}
 export async function setUltimoAnimalesSQL(db) {
-    await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 1`)
+    await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 1`)
 }
 export async function editarAnimalExpandSQL(db, id, p_expand = null) {
     let animales = await getAnimalesSQL(db);
@@ -149,17 +154,20 @@ export async function updateLocalAnimalesSQLUser(db, pb, userid) {
     await setUltimoAnimalesSQL(db)
     return animales
 }
+function addDays(date, days) {
+  var result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
 export async function updateLocalAnimalesSQLUserUltimo(db, pb, userid, ultimo) {
-    let animales = await getAnimalesSQL(db)
-    let dateultimo = new Date(ultimo)
-    //Con esta linea puedo dar velocidad
+    
+    let fechaultimo = addDays(new Date(ultimo),-1)
+    let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
     const recordsa = await pb.collection("animales").getFullList({
-        filter: `delete=false && cab.user='${userid}'`,
+        filter: `cab.user='${userid}' && updated>'${fechaultimostring}'`,
         expand: "rodeo,lote,nacimiento,cab"
-
     })
-
-
+    let animales = recordsa
     //---- Asociados
 
     let resasociados = await getEstablecimientosAsociadosSQL(db)
@@ -174,16 +182,49 @@ export async function updateLocalAnimalesSQLUserUltimo(db, pb, userid, ultimo) {
 
     for (let i = 0; i < asociados.length; i++) {
         const animal_colab = await pb.collection("animales").getFullList({
-            filter: `delete=false && cab='${asociados[i]}'`,
+            filter: `cab='${asociados[i]}' && updated>'${fechaultimostring}'`,
             expand: "rodeo,lote,nacimiento,cab",
 
         })
         animales = animales.concat(animal_colab)
     }
     //---fin
-    await setAnimalesSQL(db, animales)
+    let dbanimales = await getAnimalesSQL(db)
+    let localanimales = dbanimales.lista
+    //if(modedebug){
+    //    loger.addTextLog("local: "+localanimales.length)
+    //    loger.addTextLog("nube: "+animales.length)
+    //}
+    //Si el local de animales esta vacio, pisa
+    if(localanimales.length == 0){
+        await setAnimalesSQL(db, animales)
+        localanimales = animales
+    }
+    //En cambio pisa el animal correcto
+    else{
+        for(let i=0;i<animales.length;i++){
+            let animal = animales[i]
+            let a_idx = localanimales.findIndex(a=>a.id==animal.id)
+            if(a_idx !=-1 ){
+                let local = localanimales[a_idx]
+                if(animal.delete){
+                    localanimales.splice(a_idx,1)
+                }
+                else{
+                    localanimales[a_idx] = animal
+                }
+                
+            }
+            //si no existe el animal es poque es nuevo
+            else{
+                localanimales.push(animal)
+            }
+        }
+        await setAnimalesSQL(db, localanimales)
+    }
+    
     await setUltimoAnimalesSQL(db)
-    return animales
+    return localanimales
 }
 export async function updateLocalAnimalesSQL(db, pb, cabid) {
     const recordsa = await pb.collection("animales").getFullList({
@@ -218,8 +259,11 @@ export async function getHistorialAnimalesSQL(db) {
 export async function setHistorialAnimalesSQL(db, animales) {
     await db.run(`UPDATE Colecciones SET lista = '${JSON.stringify(animales)}' WHERE id = 13`)
 }
+export async function setUltimoCeroHistorialAnimalesSQL(db) {
+    await db.run(`UPDATE Colecciones SET ultimo = ${0} WHERE id = 13`)
+}
 export async function setUltimoHistorialAnimalesSQL(db) {
-    await db.run(`UPDATE Colecciones SET ultimo = '${Date.now()}' WHERE id = 13`)
+    await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 13`)
 }
 export async function addNewHistorialAnimalesSQL(db, his) {
     let histos = await getHistorialAnimalesSQL(db)
@@ -234,6 +278,58 @@ export async function deleteHistorialAnimalesSQL(db, id) {
     lista = lista.filter(a => a.id != id)
     await setHistorialAnimalesSQL(db, lista)
     return animales
+}
+export async function updateLocalHistorialAnimalesSQLUserUltimo(db, pb, userid,ultimo) {
+
+    let fechaultimo = addDays(new Date(ultimo),-1)
+    let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
+
+    const recordsa = await pb.collection("historialanimales").getFullList({
+        filter: `animal.cab.user='${userid}'  && updated>'${fechaultimostring}'` ,
+        expand: "rodeo,lote,nacimiento,animal,animal.cab"
+    })
+    let historial = recordsa
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline()
+
+    if (caboff.colaborador) {
+        if (!asociados.includes(caboff.id)) {
+            asociados.push(caboff.id)
+        }
+    }
+
+    for (let i = 0; i < asociados.length; i++) {
+        let records_asociados = await pb.collection("historialanimales").getFullList({
+            filter: `animal.cab='${asociados[i]}' && updated>'${fechaultimostring}'`,
+            expand: "rodeo,lote,nacimiento,animal"
+        })
+        historial = historial.concat(records_asociados)
+    }
+
+    //Fin Asociados
+    let dbhistorial = await getHistorialAnimalesSQL(db)
+    let localhistorial = dbhistorial.lista
+
+    if(localhistorial.length==0){
+        await setHistorialAnimalesSQL(db, historial)
+        localhistorial = historial    
+    }
+    else{
+        for(let i = 0;i<historial.length;i++){
+            let historia = historial[i]
+            let h_idx = localhistorial.findIndex(h=>h.id==historia.id)
+            if(h_idx != -1){
+                localhistorial[h_idx] = historia
+            }
+            else{
+                localhistorial.push(historia)
+            }
+        }
+    }
+    await setUltimoHistorialAnimalesSQL(db)
+    return localhistorial
 }
 //Esto de los historiales no seria filtrado por establecimiento sino por  el  usuario que le pertenece el animal
 export async function updateLocalHistorialAnimalesSQLUser(db, pb, userid) {
@@ -283,4 +379,9 @@ export async function getHistorialesAnimalSQLByIDAnimal(db, id) {
     let animals = lista.filter((a) => a.animal == id)
     return animals
 
+}
+export async function getUltimoHistorialSQL(db){
+    let ultimo_json = await db.query("select id,ultimo from Colecciones where id = 13")
+    let ultimo = ultimo_json.values[0]
+    return ultimo
 }

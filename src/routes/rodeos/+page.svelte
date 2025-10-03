@@ -52,16 +52,22 @@
         setRodeosSQL,
         setUltimoRodeosLotesSQL,
         getUltimoRodeosSQL,
-        getUpdateLocalRodeosLotesSQLUser
+        setUltimoCeroEventosSQL,
+        getUpdateLocalRodeosLotesSQLUser,
+
+        getUpdateLocalRodeosLotesSQLUserUltimo
+
     } from "$lib/stores/sqlite/dbeventos";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { ACTUALIZACION } from "$lib/stores/constantes";
-    import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
+    import { getAnimalesCabSQL,setUltimoCeroAnimalesSQL,setUltimoCeroHistorialAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -203,7 +209,7 @@
     }
     function changeRodeo() {
         rodeoscab = rodeos
-            .filter((r) => r.cab == caboff.id)
+            .filter((r) => r.cab == caboff.id && r.active)
             .map((r) => ({ ...r, total: 0 }));
 
         for (let i = 0; i < rodeoscab.length; i++) {
@@ -485,10 +491,10 @@
     async function updateLocalSQL() {
         animales = await getAnimalesCabSQL(db, caboff.id);
         
-        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUserUltimo(db,pb,usuarioid,caboff.id,ultimo_rodeo.ultimo)
         //lotes = await updateLocalLotesSQLUser(db, pb, usuarioid);
         //let rodeos  = await updateLocalRodeosSQLUser(db, pb, usuarioid);
-        await setUltimoRodeosLotesSQL(db);
+        //await setUltimoRodeosLotesSQL(db);
         rodeos = lotesrodeos.rodeos
         ordenar(rodeos);
         changeRodeo();
@@ -531,10 +537,22 @@
             }
         }
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -647,6 +665,9 @@
                 <span>
                     get local{getlocal}
                 </span>
+            </div>
+            <div>
+                <span>Tiene ultimo {tieneUltimo}</span>
             </div>
         </div>
     {/if}

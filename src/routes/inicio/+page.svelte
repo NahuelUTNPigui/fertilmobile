@@ -89,6 +89,9 @@
         getTotalesRodeosLotesSQL,
         setUltimoLotesSQL,
         setUltimoRodeosSQL,
+        setUltimoCeroEventosSQL,
+        getUltimoTiposTratsSQL,
+        updateLocalTiposTratSQLUserUltimo,
     } from "$lib/stores/sqlite/dbeventos";
     import {
         setAnimalesSQL,
@@ -99,9 +102,11 @@
         updateLocalAnimalesSQLUser,
         updateLocalHistorialAnimalesSQLUser,
         updateLocalAnimalesSQLUserUltimo,
+        setUltimoCeroAnimalesSQL,
+        setUltimoHistorialAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales";
     //import {updateLocalEstablecimientoSQL} from '$lib/stores/sqlite/dbestablecimiento';
-    import { updateLocalEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
+    import { setUltimoCeroEstablecimientosSQL, updateLocalEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import {
         updateLocalColabSQL,
         updateLocalColabSQLUser,
@@ -131,6 +136,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import { setEstablecimientosAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
+    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
@@ -154,6 +160,7 @@
     let getpermisos = $state("");
     let tiempocargatotales = $state(0);
     let tiempocargaupdate = $state(0);
+    let tieneUltimo = $state(false)
     /*
     let cab = $state({
         exist:false,
@@ -1656,7 +1663,7 @@
             filter: `animal.cab='${cab.id}'`,
         });
         let recordservicios = await pb.collection("servicios").getList(1, 1, {
-            filter: `cab='${caboff.id}'`,
+            filter: `cab='${caboff.id}' && active = true`,
         });
         const recordslotes = await pb.collection("lotes").getList(1, 1, {
             filter: `active=true && cab='${caboff.id}'`,
@@ -1672,6 +1679,7 @@
         totaleventos.observaciones = recordobservaciones.totalItems;
         totaleventos.pesajes = recordpesajes.totalItems;
         totaleventos.servicios = recordservicios.totalItems;
+        
         totaleventos.lotes = recordslotes.totalItems;
         totaleventos.rodeos = recordsrodeos.totalItems;
     }
@@ -1748,10 +1756,8 @@
         await setUltimosSQL(db);
     }
     async function updateLocalSQL() {
-        
         let inicio = Date.now();
-
-        
+                
         let totales = await getTotalesEventosOnlineCab(pb, caboff.id);
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
 
@@ -1763,9 +1769,10 @@
         totaleventos.pesajes = totales.pesajes;
         totaleventos.servicios = totales.servicios;
 
-        let tipotrats = await updateLocalTiposTratSQLUser(db, pb, usuarioid);
+        let ultimotipotrat = await getUltimoTiposTratsSQL(db)
+        let tipotrats = await updateLocalTiposTratSQLUserUltimo(db, pb, usuarioid,ultimotipotrat.ultimo);
         tipotrats.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-        let animalesuser = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
+        let animalesuser = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,lastinter.ultimo);
         animalesuser.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
         animales = animalesuser
 
@@ -1778,10 +1785,10 @@
         totaleventos.lotes = totalrodeoslotes.lotes;
         totaleventos.rodeos = totalrodeoslotes.rodeos;
         tipotratamientos = tipotrats.filter(
-            (t) => (t.cab == caboff.id && t.active) || t.generico,
+            (t) => (t.cab == caboff.id || t.generico ) && t.active,
         );
         await setInternetSQL(db, 1, Date.now());
-        await setUltimoAnimalesSQL(db);
+        //await setUltimoAnimalesSQL(db);
         //caboff = await updatePermisos(pb, usuarioid);
         //getpermisos = caboff.permisos;
         tiempocargaupdate = Date.now() - inicio;
@@ -1854,6 +1861,26 @@
         });
         cargadoanimales = true;
     }
+    async function limpiarAnimales() {
+        await setAnimalesSQL(db,[])
+        let dataanimales = await getAnimalesSQL(db);
+        loger.addTextLog("animales: "+dataanimales.lista.length)
+    }
+    async function borrarUltimo(){
+        delete localStorage["ultimo"]
+        await ultimoLocalStorage()
+    }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function initPage() {
         
         coninternet = await getInternet(
@@ -1900,6 +1927,7 @@
         );
 
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         lastinter = await getUltimoAnimalesSQL(db);
         let rescom = await getComandosSQL(db);
@@ -1922,8 +1950,7 @@
         let ahora = Date.now();
         let antes = lastinter.ultimo;
 
-        await getLocalSQL(db);
-
+        await getLocalSQL(db);  
         if (coninternet.connected) {
             let velocidad = await velocidader.medirVelocidadInternet();
             
@@ -1951,6 +1978,10 @@
                 ahora,
                 antes,
             );
+            //if(modedebug){
+            //    mustUpdate = true
+            //}
+            
             await getTotales()
             if (modedebug) {
                 getactualizacion = await actualizacion(
@@ -2022,6 +2053,19 @@
                 ? "sin internet"
                 : "con internet"}
         </button>
+        <button
+            onclick={borrarUltimo}
+            class="btn"
+        >
+            bye ultimo
+        </button>
+        <button
+            onclick={borrarUltimo}
+            class="btn"
+        >
+            Limpiar animales
+        </button>
+
         <div class="grid grid-cols-2">
             <span>
                 Colaborador: {caboff.colaborador}
@@ -2083,6 +2127,12 @@
             </span>
             <span>
                 Permisos: {getpermisos}
+            </span>
+            <span>
+                Tiene ultimo: {tieneUltimo}
+            </span>
+            <span>
+                Ultimo update: {new Date(lastinter.ultimo).toLocaleDateString()}
             </span>
         </div>
     {/if}

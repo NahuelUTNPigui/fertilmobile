@@ -51,21 +51,30 @@
         deleteLoteSQL,
         setLotesSQL,
         setUltimoRodeosLotesSQL,
+        setUltimoCeroEventosSQL,
         getUltimoRodeosSQL,
         getUpdateLocalRodeosSQLUserCab,
 
-        getUpdateLocalRodeosLotesSQLUser
+        getUpdateLocalRodeosLotesSQLUser,
+
+        getUpdateLocalLotesSQLUserCabUltimo,
+
+        getUpdateLocalRodeosLotesSQLUserUltimo
+
+
 
     } from "$lib/stores/sqlite/dbeventos";
-    import { getAnimalesCabSQL } from "$lib/stores/sqlite/dbanimales";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
+    import { getAnimalesCabSQL,setUltimoCeroAnimalesSQL,setUltimoCeroHistorialAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Info from "$lib/components/toast/Info.svelte";
-import Nube from "$lib/components/toast/Nube.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -223,8 +232,9 @@ import Nube from "$lib/components/toast/Nube.svelte";
         }
     }
     function onChangeLote() {
+        
         lotescab = lotes
-            .filter((lo) => lo.cab == caboff.id)
+            .filter((lo) => lo.cab == caboff.id && lo.active)
             .map((lo) => {
                 return {
                     ...lo,
@@ -504,11 +514,24 @@ import Nube from "$lib/components/toast/Nube.svelte";
         filterUpdate();
         cargado = true;
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function updateLocalSQL() {
 
         
         await getAnimales();
-        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        //let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(db,pb,usuarioid,caboff.id)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUserUltimo(db,pb,usuarioid,caboff.id,ultimo_rodeo.ultimo)
         //lotes = await updateLocalLotesSQLUser(db, pb, usuarioid);
         //let rodeos  = await updateLocalRodeosSQLUser(db, pb, usuarioid);
         lotes = lotesrodeos.lotes
@@ -516,7 +539,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
         filterUpdate();
         caboff = await updatePermisos(pb, usuarioid);
         getpermisos = caboff.permisos;
-        await setUltimoRodeosLotesSQL(db);
+        //await setUltimoRodeosLotesSQL(db);
         cargado = true;
     }
     async function updateComandos() {
@@ -549,6 +572,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -558,6 +582,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
         let ahora = Date.now();
         let antes = ultimo_rodeo.ultimo;
         await getLocalSQL();
+        
         if (coninternet.connected) {
             await updateComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
@@ -665,8 +690,11 @@ import Nube from "$lib/components/toast/Nube.svelte";
             </div>
             <div>
                 <span>
-                    mostrarVacios{mostrarVacios}
+                    mostrarVacios {mostrarVacios}
                 </span>
+            </div>
+            <div>
+                <span>Tiene ultimo {tieneUltimo}</span>
             </div>
         </div>
     {/if}

@@ -47,15 +47,18 @@
         setEstablecimientoSQL,
         getEsblecimientoSQL,
         updateLocalEstablecimientoSQL,
+        
     } from "$lib/stores/sqlite/dbestablecimiento";
 
     import {
         getUltimoEstablecimientosSQL,
         updateLocalEstablecimientosSQL,
+        updateLocalEstablecimientosSQLUltimo,
         setUltimoEstablecimientosSQL,
         getEstablecimientosSQL,
         getUpdateLocalEstablecimientosSQL,
         setEstablecimientosSQL,
+        setUltimoCeroEstablecimientosSQL
     } from "$lib/stores/sqlite/dballestablecimientos";
 
     import {
@@ -69,6 +72,9 @@
         setColabSQL,
         updateLocalColabSQLUser,
     } from "$lib/stores/sqlite/dbcolaboradores";
+    import { setUltimoCeroEventosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { setUltimoCeroAnimalesSQL,setUltimoHistorialAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
+
     import {
         getComandosSQL,
         setComandosSQL,
@@ -83,8 +89,11 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Info from "$lib/components/toast/Info.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
+    let tieneUltimo = $state(false)
+    let nubetoast = $state(false)
     let infotoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
@@ -650,18 +659,19 @@
     }
     async function updateLocalSQL() {
         
-        establecimientos = await updateLocalEstablecimientosSQL(
+        establecimientos = await updateLocalEstablecimientosSQLUltimo(
             db,
             pb,
             usuarioid,
             caboff.id,
+            ultimo_establecimiento.ultimo
         );
         //let res = await getEsblecimientoSQL(db)
         establecimiento = establecimientos.filter(
             (est) => est.id == caboff.id,
         )[0];
         await setEstablecimientoSQL(db,establecimiento)
-        await setUltimoEstablecimientosSQL(db);
+        
         datosviejos = { ...establecimiento };
         nombre = establecimiento.nombre;
         direccion = establecimiento.direccion;
@@ -676,6 +686,7 @@
         let allcolabs = await updateLocalColabSQLUser(db, pb, usuarioid);
         colabs = allcolabs.filter((colab) => colab.cab == caboff.id);
         cargado = true;
+        await setUltimoEstablecimientosSQL(db)
     }
     async function oldGetUpdate() {
         let lastinter = await getInternetSQL(db);
@@ -690,7 +701,19 @@
             }
         }
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function getDataSQL() {
+        await ultimoLocalStorage()
         //Reviso el internet
         ultimo_establecimiento = await getUltimoEstablecimientosSQL(db);
         let rescom = await getComandosSQL(db);
@@ -721,10 +744,12 @@
                 antes,
             );
             if (mustUpdate) {
+                nubetoast=true
                 setTimeout(async () => {
                     try {
-                        await updateLocalSQL(db);
+                        await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
+                        nubetoast=false
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;
@@ -840,4 +865,7 @@
 </Navbarr>
 {#if infotoast}
     <Info/>
+{/if}
+{#if nubetoast}
+    <Nube/>
 {/if}

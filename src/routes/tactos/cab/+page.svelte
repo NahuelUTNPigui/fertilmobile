@@ -49,8 +49,10 @@
         setAnimalesSQL,
         getAnimalesSQL,
         setUltimoAnimalesSQL,
+        getUltimoAnimalesSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
+        updateLocalAnimalesSQLUserUltimo
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -73,6 +75,7 @@
     } from "$lib/stores/capacitor/offlinecab";
     import {
         updateLocalTactosSQLUser,
+        updateLocalTactosSQLUserUltimo,
         setTactosSQL,
         getTactosSQL,
         setUltimoTactosSQL,
@@ -87,6 +90,7 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -441,14 +445,38 @@
         caboff = await getCabOffline();
         usuarioid = useroff.id;
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function updateLocalSQL() {
         
-
-        animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
+        let ultimo_animal = await getUltimoAnimalesSQL(db)
+        if(modedebug){
+            loger.addTextLinea(464)
+        }
+        animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+        if(modedebug){
+            loger.addTextLinea(468)
+        }
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
-        tactos = await updateLocalTactosSQLUser(db, pb, usuarioid);
-        await setUltimoTactosSQL(db);
-        await setUltimoAnimalesSQL(db);
+        if(modedebug){
+            loger.addTextLinea(472)
+        }
+        tactos = await updateLocalTactosSQLUserUltimo(db, pb, usuarioid,ultimo_tacto.ultimo);
+        if(modedebug){
+            loger.addTextLinea(475)
+        }
+        //await setUltimoTactosSQL(db);
+        //await setUltimoAnimalesSQL(db);
         onChangeTactos();
         filterUpdate();
 
@@ -498,6 +526,7 @@
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
