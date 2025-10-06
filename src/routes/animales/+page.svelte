@@ -70,9 +70,14 @@
         addNewAnimalSQL,
         updateLocalAnimalesSQLUser,
         updateLocalHistorialAnimalesSQLUser,
+        updateLocalAnimalesSQLUserUltimo,
+        updateLocalHistorialAnimalesSQLUserUltimo,
         getAnimalesCabSQL,
         getUltimoAnimalesSQL,
         setUltimoAnimalesSQL,
+        setUltimoCeroAnimalesSQL,
+        setUltimoCeroHistorialAnimalesSQL,
+        getUltimoHistorialSQL
     } from "$lib/stores/sqlite/dbanimales";
 
     import {
@@ -84,7 +89,12 @@
         getLotesRodeosSQL,
         addNewPesajeSQL,
         addNewNacimientoSQL,
+        setUltimoCeroEventosSQL,
+        getUltimoLotesSQL,
+        getUltimoRodeosSQL,
+        getUpdateLocalRodeosLotesSQLUserUltimo
     } from "$lib/stores/sqlite/dbeventos";
+    import { setUltimoCeroEstablecimientosSQL, updateLocalEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import { getTotalAnimales } from "$lib/stores/totaldata";
     //Banco pero esta dificil ahora que traiga los animales actuales
@@ -106,6 +116,7 @@
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -686,10 +697,10 @@
         proxy.save(proxyfiltros);
         animalesrows = animalescab;
         madres = animalescab
-            .filter((a) => a.sexo == "H")
+            .filter((a) => a.sexo == "H" && a.active)
             .map((a) => ({ id: a.id, nombre: a.caravana })).sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1);
         padres = animalescab
-            .filter((a) => a.sexo == "M")
+            .filter((a) => a.sexo == "M" && a.active)
             .map((a) => ({ id: a.id, nombre: a.caravana })).sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1);
         totalAnimalesEncontrados = animalesrows.length;
         if (buscar != "") {
@@ -784,23 +795,28 @@
     // y siquiero get y luego update
     async function updateLocalSQL() {
         
-        await updateLocalHistorialAnimalesSQLUser(db, pb, usuarioid);
-        let resanimales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
+        
+        let resanimales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
         animales = resanimales;
         animalescab = animales.filter((a) => a.cab == caboff.id);
-        
-        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
+        let ultimo_historia = await getUltimoHistorialSQL(db)
+        await updateLocalHistorialAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_historia.ultimo);
+        let ultimo_rodeo = await getUltimoRodeosSQL(db)
+        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUserUltimo(
             db,
             pb,
             usuarioid,
             caboff.id,
+            ultimo_rodeo.ultimo
         );
         caboff = await updatePermisos(pb, usuarioid);
-        await setUltimoAnimalesSQL(db);
-        await setUltimoRodeosLotesSQL(db);
+        //await setUltimoAnimalesSQL(db);
+        //await setUltimoRodeosLotesSQL(db);
         getpermisos = caboff.permisos;
         lotes = lotesrodeos.lotes.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+        lotes = lotes.filter(lo=>lo.active)
         rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+        rodeos = rodeos.filter(ro=>ro.active)
 
         filterUpdate();
         cargado = true;
@@ -847,11 +863,23 @@
             }
         }
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
 
         setFilters();
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         ultimo_animal = await getUltimoAnimalesSQL(db);
@@ -892,7 +920,7 @@
                 nubetoast=true
                 setTimeout(async () => {
                     try {
-                        await updateLocalSQL(db);
+                        await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
                         nubetoast=false
                         infotoast = true;

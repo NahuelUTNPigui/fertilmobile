@@ -43,10 +43,10 @@
         getCabOffline,
     } from "$lib/stores/capacitor/offlinecab";
     import { getCabData } from "$lib/stores/cabsdata";
-    import { updateLocalEventosSQL } from "$lib/stores/sqlite/dbeventos";
+    import { updateLocalEventosSQL,setUltimoCeroEventosSQL } from "$lib/stores/sqlite/dbeventos";
     import {
-        addNewAnimalSQL,
-        updateLocalAnimalesSQL,
+        setUltimoCeroAnimalesSQL,
+        setUltimoCeroHistorialAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getUltimoEstablecimientosSQL,
@@ -54,7 +54,9 @@
         setUltimoEstablecimientosSQL,
         getEstablecimientosSQL,
         getUpdateLocalEstablecimientosSQL,
+        getUpdateLocalEstablecimientosSQLUltimo,
         setEstablecimientosSQL,
+        setUltimoCeroEstablecimientosSQL
     } from "$lib/stores/sqlite/dballestablecimientos";
     import { getAnimalesSQL } from "$lib/stores/sqlite/dbanimales";
     import {
@@ -79,6 +81,7 @@
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
@@ -271,6 +274,17 @@
         }
         cargado = true;
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function getOnlineColabs() {
         const restxcolab = await pb.collection("estxcolabs").getFullList({
             filter: `colab.user = '${usuarioid}' && cab.active = true`,
@@ -281,21 +295,22 @@
     async function updateLocalSQL() {
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
         
-        let resestablecimientos = await getUpdateLocalEstablecimientosSQL(
+        let resestablecimientos = await getUpdateLocalEstablecimientosSQLUltimo(
             db,
             pb,
             usuarioid,
+            ultimo_establecimiento.ultimo
         );
-        await setUltimoEstablecimientosSQL(db);
+        //await setUltimoEstablecimientosSQL(db);
         establecimientos = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
             //Osea que el user es igual a u id
-            return e.user == usuarioid;
+            return e.user == usuarioid && e.active;
             //return !sincronizadas.includes(s => s == e.id)
         });
         establecimientoscolab = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos si sean colaborador
-            return e.user != usuarioid;
+            return e.user != usuarioid && e.active;
             //return sincronizadas.includes(s => s == e.id)
         });
         //await getOnlineColabs();
@@ -320,24 +335,13 @@
             }
         }
     }
-    async function oldUpdate() {
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-    }
+    
     //En este caso hace falta usar el internet directo
     //Para buscar los establecimientos a quien soy colaborador
     async function getDataSQL() {
         //Reviso el internet
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         ultimo_establecimiento = await getUltimoEstablecimientosSQL(db);

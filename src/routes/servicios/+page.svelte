@@ -65,7 +65,7 @@
         getUltimoServiciosSQL,
         setUltimoServiciosSQL,
         updateLocalInseminacionesSQLUserUltimo,
-        
+        setUltimoCeroEventosSQL
     } from "$lib/stores/sqlite/dbeventos";
     import {
         addNewAnimalSQL,
@@ -77,7 +77,8 @@
         updateLocalAnimalesSQLUserUltimo,
         updateLocalHistorialAnimalesSQLUser,
         updateLocalHistorialAnimalesSQLUserUltimo,
-        setUltimoAnimalesSQL,
+        setUltimoCeroAnimalesSQL,
+        setUltimoCeroHistorialAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -793,10 +794,11 @@
         usuarioid = useroff.id;
     }
     async function updateLocalSQL() {
+
         let ultimo_animal = await getUltimoAnimalesSQL(db)
         let animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
         //await setUltimoAnimalesSQL(db);
-        
+ 
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         madres = animales.filter((a) => a.sexo == "H" || a.sexo == "F");
         padres = animales.filter((a) => a.sexo == "M");
@@ -807,6 +809,7 @@
             };
         });
 
+        
         servicios = await updateLocalServiciosSQLUserUltimo(db, pb, usuarioid,ultimo_servicio.ultimo);
 
         inseminaciones = await updateLocalInseminacionesSQLUserUltimo(
@@ -943,7 +946,7 @@
         const hasUltimo = localStorage.getItem("ultimo") === "si";
         if(!hasUltimo){
             await setUltimoCeroAnimalesSQL(db)
-            await setUltimoHistorialAnimalesSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
             await setUltimoCeroEventosSQL(db)
             await setUltimoCeroEstablecimientosSQL(db)
             localStorage.setItem("ultimo","si")

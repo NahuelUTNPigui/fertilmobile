@@ -360,9 +360,7 @@
         })
     }
     onMount(()=>{
-        if(modedebug){
-            //loger.addTextLog(JSON.stringify(colabs.filter(c=>c.cab == cabid)))
-        }
+
     })
 </script>
 <h1 class="text-2xl font-bold text-green-700 dark:text-green-400 mb-6 text-start">{titulo}</h1>

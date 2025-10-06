@@ -1,5 +1,6 @@
 <script>
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
+    import PredictSelect from '../PredictSelect.svelte';
     import estilos from '$lib/stores/estilos';
     import RadioButton from '$lib/components/RadioButton.svelte';
     import tipostacto from '$lib/stores/tipostacto';
@@ -21,11 +22,14 @@
         tratamiento = $bindable({}),
         tipotratamientos = $bindable([]),
         
-        animales = $bindable([]),
+        animales = $bindable([]), 
+        listaanimales = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarTrat
 
     } = $props()
+    let nombreanimal = $state("")
+    let animaltrat = $state("")
     function validarBotonTrat(){
         tratamiento.botonhabilitadotrat = true
         if(!agregaranimal && isEmpty(tratamiento.animaltrat)){
@@ -50,6 +54,7 @@
         
     }
     function oninputTrat(campo){
+        tratamiento.animaltrat = animaltrat
         validarBotonTrat()
         if(!agregaranimal && campo=="ANIMAL"){
             
@@ -89,32 +94,47 @@
     {/if}
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
     {#if !agregaranimal}
-        <label for = "madre" class="label">
-            <span class={estilos.labelForm}>Animal</span>
-        </label>
-        <label class="input-group ">
-            <select 
-                class={`
-                    select select-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 focus:border-green-500
+        <div class="hidden">
 
-                    ${estilos.bgdark2} 
-                    ${tratamiento.malanimaltrat?"input-error":""}
-                `}
-                onchange={()=>oninputTrat("ANIMAL")}
-                bind:value={tratamiento.animaltrat}
+        
+            <label for = "madre" class="label">
+                <span class={estilos.labelForm}>Animal</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 focus:border-green-500
+
+                        ${estilos.bgdark2} 
+                        ${tratamiento.malanimaltrat?"input-error":""}
+                    `}
+                    onchange={()=>oninputTrat("ANIMAL")}
+                    bind:value={tratamiento.animaltrat}
+                    
+                >
+                    {#each animales as a}
+                        <option value={a.id}>{a.caravana}</option>    
+                    {/each}
+                </select>
+                <div class={`label ${tratamiento.malanimaltrat?"":"hidden"}`}>
+                    <span class="label-text-alt text-red-400">Debe seleccionar el animal</span>
+                </div>
+            </label>
+        </div>
+        {#if cargadoanimales}
+            <PredictSelect 
+                bind:valor={animaltrat} 
+                etiqueta = {"Animal"} 
+                bind:cadena={nombreanimal} 
+                lista = {listaanimales} 
+                onelegir={()=>oninputTrat("ANIMAL")}
+                >
                 
-            >
-                {#each animales as a}
-                    <option value={a.id}>{a.caravana}</option>    
-                {/each}
-            </select>
-            <div class={`label ${tratamiento.malanimaltrat?"":"hidden"}`}>
-                <span class="label-text-alt text-red-400">Debe seleccionar el animal</span>
-            </div>
-        </label>
+            </PredictSelect>
+        {/if}
         <label for = "categoria" class="label">
             <span class="label-text text-base">Categoria</span>
         </label>

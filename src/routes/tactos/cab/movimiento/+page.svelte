@@ -781,6 +781,8 @@
         setFilters();
         db = await openDB();
         await getLocalSQL();
+        let rescom = await getComandosSQL(db);
+        comandos = rescom.lista;
     }
     async function initPage() {
         coninternet = await getInternet(

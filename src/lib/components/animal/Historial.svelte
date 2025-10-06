@@ -9,6 +9,7 @@
     import { capitalize } from "$lib/stringutil/lib";
     import { getEstadoNombre } from "../estadosutils/lib";
     import { loger } from "$lib/stores/logs/logs.svelte";
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     let {
         lotes = $bindable([]),
         rodeos = $bindable([]),
@@ -20,13 +21,7 @@
     let ruta = import.meta.env.VITE_RUTA;
     const pb = new PocketBase(ruta);
     let id = $state("");
-    async function getHistorial() {
-        historial = await pb.collection("historialanimales").getFullList({
-            filter: `animal='${id}'`,
-            sort: "-created",
-            expand: "lote,rodeo",
-        });
-    }
+    
     function onChangeHistorial() {
         historialrows = historial.filter((h) => h.animal == id);
         historialrows.sort((h1, h2) =>
@@ -53,15 +48,17 @@
     }
     onMount(async () => {
         id = $page.params.slug;
-        //onChangeHistorial();
+        onChangeHistorial();
         //await getHistorial()
     });
 </script>
-
+{#if modedebug}
+    historial.length: {historial.length}
+{/if}
 <div
     class="hidden w-full md:block justify-items-center mx-1 lg:w-3/4 overflow-x-auto"
 >
-    {#if historial.length == 0}
+    {#if historialrows.length == 0}
         <p class="mt-5 text-lg">No recibio modificaciones</p>
     {:else}
         <table class="table table-lg">
@@ -79,7 +76,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each historial as h}
+                {#each historialrows as h}
                     <tr>
                         <td class="text-base">
                             {`${new Date(h.created).toLocaleDateString()}`}
@@ -117,17 +114,17 @@
 <div
     class="block w-full md:hidden justify-items-center mx-1 lg:w-3/4 overflow-x-auto"
 >
-    {#if historial.length == 0}
+    {#if historialrows.length == 0}
         <p class="mt-5 text-lg">No recibio modificaciones</p>
     {:else}
-        {#each historial as h}
+        {#each historialrows as h}
             <div
                 class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900"
             >
                 <div class="block p-4">
-                    <div class="grid grid-cols-2 gap-y-2">
+                    <div class="grid grid-cols-2 gap-y-2 gap-x-1">
                         <div class="flex items-start">
-                            <span>Fecha:</span>
+                            <span>Fecha cambio:</span>
                             <span class="font-semibold">
                                 {`${new Date(h.created).toLocaleDateString()}`}
                             </span>

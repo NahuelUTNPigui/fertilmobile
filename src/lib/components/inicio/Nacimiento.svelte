@@ -152,7 +152,8 @@
     {#if cargadoanimales}
         <PredictSelect 
             bind:valor={nacimiento.madrenac} 
-            etiqueta = {"Madre"} bind:cadena={nacimiento.nombremadrenac} 
+            etiqueta = {"Madre"} 
+            bind:cadena={nacimiento.nombremadrenac} 
             lista = {listamadres} 
             validarAnimal={()=>oninputNacimiento("COMBOMADRE")}>
             

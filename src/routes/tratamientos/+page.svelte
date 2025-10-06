@@ -50,22 +50,29 @@
         setTratsSQL,
         setUltimoTratsSQL,
         addNewTrataSQL,
+        updateLocalTratsSQLUserUltimo,
         updateLocalTratsSQLUser,
         getTiposTratSQL,
         setTiposTratSQL,
         addNewTipoTratSQL,
         setUltimoTiposTratSQL,
         updateLocalTiposTratSQLUser,
+        updateLocalTiposTratSQLUserUltimo,
         getUltimoTratsSQL,
+        getUltimoTiposTratsSQL,
+        setUltimoCeroEventosSQL
     } from "$lib/stores/sqlite/dbeventos";
     import {
         addNewAnimalSQL,
         getAnimalesSQL,
         updateLocalAnimalesSQL,
+        getUpdateLocalAnimalesSQLUserUltimo,
         getUpdateLocalAnimalesSQLUser,
         getAnimalesCabSQL,
         setUltimoAnimalesSQL,
         getUltimoAnimalesSQL,
+        setUltimoCeroAnimalesSQL,
+        setUltimoCeroHistorialAnimalesSQL
     } from "$lib/stores/sqlite/dbanimales";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
@@ -73,6 +80,7 @@
         setComandosSQL,
         flushComandosSQL,
     } from "$lib/stores/sqlite/dbcomandos";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
@@ -80,6 +88,7 @@
     import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //Offline
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -275,12 +284,12 @@
                 : 1,
         );
         tipotratamientoscab = tipotratamientos.filter(
-            (tp) => (tp.cab == caboff.id || tp.generico == true) && tp.active,
+            (tp) => (tp.cab == caboff.id || tp.generico == true) && tp.active
         );
     }
     function onChangeTratamientos() {
         tratamientoscab = tratamientos.filter(
-            (t) => t.cab == cab.id && t.active == true,
+            (t) => t.cab == caboff.id && t.active == true,
         );
     }
     async function editarOffline() {
@@ -877,22 +886,30 @@
     // Se supone que los comandos ya fueron flush
 
     async function updateLocalSQL() {
-        
-        tratamientos = await updateLocalTratsSQLUser(db, pb, usuarioid);
-        onChangeTratamientos();
-        animales = await getUpdateLocalAnimalesSQLUser(
+
+        let ultimo_animal = await getUltimoAnimalesSQL(db)
+
+        let ultimos_tipo = await getUltimoTiposTratsSQL(db)
+
+        tratamientos = await updateLocalTratsSQLUserUltimo(db, pb, usuarioid,ultimo_tratamientos.ultimo);
+
+        animales = await getUpdateLocalAnimalesSQLUserUltimo(
             db,
             pb,
             usuarioid,
             caboff.id,
+            ultimo_animal.ultimo
         );
-        tipotratamientos = await updateLocalTiposTratSQLUser(db, pb, usuarioid);
-        await setUltimoTratsSQL(db);
-        await setUltimoAnimalesSQL(db);
+
+        tipotratamientos = await updateLocalTiposTratSQLUserUltimo(db, pb, usuarioid,ultimos_tipo.ultimo);
+
         onChangeTratamientos();
+
         onChangeTipos();
+
         filterUpdate();
         caboff = await updatePermisos(pb, usuarioid);
+
         getpermisos = caboff.permisos;
 
         cargado = true;
@@ -933,6 +950,18 @@
                 await getLocalSQL();
             }
         }
+    }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
     }
     async function getDataSQL() {
         proxyfiltros = proxy.load();

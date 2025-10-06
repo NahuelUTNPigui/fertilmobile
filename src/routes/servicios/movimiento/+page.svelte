@@ -1097,34 +1097,6 @@
         servicios = resservicios.lista;
         inseminaciones = resinseminaciones.lista;
     }
-    async function updateLocalSQL() {
-        
-        await getServiciosInseminacionesSQL();
-        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
-            db,
-            pb,
-            usuarioid,
-            caboff.id,
-        );
-
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
-        animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
-        await setUltimoAnimalesSQL(db);
-        await setUltimoRodeosLotesSQL(db);
-        animales = animales.filter((a) => a.active && a.cab == caboff.id);
-        animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-        madres = animales.filter((a) => a.sexo == "H");
-        padres = animales.filter((a) => a.sexo == "M");
-        cargadoanimales = true;
-        listapadres = padres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-            };
-        });
-        filterUpdate();
-    }
 
     async function getLocalSQL() {
         getlocal = true;
@@ -1151,26 +1123,6 @@
         });
 
         filterUpdate();
-    }
-    async function oldDataUpdate() {
-        if (coninternet.connected) {
-            if (lastinter.internet == 0) {
-                await setInternetSQL(db, 1, Date.now());
-                await updateLocalSQL();
-            } else {
-                const cincoMinEnMs = 300000;
-                if (ahora - antes >= cincoMinEnMs) {
-                    await updateLocalSQL();
-                } else {
-                    await getLocalSQL();
-                }
-            }
-
-            cargado = true;
-        } else {
-            await getLocalSQL();
-            cargado = true;
-        }
     }
     async function getDataSQL() {
         proxyfiltros = proxy.load();

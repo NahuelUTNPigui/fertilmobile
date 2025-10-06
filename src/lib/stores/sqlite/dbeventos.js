@@ -407,32 +407,24 @@ export async function getUltimoPesajeSQL(db) {
 }
 //TACTOS
 export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
-    if(modedebug){
-        loger.addTextLinea(411)
-    }
+
     let fechaultimo = addDays(new Date(ultimo),-1)
     let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
-    if(modedebug){
-        loger.addTextLinea(416)
-    }
+
     const recordst = await pb.collection('tactos').getFullList({
-        filter: `cab.user='${userid}' && update>'${fechaultimostring}'`,
+        filter: `cab.user='${userid}' && updated>'${fechaultimostring}'`,
         sort: '-fecha',
         //El cab es donde se hace el tacto
         //El animal en el futuro puede tener un cab diferente
         expand: "animal,cab"
     });
-    if(modedebug){
-        loger.addTextLinea(426)
-    }
+
     let tactos = recordst
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
     let caboff = await getCabOffline()
-    if(modedebug){
-        loger.addTextLinea(433)
-    }
+
     if (caboff.colaborador) {
         if (!asociados.includes(caboff.id)) {
             asociados.push(caboff.id)
@@ -442,7 +434,7 @@ export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
     for (let i = 0; i < asociados.length; i++) {
         //asociados[i]
         let records_asoc = await pb.collection('tactos').getFullList({
-            filter: `cab='${asociados[i]}' && update>'${fechaultimostring}'`,
+            filter: `cab='${asociados[i]}' && updated>'${fechaultimostring}'`,
             sort: '-fecha',
             //El cab es donde se hace el tacto
             //El animal en el futuro puede tener un cab diferente
@@ -450,9 +442,7 @@ export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
         });
         tactos = tactos.concat(records_asoc)
     }
-    if(modedebug){
-        loger.addTextLinea(454)
-    }
+
     //Fin Asociados
     let dbtactos = await getTactosSQL(db)
     let localtactos = dbtactos.lista
@@ -481,9 +471,6 @@ export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
         await setTactosSQL(db, localtactos)
     }
 
-    if(modedebug){
-        loger.addTextLinea(485)
-    }
     await setUltimoTactosSQL(db)
     return localtactos
 }
@@ -697,6 +684,7 @@ export async function updateLocalInseminacionesSQLUserUltimo(db, pb, userid,ulti
         filter: `cab.user = '${userid}' && updated>'${fechaultimostring}'`,
         expand: "animal,cab"
     });
+
     let inseminaciones = records
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
@@ -722,14 +710,15 @@ export async function updateLocalInseminacionesSQLUserUltimo(db, pb, userid,ulti
     //Fin Asociados
     let dbinseminaciones = await getInseminacionesSQL(db)
     let localinseminaciones = dbinseminaciones.lista
+
     if(localinseminaciones.length==0){
         await setInseminacionesSQL(db, inseminaciones)
         localinseminaciones = inseminaciones
     }
     else{
-        for(let i = 0;inseminaciones.length;i++){
+        for(let i = 0;i<inseminaciones.length;i++){
             let inseminacion = inseminaciones[i]
-            let i_idx = localinseminaciones.findIndex(i=>i.id==inseminacion.id)
+            let i_idx = localinseminaciones.findIndex(ins=>ins.id==inseminacion.id)
             if(i_idx != -1){
                 if(!inseminacion.active){
                     localinseminaciones.splice(i_idx,1)
@@ -742,6 +731,8 @@ export async function updateLocalInseminacionesSQLUserUltimo(db, pb, userid,ulti
                 localinseminaciones.push(inseminacion)
             }
         }
+
+        await setInseminacionesSQL(db, localinseminaciones)
     }
     await setUltimoInseminacionesSQL(db)
     return localinseminaciones
@@ -862,7 +853,9 @@ export async function updateLocalObservacionesSQLUserUltimo(db, pb, userid,ultim
             else{
                 localobservaciones.push(observacion)
             }
+
         }
+        await setObservacionesSQL(db, localobservaciones)
     }
     
     await setUltimoObservacionesSQL(db)
@@ -1143,6 +1136,7 @@ export async function updateLocalRodeosSQLUserULtimo(db, pb, userid,ultimo) {
                 localrodeos.push(rodeo)
             }
         }
+        await setRodeosSQL(db, localrodeos)
     }
     
     await setUltimoRodeosSQL(db)
@@ -1454,13 +1448,13 @@ export async function updateLocalTratsSQLUserUltimo(db, pb, userid,ultimo) {
 
     //Fin Asociados
     let dbtratamientos = await getTratsSQL(db)
-    let localtrats = dbtratamientos
+    let localtrats = dbtratamientos.lista
     if(localtrats.length == 0){
         await setTratsSQL(db, tratamientos)
         localtrats = tratamientos
     }
     else{
-        for(let i = 0;i<tratamientos;i++){
+        for(let i = 0;i<tratamientos.length;i++){
             let trat = tratamientos[i]
             let t_idx = localtrats.findIndex(t=>t.id==trat.id)
             if(t_idx != -1){
@@ -1475,6 +1469,7 @@ export async function updateLocalTratsSQLUserUltimo(db, pb, userid,ultimo) {
                 localtrats.push(trat)
             }
         }
+        await setTratsSQL(db, localtrats)
     }
     
     await setUltimoTratsSQL(db)

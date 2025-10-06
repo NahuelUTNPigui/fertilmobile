@@ -631,28 +631,6 @@
         caboff = await getCabOffline();
         usuarioid = useroff.id;
     }
-    async function updateLocalSQL() {
-        await setInternetSQL(db, 1, Date.now());
-        animales = await getUpdateLocalAnimalesSQLUser(
-            db,
-            pb,
-            usuarioid,
-            caboff.id,
-        );
-        let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
-            db,
-            pb,
-            usuarioid,
-            caboff.id,
-        );
-        lotes = lotesrodeos.lotes;
-        rodeos = lotesrodeos.rodeos;
-        let restipos = await getTiposTratSQL(db);
-        tipotratamientos = restipos.lista.filter(
-            (tt) => tt.generico || tt.cab == caboff.id,
-        );
-        filterUpdate();
-    }
     async function getLocalSQL() {
         getlocal = true;
         let resanimales = await getAnimalesSQL(db);
@@ -673,24 +651,7 @@
         filterUpdate();
         cargado = true;
     }
-    async function oldUpdate() {
-        if (coninternet.connected) {
-            if (lastinter.internet == 0) {
-                await updateLocalSQL();
-            } else {
-                let ahora = Date.now();
-                let antes = lastinter.ultimo;
-                const cincoMinEnMs = 300000;
-                if (ahora - antes >= cincoMinEnMs) {
-                    await updateLocalSQL();
-                } else {
-                    await getLocalSQL();
-                }
-            }
-        } else {
-            await getLocalSQL();
-        }
-    }
+    
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();

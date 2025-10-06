@@ -1,7 +1,16 @@
 <script>
     import estilos from "$lib/stores/estilos";
+    import { onMount } from "svelte";
 
-    let {lista,etiqueta,valor=$bindable(""),cadena=$bindable(""),onelegir=()=>{},onwrite=()=>{},size="w-4/5"} = $props()
+    let {
+        lista = $bindable([]),
+        etiqueta,
+        valor=$bindable(""),
+        cadena=$bindable(""),
+        onelegir=()=>{},
+        onwrite=()=>{},
+        size="w-4/5"
+    } = $props()
     let listarow = $state(lista)
     let isOpen = $state(false)
     let nombre = $state("")
@@ -43,9 +52,12 @@
         cadena = listarow.filter(l=>l.id==id)[0].nombre
         nombre = cadena
     }
-    
+    //onMount(()=>{
+    //    cambioCadena()
+    //})
     
 </script>
+
 <div class="w-full">
     
     <label for = "" class="label">

@@ -48,6 +48,8 @@
     import {
         setAnimalesSQL,
         getAnimalesSQL,
+        setUltimoCeroAnimalesSQL,
+        setUltimoHistorialAnimalesSQL,
         setUltimoAnimalesSQL,
         getUltimoAnimalesSQL,
         updateLocalAnimalesSQL,
@@ -80,7 +82,9 @@
         getTactosSQL,
         setUltimoTactosSQL,
         getUltimoTactosSQL,
+        setUltimoCeroEventosSQL
     } from "$lib/stores/sqlite/dbeventos";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { loger } from "$lib/stores/logs/logs.svelte";
@@ -460,21 +464,13 @@
     async function updateLocalSQL() {
         
         let ultimo_animal = await getUltimoAnimalesSQL(db)
-        if(modedebug){
-            loger.addTextLinea(464)
-        }
+
         animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
-        if(modedebug){
-            loger.addTextLinea(468)
-        }
+
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
-        if(modedebug){
-            loger.addTextLinea(472)
-        }
+
         tactos = await updateLocalTactosSQLUserUltimo(db, pb, usuarioid,ultimo_tacto.ultimo);
-        if(modedebug){
-            loger.addTextLinea(475)
-        }
+
         //await setUltimoTactosSQL(db);
         //await setUltimoAnimalesSQL(db);
         onChangeTactos();

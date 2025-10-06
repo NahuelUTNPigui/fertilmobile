@@ -25,6 +25,7 @@
         esServicio = $bindable(true) ,
         padres =  $bindable([]),
         listapadres  = $bindable([]),
+        listamadres  = $bindable([]),
         madres =  $bindable([]),
         animales = $bindable([]),
         cargadoanimales = $bindable(false),
@@ -32,7 +33,14 @@
         guardarInseminacion
 
     } = $props()
-
+    let nombremadre = $state("")
+    let nombrepadre = $state("")
+    //inseminacion
+    let idanimalins = $state("")
+    let padreins = $state("")
+    //Servicio
+    let idanimalser = $state("")
+    let padreser = $state("")
     let options = [
         {id:true,nombre:"Servicio"},
         {id:false,nombre:"Inseminación"}
@@ -93,6 +101,7 @@
     }
 
     function oninputIns(campo){
+        inseminacion.idanimalins = idanimalins
         validarBotonIns()
         if(!agregaranimal && campo == "ANIMAL"){
             if(isEmpty(inseminacion.idanimalins)){
@@ -104,6 +113,7 @@
             }
         }
         if(campo == "PADRE"){
+
             if(isEmpty(inseminacion.padreins)){
                 inseminacion.malpadreins = true
             }
@@ -131,6 +141,7 @@
         }
     }
     function oninputSer(campo){
+        servicio.idanimalser = idanimalser
         validarBotonSer()
         if(campo == "ANIMAL"){
             if(servicio.idanimalser==""){
@@ -172,32 +183,44 @@
     <div class="form-control">
         <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
         {#if !agregaranimal}
-            <label for = "animal" class="label">
-                <span class="label-text text-base">Animal</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2}
-                    `}
-                    bind:value={servicio.idanimalser}
-                    onchange={()=>oninputSer("ANIMAL")}
-                >   
-                    {#each madres as a}
-                        <option value={a.id}>{a.caravana}</option>    
-                    {/each}
-                </select>
-                {#if servicio.malanimalser}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500">Debe seleccionar el animal</span>                    
-                    </div>
-                {/if}
-            </label>
+            <div class="hidden">
+                <label for = "animal" class="label">
+                    <span class="label-text text-base">Animal</span>
+                </label>
+                <label class="input-group ">
+                    <select 
+                        class={`
+                            select select-bordered w-full
+                            border border-gray-300 rounded-md
+                            focus:outline-none focus:ring-2 
+                            focus:ring-green-500 
+                            focus:border-green-500
+                            ${estilos.bgdark2}
+                        `}
+                        bind:value={servicio.idanimalser}
+                        onchange={()=>oninputSer("ANIMAL")}
+                    >   
+                        {#each madres as a}
+                            <option value={a.id}>{a.caravana}</option>    
+                        {/each}
+                    </select>
+                    {#if servicio.malanimalser}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500">Debe seleccionar el animal</span>                    
+                        </div>
+                    {/if}
+                </label>
+            </div>
+            {#if cargadoanimales}
+                <PredictSelect 
+                    bind:valor={idanimalser} 
+                    etiqueta = {"Madre"} 
+                    bind:cadena={nombremadre} 
+                    bind:lista = {listamadres} 
+                    onelegir={()=>oninputSer("ANIMAL")}
+                >
+                </PredictSelect>
+            {/if}
             <label for = "categoria" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>
@@ -324,6 +347,9 @@
     <div class="form-control">
         <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
         {#if !agregaranimal}
+            <div class="hidden">
+
+            
             <label for = "nombre" class="label">
                 <span class="label-text text-base">Caravana</span>
             </label>
@@ -350,6 +376,18 @@
                 {/if}
 
             </label>
+            </div>
+            {#if cargadoanimales}
+                <PredictSelect 
+                    bind:valor={idanimalser} 
+                    etiqueta = {"Madre"} 
+                    bind:cadena={nombremadre} 
+                    bind:lista = {listamadres} 
+                    onelegir={()=>oninputSer("ANIMAL")}
+                >
+                    
+                </PredictSelect>
+            {/if}
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>

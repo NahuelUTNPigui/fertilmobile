@@ -1,4 +1,5 @@
 <script>
+    import PredictSelect from '$lib/components/PredictSelect.svelte';
     import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
     import estilos from '$lib/stores/estilos';
     import RadioButton from '$lib/components/RadioButton.svelte';
@@ -20,10 +21,14 @@
         tacto = $bindable({}),
         prenadatacto=$bindable(0),
         madres = $bindable([]),
+        listamadres = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarTacto
 
     } = $props()
+    let nombreanimal = $state("")
+    let animaltacto = $state("")
+    
     let option=$state(0)
     const HOY = new Date().toISOString().split("T")[0]
     function validarBotonTacto(){
@@ -46,8 +51,10 @@
         
     }
     function oninputTacto(inputName){
+        tacto.animaltacto = animaltacto
         validarBotonTacto()
         if(!agregaranimal && inputName == "ANIMAL"){
+            
             if(isEmpty(tacto.animaltacto)){
                 tacto.malanimaltacto = true
             }
@@ -73,6 +80,7 @@
         })
         
     }
+
 </script>
 <div class="form-control">
     {#if modedebug}
@@ -89,29 +97,40 @@
     {/if}
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
     {#if !agregaranimal}
-        
-        <label for = "animal" class="label">
-            <span class={estilos.labelForm}>Animal</span>
-        </label>
-        <label class="input-group ">
-            <select 
-                class={`
-                    select select-bordered w-full
-                    border border-gray-300 rounded-md
-                    focus:outline-none focus:ring-2 
-                    focus:ring-green-500 
-                    focus:border-green-500
-                    ${estilos.bgdark2}
-                `}
+        <div class="hidden">
+            <label for = "animal" class="label">
+                <span class={estilos.labelForm}>Animal</span>
+            </label>
+            <label class="input-group ">
+                <select 
+                    class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2}
+                    `}
+                    
+                    bind:value={tacto.animaltacto}
+                    onchange={()=>oninputTacto("ANIMAL")}
+                >
+                    {#each madres as a}
+                        <option value={a.id}>{a.caravana}</option>    
+                    {/each}
+                </select>
+            </label>
+        </div>
+        {#if cargadoanimales}
+            <PredictSelect 
+                bind:valor={animaltacto} 
+                etiqueta = {"Animal"} 
+                bind:cadena={nombreanimal} 
+                bind:lista = {listamadres} 
+                onelegir={()=>oninputTacto("ANIMAL")}>
                 
-                bind:value={tacto.animaltacto}
-                onchange={()=>oninputTacto("ANIMAL")}
-            >
-                {#each madres as a}
-                    <option value={a.id}>{a.caravana}</option>    
-                {/each}
-            </select>
-        </label>
+            </PredictSelect>
+        {/if}
         
         <label for = "tipo" class="label">
             <span class={estilos.labelForm}>Categoria</span>

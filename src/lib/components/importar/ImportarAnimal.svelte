@@ -348,16 +348,6 @@
                     }
                 }
             } else {
-                //let test = {
-                //    ...animales[aidx],
-                //    ...datamod
-                //}
-                //if(modedebug){
-                //    loger.addLog({
-                //        time:Date.now(),
-                //        text:"update"
-                //    })
-                //}
 
                 try {
                     await pb
@@ -394,12 +384,6 @@
                     }
 
                     //Falta el historial del animal
-                    //if(modedebug){
-                    //    loger.addLog({
-                    //        time:Date.now(),
-                    //        text:JSON.stringify(datamod,null,2)
-                    //    })
-                    //}
                 } catch (err) {
                     errores = true;
                     //if(modedebug){

@@ -60,7 +60,38 @@ export async function addNewEstablecimientoSQL(db,establecimiento) {
     await setEstablecimientosSQL(db,lista)
     return establecimientos
 }
+export async function getUpdateLocalEstablecimientosSQLUltimo(db,pb,userid,ultimo) {
+    let fechaultimo = addDays(new Date(ultimo),-1)
+    let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
+    const records = await pb.collection('cabs').getFullList({
+        filter:`user='${userid}' && updated> '${fechaultimostring}'`,
+    });
+    let establecimientos = records
+    //Asociados
+    let resasociados = await getEstablecimientosAsociadosSQL(db)
+    let asociados = resasociados.lista
+    let caboff = await getCabOffline() 
+    if(caboff.colaborador){
+        if(!asociados.includes(caboff.id)){
+            asociados.push(caboff.id)
+        }
+    }
 
+    for(let i = 0;i<asociados.length;i++){
+        //Necesito los permisos
+        let est_asociados = await pb.collection('cabs').getFullList({
+            filter:`id='${asociados[i]}'`,
+            
+        });
+        if(est_asociados.length > 0){
+            establecimientos.push(est_asociados[0])
+        }
+    }
+    //Fin Asociados
+    await setEstablecimientosSQL(db,establecimientos)
+    await setUltimoEstablecimientosSQL(db)
+    return establecimientos
+}
 export async function getUpdateLocalEstablecimientosSQL(db,pb,userid) {
     const records = await pb.collection('cabs').getFullList({
         filter:`user='${userid}' && active=true`,

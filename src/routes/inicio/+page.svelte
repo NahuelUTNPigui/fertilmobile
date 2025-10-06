@@ -103,7 +103,10 @@
         updateLocalHistorialAnimalesSQLUser,
         updateLocalAnimalesSQLUserUltimo,
         setUltimoCeroAnimalesSQL,
-        setUltimoHistorialAnimalesSQL
+        setUltimoHistorialAnimalesSQL,
+
+        setUltimoCeroHistorialAnimalesSQL
+
     } from "$lib/stores/sqlite/dbanimales";
     //import {updateLocalEstablecimientoSQL} from '$lib/stores/sqlite/dbestablecimiento';
     import { setUltimoCeroEstablecimientosSQL, updateLocalEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
@@ -127,6 +130,7 @@
         setEstablecimientoSQL,
         getEsblecimientoSQL,
         updateLocalEstablecimientoSQL,
+        
     } from "$lib/stores/sqlite/dbestablecimiento";
     //asociados
     import { updateLocalIDAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
@@ -189,6 +193,7 @@
     let listaanimales = $state([]);
     let madres = $state([]);
     let padres = $state([]);
+    
     let listamadres = $state([]);
     let listapadres = $state([]);
 
@@ -1874,7 +1879,7 @@
         const hasUltimo = localStorage.getItem("ultimo") === "si";
         if(!hasUltimo){
             await setUltimoCeroAnimalesSQL(db)
-            await setUltimoHistorialAnimalesSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
             await setUltimoCeroEventosSQL(db)
             await setUltimoCeroEstablecimientosSQL(db)
             localStorage.setItem("ultimo","si")
@@ -1978,9 +1983,6 @@
                 ahora,
                 antes,
             );
-            //if(modedebug){
-            //    mustUpdate = true
-            //}
             
             await getTotales()
             if (modedebug) {
@@ -2339,6 +2341,7 @@
             bind:tacto
             bind:prenadatacto
             bind:madres
+            bind:listamadres
             bind:cargadoanimales
             {guardarTacto}
         ></InicioTacto>
@@ -2406,6 +2409,7 @@
             bind:categoria
             bind:agregaranimal
             bind:tipotratamientos
+            bind:listaanimales
             bind:animales={animalescab}
             bind:tratamiento
             bind:cargadoanimales
@@ -2438,6 +2442,7 @@
             bind:sexo
             bind:peso
             bind:fechanacimiento
+            bind:listaanimales
             bind:animales={animalescab}
             bind:cargadoanimales
             bind:observacion
@@ -2480,6 +2485,7 @@
             bind:inseminacion
             bind:cargadoanimales
             bind:listapadres
+            bind:listamadres
             {guardarInseminacion}
             {guardarServicio}
         ></InicioServicio>

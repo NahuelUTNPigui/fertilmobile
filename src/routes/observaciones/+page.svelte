@@ -41,12 +41,22 @@
         getAnimalesSQL,
         setUltimoAnimalesSQL,
         updateLocalAnimalesSQLUser,
+        setUltimoCeroAnimalesSQL,
+        setUltimoHistorialAnimalesSQL,
+        getUltimoAnimalesSQL,
+
+        updateLocalAnimalesSQLUserUltimo,
+
+        setUltimoCeroHistorialAnimalesSQL
+
+
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
         setComandosSQL,
         flushComandosSQL,
     } from "$lib/stores/sqlite/dbcomandos";
+    import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import {
         getTotalSQL,
         setTotalSQL,
@@ -69,6 +79,8 @@
         updateLocalObservacionesSQLUser,
         setUltimoObservacionesSQL,
         getUltimoObservacionesSQL,
+        setUltimoCeroEventosSQL,
+        updateLocalObservacionesSQLUserUltimo
     } from "$lib/stores/sqlite/dbeventos";
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
@@ -76,9 +88,11 @@
     import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import Info from "$lib/components/toast/Info.svelte";
-import Nube from "$lib/components/toast/Nube.svelte";
+    import Nube from "$lib/components/toast/Nube.svelte";
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
+    let tieneUltimo = $state(false)
     let infotoast = $state(false);
     let nubetoast = $state(false)
     let db = $state(null);
@@ -592,6 +606,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
             comandos.push(comando);
             data.id = idprov;
             await setComandosSQL(db, comandos);
+            let animalobservacion = animales.filter((an) => an.id == animal)[0]
             data.expand = {
                 animal:{...animalobservacion} ,
                 cab: { id: caboff.id },
@@ -610,7 +625,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
             filterUpdate();
         }
     }
-    async function guardar2() {
+    async function guardar() {
         coninternet = await getInternet(
             modedebug,
             offliner.offline,
@@ -812,28 +827,47 @@ import Nube from "$lib/components/toast/Nube.svelte";
         usuarioid = useroff.id;
     }
     function changeObservacion() {
-        observacionescab = observaciones.filter((o) => o.cab == caboff.id);
+        observacionescab = observaciones.filter((o) => o.cab == caboff.id  && o.active);
     }
     function changeAnimales() {
         animalescab = animales.filter((a) => a.cab == caboff.id);
     }
+    async function ultimoLocalStorage(){
+        const hasUltimo = localStorage.getItem("ultimo") === "si";
+        if(!hasUltimo){
+            await setUltimoCeroAnimalesSQL(db)
+            await setUltimoCeroHistorialAnimalesSQL(db)
+            await setUltimoCeroEventosSQL(db)
+            await setUltimoCeroEstablecimientosSQL(db)
+            localStorage.setItem("ultimo","si")
+        }
+        tieneUltimo = hasUltimo
+    }
     async function updateLocalSQL() {
 
-        
-        observaciones = await updateLocalObservacionesSQLUser(
+        let ultimo_animal = await getUltimoAnimalesSQL(db)
+
+        observaciones = await updateLocalObservacionesSQLUserUltimo(
             db,
             pb,
             usuarioid,
+            ultimo_observaciones.ultimo
         );
+
         observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
-            );
-        animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
-        await setUltimoObservacionesSQL(db);
-        await setUltimoAnimalesSQL(db);
+        );
+
+        animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+
+        //await setUltimoObservacionesSQL(db);
+        //await setUltimoAnimalesSQL(db);
         changeAnimales();
+
         changeObservacion();
+
         filterUpdate();
+
         cargado = true;
     }
     async function getLocalSQL() {
@@ -860,33 +894,15 @@ import Nube from "$lib/components/toast/Nube.svelte";
             }
         }
     }
-    async function oldUpdate() {
-        if (lastinter.internet == 0) {
-            if (modedebug) {
-                loger.addLog({
-                    time: Date.now(),
-                    text: "updatelocalsql",
-                });
-            }
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-    }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
+        await ultimoLocalStorage()
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
-        let ultimo_observaciones = await getUltimoObservacionesSQL(db);
+        ultimo_observaciones = await getUltimoObservacionesSQL(db);
         comandos = rescom.lista;
         let ahora = Date.now();
         let antes = ultimo_observaciones.ultimo;
@@ -1254,7 +1270,7 @@ import Nube from "$lib/components/toast/Nube.svelte";
                     <button
                         class="btn btn-success text-white"
                         disabled={!botonhabilitado}
-                        onclick={guardar2}>Guardar</button
+                        onclick={guardar}>Guardar</button
                     >
                 {:else}
                     <button

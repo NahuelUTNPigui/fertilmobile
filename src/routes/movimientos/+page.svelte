@@ -1105,21 +1105,6 @@
             }
         }
     }
-    async function oldUpdate() {
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            let ahora = Date.now();
-            let antes = ultimo_animal.ultimo;
-            const cincoMinEnMs = 300000;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-    }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();

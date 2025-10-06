@@ -191,10 +191,7 @@ export async function updateLocalAnimalesSQLUserUltimo(db, pb, userid, ultimo) {
     //---fin
     let dbanimales = await getAnimalesSQL(db)
     let localanimales = dbanimales.lista
-    //if(modedebug){
-    //    loger.addTextLog("local: "+localanimales.length)
-    //    loger.addTextLog("nube: "+animales.length)
-    //}
+
     //Si el local de animales esta vacio, pisa
     if(localanimales.length == 0){
         await setAnimalesSQL(db, animales)
@@ -234,6 +231,11 @@ export async function updateLocalAnimalesSQL(db, pb, cabid) {
     let animales = recordsa
     await setAnimalesSQL(db, animales)
     await setUltimoAnimalesSQL(db)
+    return animales
+}
+export async function getUpdateLocalAnimalesSQLUserUltimo(db, pb, userid, cabid,ultimo) {
+    let animales = await updateLocalAnimalesSQLUserUltimo(db, pb, userid,ultimo)
+    animales = animales.filter(a => a.active && a.cab == cabid)
     return animales
 }
 export async function getUpdateLocalAnimalesSQLUser(db, pb, userid, cabid) {

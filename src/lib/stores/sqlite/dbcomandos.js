@@ -155,7 +155,9 @@ async function addComando(pb, c, tablaids) {
     delete data.id
     let res = { id: "x" }
     try {
-        return await pb.collection(coleccion).create(data)
+        
+        let record =  await pb.collection(coleccion).create(data)
+        return record
     }
     catch (err) {
         console.error(err)
