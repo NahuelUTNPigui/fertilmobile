@@ -101,11 +101,11 @@
     if(modedebug){
       let platform = getPlatform()
       loger.addTextLog(JSON.stringify(platform))
-      if(platform != "android"){
-        mt = "mt-4"
-      }
+      
     }
-    
+    if(platform != "android"){
+      mt = "mt-4"
+    }
     //await cabuserSQL()
     let caber = createCaber();
     nombreestablecimiento = caber.cab.nombre;
