@@ -430,13 +430,6 @@
             return new Date(t1.fecha) > new Date(t2.fecha) ? -1 : 1;
         });
     }
-    async function onmountoriginal() {
-        let pb_json = await JSON.parse(localStorage.getItem("pocketbase_auth"));
-        usuarioid = pb_json.record.id;
-        await getTactos();
-        filterUpdate();
-        await getAnimales();
-    }
     async function initPage() {
         coninternet = await getInternet(
             modedebug,
@@ -776,7 +769,9 @@
             </div>
         </div>
     </div>
-    <div class="grid grid-cols-1 m-1 mb-2 mt-1 mx-1 lg:mx-10 w-11/12">
+    <div 
+        class="grid grid-cols-1 lg:grid-cols-2 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12"
+    >
         <div class="w-full lg:w-1/2">
             <label
                 class={`
@@ -792,6 +787,9 @@
                     oninput={filterUpdate}
                 />
             </label>
+        </div>
+        <div class="w-11/12">
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">

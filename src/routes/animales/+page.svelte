@@ -847,22 +847,6 @@
         getpermisos = caboff.permisos;
         usuarioid = useroff.id;
     }
-    async function oldGetUpdate() {
-        if (lastinter.internet == 0) {
-            //Para que cuando vaya al inicio se actualice si o si
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            let ahora = Date.now();
-            let antes = ultimo_animal.ultimo;
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-    }
     async function ultimoLocalStorage(){
         const hasUltimo = localStorage.getItem("ultimo") === "si";
         if(!hasUltimo){

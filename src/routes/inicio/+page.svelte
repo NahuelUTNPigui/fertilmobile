@@ -1852,6 +1852,9 @@
         //loger.addTextError(JSON.stringify(data,null,2))
     }
     function onChangeAnimales() {
+        if(modedebug){
+            loger.addTextLinea(caboff.id)
+        }
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
         listaanimales = animalescab.map((a) => {
             return { id: a.id, nombre: a.caravana };
@@ -1875,7 +1878,7 @@
         delete localStorage["ultimo"]
         await ultimoLocalStorage()
     }
-    async function ultimoLocalStorage(){
+    async function ultimoLocalStorage(hasLoggedIn){
         const hasUltimo = localStorage.getItem("ultimo") === "si";
         if(!hasUltimo){
             await setUltimoCeroAnimalesSQL(db)
@@ -1884,7 +1887,21 @@
             await setUltimoCeroEstablecimientosSQL(db)
             localStorage.setItem("ultimo","si")
         }
+        //else if(hasLoggedIn){
+        //    await setUltimoCeroAnimalesSQL(db)
+        //    await setUltimoCeroHistorialAnimalesSQL(db)
+        //    await setUltimoCeroEventosSQL(db)
+        //    await setUltimoCeroEstablecimientosSQL(db)
+        //}
         tieneUltimo = hasUltimo
+    }
+    function getPlatform() {
+        if (window.Capacitor) {
+            if (window.Capacitor.getPlatform) {
+            return window.Capacitor.getPlatform(); // 'ios', 'android', 'web'
+            }
+        }
+        return 'android'; // fallback
     }
     async function initPage() {
         
@@ -1902,26 +1919,10 @@
         getpermisos = caboff.permisos;
         usuarioid = useroff.id;
         cab = caber.cab;
-    }
-    async function oldDataUpdate() {
-        if (cab.cambio || lastinter.internet == 0) {
-            await updateLocalSQL(db);
-            await setInternetSQL(db, 1, Date.now());
-        } else {
-            //Logica con internet previo
-            let ahora = Date.now();
-            let antes = lastinter.ultimo;
-            const cincoMinEnMs = ACTUALIZACION;
-
-            if (ahora - antes >= cincoMinEnMs) {
-                comandos = [];
-                await updateLocalSQL(db);
-                await setInternetSQL(db, 1, ahora);
-            } else {
-                s;
-
-                await getLocalSQL(db);
-            }
+        const hasPlatform = localStorage.getItem("platform") === "ios"||localStorage.getItem("platform") === "android";
+        if(!hasPlatform){
+            let platform = getPlatform()
+            loger.addTextLog(JSON.stringify(platform))
         }
     }
     async function getDataSQL() {
@@ -1932,13 +1933,14 @@
         );
 
         db = await openDB();
-        await ultimoLocalStorage()
+        const hasLoggedIn = localStorage.getItem("hasLoggedIn") === "si";
+        await ultimoLocalStorage(hasLoggedIn)
         //Reviso el internet
         lastinter = await getUltimoAnimalesSQL(db);
         let rescom = await getComandosSQL(db);
         //let ultimo_animal = await getUltimoAnimalesSQL(db)
         //verifica si venis del login
-        const hasLoggedIn = localStorage.getItem("hasLoggedIn") === "si";
+        
   
         if (hasLoggedIn) {
             //Elimino la lista de asociados y si quiero no eliminarla?
@@ -2000,7 +2002,7 @@
                 nubetoast=true
                 setTimeout(async () => {
                     try {
-                        await updateLocalSQL(db);
+                        await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
                         nubetoast = false
                         infotoast = true;

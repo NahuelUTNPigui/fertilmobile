@@ -104,7 +104,23 @@
         ...defaultfiltro,
     });
     let proxy = createStorageProxy("listarodeos", defaultfiltro);
-
+    //filtros animales
+    let defaultfiltroanimales = {
+        buscar: "",
+        rodeobuscar: "",
+        rodeoseleccion: [],
+        loteseleccion: [],
+        categoriaseleccion: [],
+        sexobuscar: "",
+        lotebuscar: "",
+        estadobuscar: "",
+        categoriabuscar: "",
+        activosbuscar: "activos",
+    };
+    let proxyfiltrosanimales = $state({
+        ...defaultfiltroanimales,
+    });
+    let proxyanimales = createStorageProxy("listaanimales", defaultfiltro);
     //Guardar
     let idrodeo = $state("");
     let nombre = $state("");
@@ -548,6 +564,12 @@
         }
         tieneUltimo = hasUltimo
     }
+    function goToAnimales(){
+        proxyanimales.load()
+        proxyfiltrosanimales.rodeoseleccion = [`${idrodeo}`]
+        proxyanimales.save(proxyfiltrosanimales)
+        goto("/animales")
+    }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();
@@ -837,6 +859,9 @@
                         >Eliminar</button
                     >
                 {/if}
+                <button class="btn btn-info" onclick={goToAnimales}
+                    >Ver animales</button
+                >
                 <button class="btn btn-neutral" onclick={cerrarModal}
                     >Cerrar</button
                 >

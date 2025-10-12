@@ -1085,12 +1085,7 @@
         }
         onInput("PAJUELA");
     }
-    async function onMountOriginal() {
-        await getAnimales();
-        await getRodeos();
-        await getLotes();
-        cargado = true;
-    }
+    
     async function getServiciosInseminacionesSQL() {
         let resservicios = await getServiciosSQL(db);
         let resinseminaciones = await getInseminacionesSQL(db);

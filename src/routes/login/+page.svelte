@@ -20,6 +20,7 @@
     import { loger } from '$lib/stores/logs/logs.svelte';
     
     
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let ruta = import.meta.env.VITE_RUTA
     const pb = new PocketBase(ruta);
@@ -177,6 +178,8 @@
     }
     onMount(async ()=>{
         coninternet = await Network.getStatus();
+        
+        
     })
 </script>
 <svelte:window on:keydown={keyEvent}></svelte:window>

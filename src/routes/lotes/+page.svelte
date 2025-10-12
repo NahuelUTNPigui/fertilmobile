@@ -71,6 +71,7 @@
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
+    import { goto } from "$app/navigation";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
@@ -113,6 +114,25 @@
         ...defaultfiltro,
     });
     let proxy = createStorageProxy("listalotes", defaultfiltro);
+
+    //filtros animales
+    let defaultfiltroanimales = {
+        buscar: "",
+        rodeobuscar: "",
+        rodeoseleccion: [],
+        loteseleccion: [],
+        categoriaseleccion: [],
+        sexobuscar: "",
+        lotebuscar: "",
+        estadobuscar: "",
+        categoriabuscar: "",
+        activosbuscar: "activos",
+    };
+    let proxyfiltrosanimales = $state({
+        ...defaultfiltroanimales,
+    });
+    let proxyanimales = createStorageProxy("listaanimales", defaultfiltro);
+
     //Guardar
     let idlote = $state("");
     let nombre = $state("");
@@ -143,6 +163,12 @@
         idlote = "";
             nombre = "";
             nuevoModal.showModal();
+    }
+    function goToAnimales(){
+        proxyanimales.load()
+        proxyfiltrosanimales.loteseleccion = [`${idlote}`]
+        proxyanimales.save(proxyfiltrosanimales)
+        goto("/animales")
     }
     async function guardarOnline() {
         caboff = await updatePermisos(pb, usuarioid);
@@ -864,6 +890,9 @@
                         >Eliminar</button
                     >
                 {/if}
+                <button class="btn btn-info" onclick={goToAnimales}
+                    >Ver animales</button
+                >
                 <button class="btn btn-neutral" onclick={cerrarModal}
                     >Cerrar</button
                 >

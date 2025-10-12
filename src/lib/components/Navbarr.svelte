@@ -23,7 +23,7 @@
   import Servicio from "$lib/svgs/servicio.svelte";
   import Tacto from "$lib/svgs/tacto.svelte";
   import Tratamiento from "$lib/svgs/tratamiento.svelte";
-
+  import { loger } from "$lib/stores/logs/logs.svelte";
   import {
     getUserOffline,
     setDefaultUserOffline,
@@ -65,6 +65,8 @@
   let rol = "Establecimiento";
   let nombreestablecimiento = $state("");
 
+
+  let mt=$state("mt-0")
   async function cabuserSQL() {
     let caber = createCaber();
     useroff = await getUserOffline();
@@ -80,13 +82,30 @@
     usuarioid = useroff.id;
     nombreusuario = useroff.username;
   }
+
   //let rol = "cab"
+  function getPlatform() {
+      if (window.Capacitor) {
+          if (window.Capacitor.getPlatform) {
+          return window.Capacitor.getPlatform(); // 'ios', 'android', 'web'
+          }
+      }
+      return 'android'; // fallback
+  }
   onMount(async () => {
     coninternet = await getInternet(
       modedebug,
       offliner.offline,
       customoffliner.customoffliner,
     );
+    if(modedebug){
+      let platform = getPlatform()
+      loger.addTextLog(JSON.stringify(platform))
+      if(platform != "android"){
+        mt = "mt-4"
+      }
+    }
+    
     //await cabuserSQL()
     let caber = createCaber();
     nombreestablecimiento = caber.cab.nombre;
@@ -154,17 +173,18 @@
   }
   let bgnav = "bg-green-500";
   let classtext = `text-lg px-2 font-extrabold`;
-  let classnavbarr = `navbar ${bgnav}`;
+  let classnavbarr = `navbar ${bgnav} `;
   let classtextnavbar = `text-white font-extrabold dark:text-gray-700`;
+  
 </script>
 
 <div
-  class="drawer min-h-screen dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800"
+  class="drawer min-h-screen dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 "
 >
   <input id="my-drawer" type="checkbox" class="drawer-toggle" bind:checked />
   <div class="drawer-content w-full">
     <div class={classnavbarr}>
-      <div class="flex-none">
+      <div class={`flex-none ${mt}`}>
         <button
           aria-label="menu"
           class={`mx-1 px-0 btn btn-ghost ${classtextnavbar}`}
@@ -188,7 +208,7 @@
       <div class="flex-1">
         <a
           href={"/establecimientos"}
-          class={`ps-0 btn btn-ghost text-xl ${classtextnavbar}`}
+          class={` ps-0 btn btn-ghost text-xl ${classtextnavbar}`}
         >
           {shorterWord(nombreestablecimiento)}
         </a>
@@ -280,6 +300,7 @@
 
     <ul
       class="
+          
           overflow-y-auto
           menu bg-gradient-to-br from-white to-gray-100
           dark:from-gray-900 dark:to-gray-800
@@ -287,14 +308,14 @@
           w-2/3 lg:w-1/4 p-4
         "
     >
-      <div class="border-b border-green-500">
+      <div class="border-b border-green-500 ">
         <h1 class="text-lg text-green-600 dark:text-green-400 italic">
           {`Fertil - ${nombreestablecimiento}`}
         </h1>
       </div>
 
       <li
-        class={`mt-0 ${pageurl.includes("inicio") ? "bg-green-400 text-green-900 dark:bg-green-900 dark:text-green-200 bg-opacity-25" : ""} rounded-full`}
+        class={`${mt} ${pageurl.includes("inicio") ? "bg-green-400 text-green-900 dark:bg-green-900 dark:text-green-200 bg-opacity-25" : ""} rounded-full`}
       >
         <a class={classtext} href="/inicio">
           <svg

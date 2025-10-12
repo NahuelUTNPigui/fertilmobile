@@ -491,10 +491,6 @@
         columnas = Array.from(setfechas);
         columnas.sort((a, b) => (new Date(a) < new Date(b) ? -1 : 1));
     }
-    async function onMountOriginal() {
-        await getPesajes();
-        filterUpdate();
-    }
     function onChangePesajes() {
         pesajescab = pesajes.filter((p) => p.expand.animal.cab == caboff.id);
         pesajescab.sort((p1, p2) =>

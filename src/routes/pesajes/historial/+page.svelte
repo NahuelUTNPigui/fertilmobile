@@ -362,10 +362,6 @@
 
         detallePesaje.showModal();
     }
-    async function onMountOriginal() {
-        await getPesajes();
-        filterUpdate();
-    }
     async function getLocalSQL() {
         getlocal = true;
         let respesajes = await getPesajesSQL(db);

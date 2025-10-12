@@ -861,15 +861,8 @@
         }
         tratamientosrow.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     }
-    async function onmountoriginal(params) {
-        await getTratamientos();
-        await getTiposTratamientos();
-        await getAnimales();
-        filterUpdate();
-    }
-    //Esto se podria poner en otro archivo
-    //PUede ser hasta un store
-    //ENcima pocket base taambien guardar la info del usuario
+    
+
     async function initPage() {
         coninternet = await getInternet(
             modedebug,
@@ -938,19 +931,7 @@
             }
         }
     }
-    async function oldUpdate() {
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-    }
+    
     async function ultimoLocalStorage(){
         const hasUltimo = localStorage.getItem("ultimo") === "si";
         if(!hasUltimo){
