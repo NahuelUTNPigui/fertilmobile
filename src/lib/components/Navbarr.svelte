@@ -206,7 +206,7 @@
           <span class="hidden md:block text-lg font-bold">Menu</span>
         </button>
       </div>
-      <div class="flex-1">
+      <div class={`flex-1 ${mt}`}>
         <a
           href={"/establecimientos"}
           class={` ps-0 btn btn-ghost text-xl ${classtextnavbar}`}
@@ -214,7 +214,7 @@
           {shorterWord(nombreestablecimiento)}
         </a>
       </div>
-      <div class="flex mr-1 pr-1 lg:mr-5 lg:pr-5">
+      <div class={`flex mr-1 pr-1 lg:mr-5 lg:pr-5 ${mt}`}>
         <details class="dropdown dropdown-end">
           <summary
             class={`btn m-0 p-0 bg-transparent hover:bg-transparent ${classtextnavbar} border-none`}
@@ -300,14 +300,14 @@
     ></label>
 
     <ul
-      class="
-          
+      class={`
+          ${mt}
           overflow-y-auto
           menu bg-gradient-to-br from-white to-gray-100
           dark:from-gray-900 dark:to-gray-800
           text-base-content min-h-full
           w-2/3 lg:w-1/4 p-4
-        "
+        `}
     >
       <div class="border-b border-green-500 ">
         <h1 class="text-lg text-green-600 dark:text-green-400 italic">
