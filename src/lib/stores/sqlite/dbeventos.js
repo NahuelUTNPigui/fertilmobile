@@ -448,7 +448,7 @@ export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
     let localtactos = dbtactos.lista
 
     if(localtactos.length==0){
-        await setTactosSQL(tactos)
+        await setTactosSQL(db,tactos)
         localtactos = tactos
     }
     else{
@@ -468,6 +468,7 @@ export async function updateLocalTactosSQLUserUltimo(db, pb, userid,ultimo) {
                 localtactos.push(tacto)
             }
         }
+
         await setTactosSQL(db, localtactos)
     }
 

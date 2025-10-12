@@ -49,6 +49,7 @@
         setAnimalesSQL,
         getAnimalesSQL,
         setUltimoCeroAnimalesSQL,
+        setUltimoCeroHistorialAnimalesSQL,
         setUltimoHistorialAnimalesSQL,
         setUltimoAnimalesSQL,
         getUltimoAnimalesSQL,
@@ -175,27 +176,11 @@
     function clickFilter() {
         isOpenFilter = !isOpenFilter;
     }
-    async function getTactos() {
-        const recordst = await pb.collection("tactos").getFullList({
-            filter: `cab='${cab.id}' && active=true`,
-            sort: "-fecha",
-            expand: "animal",
-        });
-        tactos = recordst;
-        tactosrow = tactos;
-    }
+    
     function isEmpty(str) {
         return !str || str.length === 0;
     }
-    async function getAnimales() {
-        //Estaria joya que el animal venga con todos los chiches
-        const recordsa = await pb.collection("animales").getFullList({
-            filter: `active=true && cab='${cab.id}' && sexo='H'`,
-            expand: "nacimiento",
-        });
-        animales = recordsa;
-        animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-    }
+    
     function openNewModal() {
         if (permisos[4]) {
             tacto = null;
@@ -455,7 +440,7 @@
         tieneUltimo = hasUltimo
     }
     async function updateLocalSQL() {
-        
+
         let ultimo_animal = await getUltimoAnimalesSQL(db)
 
         animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
@@ -467,6 +452,7 @@
         //await setUltimoTactosSQL(db);
         //await setUltimoAnimalesSQL(db);
         onChangeTactos();
+
         filterUpdate();
 
         caboff = await updatePermisos(pb, usuarioid);
@@ -495,19 +481,6 @@
             if (modedebug) {
                 loger.addTextError(JSON.stringify(err), null, 2);
                 loger.addTextError("Error en flush comandos tactos");
-            }
-        }
-    }
-    async function oldDataUpdate() {
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
             }
         }
     }

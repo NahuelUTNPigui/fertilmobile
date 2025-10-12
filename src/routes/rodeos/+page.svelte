@@ -859,7 +859,7 @@
                         >Eliminar</button
                     >
                 {/if}
-                <button class="btn btn-info" onclick={goToAnimales}
+                <button class="btn btn-info text-white" onclick={goToAnimales}
                     >Ver animales</button
                 >
                 <button class="btn btn-neutral" onclick={cerrarModal}
