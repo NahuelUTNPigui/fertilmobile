@@ -98,8 +98,9 @@
       offliner.offline,
       customoffliner.customoffliner,
     );
+    let platform = getPlatform()
     if(modedebug){
-      let platform = getPlatform()
+      
       loger.addTextLog(JSON.stringify(platform))
       
     }
