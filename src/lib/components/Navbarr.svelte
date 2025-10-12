@@ -105,7 +105,7 @@
       
     }
     if(platform != "android"){
-      mt = "mt-4"
+      mt = "mt-6"
     }
     //await cabuserSQL()
     let caber = createCaber();
