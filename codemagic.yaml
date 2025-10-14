@@ -15,5 +15,18 @@ workflows:
       vars:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
         VITE_MODO_DEV: "no"
-        VITE_VERSION: "2.32
+        VITE_VERSION: "2.32"
+    scripts:
+      - name: Install pnpm
+        script: |
+          npm install -g pnpm
+      - name: agregar ios
+        script : |
+          npx cap add ios
+      - name: Generate iOS assets (icons, splash)
+        script: |
+          npx capacitor-assets generate --ios
+      - name: build && sync
+        script: |
+          pnpm run build && npx cap sync && date
     
