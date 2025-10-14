@@ -3,3 +3,17 @@ workflows:
     name: hola mundo workflow
     scripts:
         - echo "Hola mundo"
+  mi-mac:
+    name: mi mac
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      # Usa pnpm (asegúrate de tener pnpm en tu package.json engines o instálalo)
+      node: latest
+      xcode: latest
+      cocoapods: default
+      vars:
+        VITE_RUTA: "https://testing.crecientefertil.com.ar"
+        VITE_MODO_DEV: "no"
+        VITE_VERSION: "2.32
+    

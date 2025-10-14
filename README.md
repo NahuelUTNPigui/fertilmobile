@@ -51,6 +51,7 @@ Install Android Studio if you haven't and open the project with
 npx cap open android
 si quiero tener el logo y el splahs screen
 npx capacitor-assets generate --android
+npx capacitor-assets generate --ios
 
 
 ## Add device in android studio
