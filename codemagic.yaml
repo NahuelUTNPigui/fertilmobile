@@ -18,7 +18,7 @@ workflows:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
         VITE_MODO_DEV: "no"
         VITE_VERSION: "2.32"
-        XCODE_WORKSPACE: "ios/App.xcworkspace"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         APP_STORE_APPLE_ID: 6753952579
     scripts:
