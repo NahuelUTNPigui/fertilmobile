@@ -10,9 +10,6 @@ workflows:
     integrations:
       app_store_connect: Creciente fertil
     environment:
-      ios_signing:
-        distribution_type: app_store 
-        bundle_identifier: com.fertmob.app
       
       node: latest
       xcode: latest
