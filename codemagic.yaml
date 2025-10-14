@@ -7,6 +7,8 @@ workflows:
     name: mi mac
     instance_type: mac_mini_m2
     max_build_duration: 30
+    integrations:
+      app_store_connect: Creciente fertil
     environment:
       ios_signing:
         distribution_type: app_store 
@@ -19,6 +21,9 @@ workflows:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
         VITE_MODO_DEV: "no"
         VITE_VERSION: "2.32"
+        XCODE_WORKSPACE: "ios/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        APP_STORE_APPLE_ID: 6753952579
     scripts:
       - name: Install dependencies
         script: |
@@ -35,4 +40,25 @@ workflows:
       - name: build && sync
         script: |
           npm run build && npx cap sync && date
-    
+      - name: Set up code signing settings on Xcode project
+        script: | 
+          xcode-project use-profiles
+      - name: Build ipa for distribution
+        script: | 
+          cd ios/App
+          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - ios/App/build/ios/ipa/App.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true 
+        beta_groups: 
+          - testers
+        submit_to_app_store: true
+        cancel_previous_submissions: true
+        release_type: AFTER_APPROVAL
+        copyright: Creciente Fertil
