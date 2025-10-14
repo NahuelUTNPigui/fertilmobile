@@ -26,12 +26,13 @@ workflows:
       - name: Install dependencies
         script: |
           npm install 
-      - name: Cocoapods installation
-        script: | 
-          cd ios/App && pod install
       - name: agregar ios
         script : |
           npx cap add ios
+      - name: Cocoapods installation
+        script: | 
+          cd ios/App && pod install
+      
       - name: Generate iOS assets (icons, splash)
         script: |
           npx capacitor-assets generate --ios
