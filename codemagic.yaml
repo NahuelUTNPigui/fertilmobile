@@ -47,9 +47,14 @@ workflows:
         script: | 
           xcode-project use-profiles
       - name: Build ipa for distribution
-        script: | 
-          
-          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --team-id "$DEVELOPMENT_TEAM" \
+            --code-sign-identity "Apple Distribution" \
+            --export-method app-store \
+            --provisioning-profile "$PROVISIONING_PROFILE_SPECIFIER"
     artifacts:
       - ios/App/build/ios/ipa/App.ipa
       - /tmp/xcodebuild_logs/*.log
