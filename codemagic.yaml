@@ -14,7 +14,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.fertmob.app
       node: 22.16
-      xcode: 15.4
+      xcode: 16.0
       cocoapods: default
       vars:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
