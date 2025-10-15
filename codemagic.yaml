@@ -45,16 +45,13 @@ workflows:
           npm run build && npx cap sync && date
       - name: Set up code signing settings on Xcode project
         script: | 
-          xcode-project use-profiles
+          echo "Using provisioning profile: $PROVISIONING_PROFILE_SPECIFIER"
+          echo "Team ID: $DEVELOPMENT_TEAM"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles found"
+          xcode-project use-profiles --verbose
       - name: Build ipa for distribution
-        script: |
-          xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --team-id "$DEVELOPMENT_TEAM" \
-            --code-sign-identity "Apple Distribution" \
-            --export-method app-store \
-            --provisioning-profile "$PROVISIONING_PROFILE_SPECIFIER"
+        script: | 
+          xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
     artifacts:
       - ios/App/build/ios/ipa/App.ipa
       - /tmp/xcodebuild_logs/*.log
