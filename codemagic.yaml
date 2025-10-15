@@ -11,8 +11,8 @@ workflows:
       app_store_connect: Creciente fertil
     environment:
       
-      node: latest
-      xcode: latest
+      node: 22.16
+      xcode: 15.4
       cocoapods: default
       vars:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
@@ -21,13 +21,18 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         APP_STORE_APPLE_ID: 6753952579
+        CODE_SIGN_STYLE: Automatic
+        TEAM_ID: C6LFUHMP89
+        PROVISIONING_PROFILE_SPECIFIER: "Creciente fertil"
     scripts:
       - name: Install dependencies
         script: |
           npm install 
       - name: agregar ios
-        script : |
-          npx cap add ios
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
       - name: Cocoapods installation
         script: | 
           cd ios/App && pod install
@@ -48,7 +53,6 @@ workflows:
     artifacts:
       - ios/App/build/ios/ipa/App.ipa
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       app_store_connect:
