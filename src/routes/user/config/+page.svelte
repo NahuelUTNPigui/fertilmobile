@@ -373,216 +373,294 @@
     })
 </script>
 <Navbarr>
-    <CardBase titulo="Datos usuario" cardsize="max-w-5xl">
-        <div class="space-y-6">
-            <div>
-                <label for="nombre" 
-                    class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                >
-                    Nombre de usuario:
-                </label>
-                {#if !modoedicion}
-                    <label for="nombre" 
-                        class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        {username}
-                    </label>
-                {:else}
-                    <input 
-                        type="text" 
-                        id="usernombre"
-                        
-                        bind:value={username} 
-                        required 
-                        class={`
+    <CardBase titulo="Configuración" cardsize="max-w-5xl">
+        <div class="rounded-2xl shadow p-6 mb-6 text-xl">
+            <h2
+                class="text-xl font-semibold dark:from-gray-900 dark:to-gray-800 mb-3"
+            >
+                Datos personales
+            </h2>
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                    <div>
+                        <label
+                            for="nombre"
+                            class={`block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            Nombre de usuario:
+                        </label>
+                        {#if !modoedicion}
+                            <label
+                                for="nombre"
+                                class={`block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                            >
+                                {username}
+                            </label>
+                        {:else}
+                            <input
+                                type="text"
+                                id="usernombre"
+                                bind:value={username}
+                                required
+                                class={`
                             w-full px-3 py-2 border rounded-md shadow-sm
                             focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                             transition duration-150 ease-in-out
                             border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
                         `}
-                    />
-                {/if}
-                <label for="nombre" 
-                    class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                >
-                    Nombre:
-                </label>
-                {#if !modoedicion}
-                    <label for="nombre" 
-                        class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        {nombre}
-                    </label>
-                {:else}
-                <input 
-                        type="text" 
-                        id="nombre"
-                        
-                        bind:value={nombre} 
-                        required 
-                        class={`
+                            />
+                        {/if}
+                    </div>
+                    <div>
+                        <label
+                            for="nombre"
+                            class={`block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            Nombre:
+                        </label>
+                        {#if !modoedicion}
+                            <label
+                                for="nombre"
+                                class={`block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                            >
+                                {nombre}
+                            </label>
+                        {:else}
+                            <input
+                                type="text"
+                                id="nombre"
+                                bind:value={nombre}
+                                required
+                                class={`
                             w-full px-3 py-2 border rounded-md shadow-sm
                             focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                             transition duration-150 ease-in-out
                             border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
                         `}
-                    />
-                {/if}
-                <label for="nombre" 
-                    class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                >
-                    Apellido:
-                </label>
-                {#if !modoedicion}
-                    <label for="nombre" 
-                        class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                    >
-                        {apellido}
-                    </label>
-                {:else}
-                <input 
-                        type="text" 
-                        id="apellido"
-                        
-                        bind:value={apellido} 
-                        required 
-                        class={`
+                            />
+                        {/if}
+                    </div>
+                    <div>
+                        <label
+                            for="apellido"
+                            class={`block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            Apellido:
+                        </label>
+                        {#if !modoedicion}
+                            <label
+                                for="nombre"
+                                class={`block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                            >
+                                {apellido}
+                            </label>
+                        {:else}
+                            <input
+                                type="text"
+                                id="apellido"
+                                bind:value={apellido}
+                                required
+                                class={`
                             w-full px-3 py-2 border rounded-md shadow-sm
                             focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                             transition duration-150 ease-in-out
                             border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-gray-100
                         `}
-                    />
-                {/if}
-                <label for="mail" 
-                    class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                >
-                    Correo:
-                </label>
-                <label for="mail" 
-                    class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-                >
-                    {usermail}
-                </label>
+                            />
+                        {/if}
+                    </div>
+                    <div>
+                        <label
+                            for="mail"
+                            class={`block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            Correo:
+                        </label>
+                        <label
+                            for="mail"
+                            class={`block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            {usermail}
+                        </label>
+                    </div>
+                    <div>
+                        <label
+                            for="codigo "
+                            class={`mt-2 block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            Codigo de colaboracion:
+                        </label>
+                        <label
+                            for="codigo"
+                            class={`mt-2 block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                        >
+                            {tokencolab}
+                        </label>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="mt-8 flex justify-start mb-3">
-            {#if  !modoedicion}
-                <button
-                    onclick={()=>modoedicion=true}
-                    class=" 
-                        btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md 
-                        text-white font-bold font-lg focus:outline-none 
+            <div class="mt-8 flex justify-start mb-3">
+                {#if !modoedicion}
+                    <button
+                        onclick={() => (modoedicion = true)}
+                        class=" 
+                        btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md
+                        text-white font-bold font-lg focus:outline-none
                         focus:ring-2 focus:ring-offset-2 focus:ring-green-500
                     "
-                >
-                    Editar usuario
-                </button>    
-            {:else}
-                <button 
-                    onclick={()=>modoedicion=false}
-                    class="
-                        btn btn-error 
-                        text-white 
+                    >
+                        Editar información personal
+                    </button>
+                {:else}
+                    <button
+                        onclick={() => (modoedicion = false)}
+                        class="
+                        btn btn-error
+                        text-white
                         font-bold font-lg
                     "
-                >
-
-                    Cancelar
-                </button>   
-                <button
-
-                    onclick={async ()=>{modoedicion=false;await editarUsuario()}}
-                    class="btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-bold font-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
-                    Guardar
-                </button>    
-            {/if}
+                        Cancelar
+                    </button>
+                    <button
+                        onclick={async () => {
+                            modoedicion = false;
+                            await editarUsuario();
+                        }}
+                        class="btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-bold font-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                        Guardar
+                    </button>
+                {/if}
+            </div>
         </div>
-        
-        <h2 class="text-xl font-semibold">Contraseña y autenticación</h2>
-        
-        <div class="mt-2 flex justify-start">
-            <button
-                    onclick={openCambioContra}
-                    class=" 
-                        btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md 
-                        text-white font-bold font-lg focus:outline-none 
+        <div class="rounded-2xl shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold">Seguridad</h2>
+            <div class="grid grid-cols-1 mt-2 gap-1">
+                <!--<div class="mt-2 flex justify-start">-->
+                <div class="">
+                    <button
+                        onclick={openCambioContra}
+                        class=" 
+                            btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md
+                            text-white font-bold font-lg focus:outline-none
+                            focus:ring-2 focus:ring-offset-2 focus:ring-green-500
+                        "
+                    >
+                        Cambiar contraseña
+                    </button>
+                    <button
+                        onclick={eliminarCuenta}
+                        class="
+                                hidden
+                                btn btn-error
+                                text-white
+                                font-bold font-lg
+                            "
+                    >
+                        Eliminar
+                    </button>
+                    <div
+                        class="
+                            bg-red-50 border border-red-300 rounded-2xl p-5 mt-10
+                            dark:bg-red-900/20 dark:border-red-700
+                            transition-colors duration-300 ease-in-out
+                        "
+                    >
+                        <h2
+                            class="
+                                text-lg font-semibold text-red-600 mb-2
+                                dark:text-red-400
+                            "
+                        >
+                            Eliminar cuenta
+                        </h2>
+
+                        <p
+                            class="
+                                text-sm text-gray-600 mb-4
+                                dark:text-gray-400
+                            "
+                        >
+                            Esta acción eliminará permanentemente todos tus
+                            datos y no podrá deshacerse.
+                        </p>
+
+                        <button
+                            onclick={eliminarCuenta}
+                            class="
+                                bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-md
+                                focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+                                dark:focus:ring-offset-gray-900
+                                transition-all duration-150 ease-in-out
+                            "
+                        >
+                            Eliminar cuenta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="rounded-2xl shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold">Plan</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                <div>
+                    <label
+                        for="nivel "
+                        class={`mt-2 block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        Nivel:
+                    </label>
+                    <label
+                        for="nivel"
+                        class={`mt-2 block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        {nivel}
+                    </label>
+                </div>
+                <div>
+                    <label
+                        for="animales "
+                        class={`mt-2 block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        Animales en la cuenta:
+                    </label>
+                    <label
+                        for="animales"
+                        class={`mt-2 block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        {totalanimales}
+                    </label>
+                </div>
+                <div>
+                    <label
+                        for="esta "
+                        class={`mt-2 block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        Establecimientos en la cuenta:
+                    </label>
+                    <label
+                        for="esta"
+                        class={`mt-2 block text-md font-medium text-gray-700 dark:text-gray-300 mb-1`}
+                    >
+                        {totalesta}
+                    </label>
+                </div>
+                <div class="mt-2 col-span-1 md:col-span-2">
+                    <button
+                        onclick={() => goto(pre + "/user/nivel")}
+                        class=" 
+                        btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md
+                        text-white font-bold font-lg focus:outline-none
                         focus:ring-2 focus:ring-offset-2 focus:ring-green-500
                     "
-                >
-                    Cambiar Contra
-            </button> 
-            
+                    >
+                        Cambiar plan
+                    </button>
+                </div>
+            </div>
         </div>
-        <h2 class="mt-3 text-xl font-semibold">Colaboracion</h2>
-        <label for="codigo " 
-            class={`mt-2 block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            Codigo de colaboracion:
-        </label>
-        <label for="codigo" 
-            class={`mt-2 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            {tokencolab}
-        </label>
-        <h2 class="mt-3 text-xl font-semibold">Plan </h2>
-        <label for="codigo " 
-            class={`mt-2 block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            Nivel:
-        </label>
-        <label for="codigo" 
-            class={`mt-2 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            {nivel}
-        </label>
-        <label for="animales " 
-            class={`mt-2 block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            Animales en la cuenta:
-        </label>
-        <label for="animales" 
-            class={`mt-2 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            {totalanimales}
-        </label>
-        <label for="esta " 
-            class={`mt-2 block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            Establecimientos en la cuenta:
-        </label>
-        <label for="esta" 
-            class={`mt-2 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-        >
-            {totalesta}
-        </label>
-        <div class="mt-2 flex justify-start">
-            <button
-                    onclick={()=>goto("/user/nivel")}
-                    class=" 
-                        btn px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md 
-                        text-white font-bold font-lg focus:outline-none 
-                        focus:ring-2 focus:ring-offset-2 focus:ring-green-500
-                    "
-                >
-                    Cambiar plan
-            </button> 
-            
-        </div>
-        <h2 class="text-xl font-semibold">Eliminar cuenta</h2>
-        <button 
-            onclick={eliminarCuenta}
-            class="
-                btn btn-error 
-                text-white 
-                font-bold font-lg
-            "
-        >
-
-            Eliminar
-        </button>
-
+        
     </CardBase>
     
 </Navbarr>
