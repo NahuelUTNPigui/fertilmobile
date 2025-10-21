@@ -1,8 +1,8 @@
 import estados from "$lib/stores/estados";
 export function getEstadoNombre(id){
-    let e = estados.filter(est=>est.id==id)[0]
-    if(e){
-        return e.nombre
+    let es = estados.filter(est=>est.id==id)
+    if(es.length>0){
+        return es[0].nombre
     }
     else{
         return ""

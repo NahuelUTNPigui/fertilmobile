@@ -92,7 +92,6 @@
     } from "$lib/stores/sqlite/dbanimales";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
@@ -323,7 +322,11 @@
 
             selecthashmap[id] = {
                 ...a,
+                padres: [],
+                padresserv: "",
                 observacion: "",
+                padre: "",
+                pajuela: "",
             };
         }
     }
@@ -340,7 +343,11 @@
                 let a = animalesrows[i];
                 selecthashmap[animalesrows[i].id] = {
                     ...a,
+                    padres: [],
+                    padresserv: "",
                     observacion: "",
+                    padre: "",
+                    pajuela: "",
                 };
             }
         } else if (algunos) {
@@ -479,6 +486,23 @@
     }
     function onInput(campo) {
         input(campo);
+    }
+    function agregarPadre(id) {
+        for (let i = 0; i < selectanimales.length; i++) {
+            let servicio = selectanimales[i];
+            if (!servicio.padres.includes(id)) {
+                selectanimales[i].padres.push(id);
+            }
+        }
+    }
+    function quitarPadre(id) {
+        for (let i = 0; i < selectanimales.length; i++) {
+            let servicio = selectanimales[i];
+            let idx = servicio.padres.findIndex((p) => p == id);
+            if (idx != -1) {
+                selectanimales[i].padres.splice(idx, 1);
+            }
+        }
     }
     async function guardarBulk() {
         if (esservicio) {
@@ -672,13 +696,14 @@
         let serverrores = [];
         for (let i = 0; i < selectanimales.length; i++) {
             let servicio = selectanimales[i];
+            let s_padres = servicio.padres;
             try {
                 let dataser = {
                     fechadesde: fechadesdeserv + " 03:00:00",
                     fechaparto: fechaparto + " 03:00:00",
                     observacion: servicio.observacion,
                     madre: servicio.id,
-                    padres: padreslist.join(),
+                    padres: s_padres.join(),
                     active: true,
                     cab: caboff.id,
                 };
@@ -738,6 +763,7 @@
         for (let i = 0; i < selectanimales.length; i++) {
             let idprov = "nuevo_servicio_" + generarIDAleatorio();
             let servicio = selectanimales[i];
+            let s_padres = servicio.padres;
             try {
                 //si necesito expand la madre y los padres
                 let dataser = {
@@ -745,7 +771,7 @@
                     fechaparto: fechaparto + " 03:00:00",
                     observacion: servicio.observacion,
                     madre: servicio.id,
-                    padres: padreslist.join(),
+                    padres: s_padres.join(),
                     active: true,
                     cab: caboff.id,
                     id: idprov,
@@ -764,8 +790,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nmadre && npadres ? "madre,padres" : nmadre ? "madre" : npadres ? "padres" : ""}`,
-                    show:{...dataser},
-                    motivo:"Nuevo servicio"
+                    show: { ...dataser },
+                    motivo: "Nuevo servicio",
                 };
                 comandos.push(comando);
                 dataser = {
@@ -898,8 +924,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nmadre && npadre ? "animal,padre" : nmadre ? "animal" : npadre ? "padre" : ""}`,
-                    show:{...data},
-                    motivo:"Nueva inseminación"
+                    show: { ...data },
+                    motivo: "Nueva inseminación",
                 };
                 comandos.push(comando);
                 data = {
@@ -1036,27 +1062,25 @@
         intermitenter.addIntermitente(isOnline);
         if (coninternet.connected) {
             await guardarOnline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         } else {
             await guardarOffline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         }
     }
@@ -1085,7 +1109,7 @@
         }
         onInput("PAJUELA");
     }
-    
+
     async function getServiciosInseminacionesSQL() {
         let resservicios = await getServiciosSQL(db);
         let resinseminaciones = await getInseminacionesSQL(db);
@@ -1098,11 +1122,11 @@
         //let reslotes = await getLotesSQL(db)
         //let resrodeos = await getRodeosSQL(db)
         await getServiciosInseminacionesSQL();
-        let lotesrodeos = await getLotesRodeosSQL(db,caboff.id);
+        let lotesrodeos = await getLotesRodeosSQL(db, caboff.id);
         let resanimales = await getAnimalesSQL(db);
         lotes = lotesrodeos.lotes;
         rodeos = lotesrodeos.rodeos;
-        
+
         animales = resanimales.lista.filter(
             (a) => a.active && a.cab == caboff.id,
         );
@@ -1716,6 +1740,8 @@
                             toros={padres}
                             bind:valor={padresserv}
                             bind:listavalores={padreslist}
+                            agregarElemento={agregarPadre}
+                            quitarElemento={quitarPadre}
                         />
                         {#if malpadre}
                             <div class="label">
@@ -1756,8 +1782,21 @@
                                 <div class="flex items-start col-span-2">
                                     <span>Caravana:</span>
                                     <span class="mx-1 font-semibold">
-                                        {a.caravana}
+                                        {shorterWord(a.caravana)}
                                     </span>
+                                </div>
+                                <div>
+                                    {#if cargadoanimales}
+                                        <MultipleToros
+                                            toros={padres}
+                                            bind:valor={
+                                                selectanimales[i].padresserv
+                                            }
+                                            bind:listavalores={
+                                                selectanimales[i].padres
+                                            }
+                                        />
+                                    {/if}
                                 </div>
                                 <div class="flex items-start col-span-2">
                                     <input

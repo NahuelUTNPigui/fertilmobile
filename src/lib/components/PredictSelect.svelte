@@ -9,6 +9,7 @@
         cadena=$bindable(""),
         onelegir=()=>{},
         onwrite=()=>{},
+        validarAnimal=()=>{},
         size="w-4/5"
     } = $props()
     let listarow = $state(lista)
@@ -52,9 +53,18 @@
         cadena = listarow.filter(l=>l.id==id)[0].nombre
         nombre = cadena
     }
-    //onMount(()=>{
-    //    cambioCadena()
-    //})
+    $effect(()=>{
+        if(valor.length !=0){
+            cadena = listarow.filter(l=>l.id==valor)[0].nombre
+            nombre = cadena
+        }
+    })
+    onMount(()=>{
+        if(valor.length !=0){
+            cadena = listarow.filter(l=>l.id==valor)[0].nombre
+            nombre = cadena
+        }
+    })
     
 </script>
 

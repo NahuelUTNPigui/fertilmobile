@@ -104,12 +104,13 @@
         updateLocalAnimalesSQLUserUltimo,
         setUltimoCeroAnimalesSQL,
         setUltimoHistorialAnimalesSQL,
-
-        setUltimoCeroHistorialAnimalesSQL
-
+        setUltimoCeroHistorialAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     //import {updateLocalEstablecimientoSQL} from '$lib/stores/sqlite/dbestablecimiento';
-    import { setUltimoCeroEstablecimientosSQL, updateLocalEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
+    import {
+        setUltimoCeroEstablecimientosSQL,
+        updateLocalEstablecimientosSQL,
+    } from "$lib/stores/sqlite/dballestablecimientos";
     import {
         updateLocalColabSQL,
         updateLocalColabSQLUser,
@@ -130,7 +131,6 @@
         setEstablecimientoSQL,
         getEsblecimientoSQL,
         updateLocalEstablecimientoSQL,
-        
     } from "$lib/stores/sqlite/dbestablecimiento";
     //asociados
     import { updateLocalIDAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
@@ -140,7 +140,6 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import { setEstablecimientosAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
-    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
@@ -151,12 +150,12 @@
     const HOY = new Date().toISOString().split("T")[0];
     //offline
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
     let caboff = $state({});
-    let coninternet = $state({connected:false});
+    let coninternet = $state({ connected: false });
     let comandos = $state([]);
     let lastinter = $state({});
     let getlocal = $state(false);
@@ -164,7 +163,7 @@
     let getpermisos = $state("");
     let tiempocargatotales = $state(0);
     let tiempocargaupdate = $state(0);
-    let tieneUltimo = $state(false)
+    let tieneUltimo = $state(false);
     /*
     let cab = $state({
         exist:false,
@@ -193,7 +192,7 @@
     let listaanimales = $state([]);
     let madres = $state([]);
     let padres = $state([]);
-    
+
     let listamadres = $state([]);
     let listapadres = $state([]);
 
@@ -411,8 +410,8 @@
         }
 
         let data = {
-            rp:"",
-            prenada:0,
+            rp: "",
+            prenada: 0,
             caravana,
             active: true,
             categoria,
@@ -420,14 +419,14 @@
             sexo,
             peso,
             cab: caboff.id,
-            fechafallecimiento:"",
-            nacimiento:"",
-            lote:"",
-            rodeo:"",
-            fechanacimiento:"",
-            expand:{
-                cab:{id:caboff.id,nombre:caboff.nombre}
-            }
+            fechafallecimiento: "",
+            nacimiento: "",
+            lote: "",
+            rodeo: "",
+            fechanacimiento: "",
+            expand: {
+                cab: { id: caboff.id, nombre: caboff.nombre },
+            },
         };
         if (fechanacimiento) {
             data.fechanacimiento = fechanacimiento + " 03:00:00";
@@ -462,8 +461,8 @@
                 idprov,
                 //No tiene poque no lotes y rodeos
                 camposprov: "",
-                show:{...data},
-                motivo:"Nuevo animal"
+                show: { ...data },
+                motivo: "Nuevo animal",
             };
 
             comandos.push(comando);
@@ -519,7 +518,7 @@
                 };
 
                 await addNewTactoSQL(db, record);
-                totaleventos.tactos += 1
+                totaleventos.tactos += 1;
                 Swal.fire(
                     "Éxito guardar",
                     "Se pudo guardar el tacto",
@@ -543,8 +542,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
-                show:{...data},
-                motivo:"Guardar tacto"
+                show: { ...data },
+                motivo: "Guardar tacto",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -556,12 +555,16 @@
                 },
             };
             await addNewTactoSQL(db, data);
-            totaleventos.tactos += 1
+            totaleventos.tactos += 1;
             Swal.fire("Éxito guardar", "Se pudo guardar el tacto", "success");
         }
     }
     async function guardarTacto() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_tacto_" + generarIDAleatorio();
@@ -636,8 +639,8 @@
                         prioridad: 5,
                         idprov,
                         camposprov: nuevoanimal ? "animal" : "",
-                        show:{...data},
-                        motivo:"Guardar tacto"
+                        show: { ...data },
+                        motivo: "Guardar tacto",
                     };
                     comandos.push(comando);
                     //if(!nuevoanimal){
@@ -651,7 +654,6 @@
                     //    comandos.push(comandohisto)
                     //}
 
-                    
                     await setComandosSQL(db, comandos);
                     data = {
                         ...data,
@@ -792,8 +794,8 @@
             prioridad: 2,
             idprov,
             camposprov,
-            show:{...dataparicion},
-            motivo:"Guardar nacimiento"
+            show: { ...dataparicion },
+            motivo: "Guardar nacimiento",
         };
 
         comandos.push(comandonac);
@@ -826,8 +828,8 @@
                 prioridad: 3,
                 idprov,
                 camposprov: "nacimiento",
-                show:{...dataanimal},
-                motivo:"Guardar animal"
+                show: { ...dataanimal },
+                motivo: "Guardar animal",
             };
             comandos.push(comandoani);
         }
@@ -839,7 +841,11 @@
         await setComandosSQL(db, comandos);
     }
     async function guardarNacimiento() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_nac_" + generarIDAleatorio();
@@ -948,8 +954,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: esnuevoanimal ? "animal" : "",
-                show:{...data},
-                motivo:"Guardar tratamiento"
+                show: { ...data },
+                motivo: "Guardar tratamiento",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -971,7 +977,11 @@
         }
     }
     async function guardarTrat() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_trat_" + generarIDAleatorio();
@@ -1047,10 +1057,10 @@
                         prioridad: 5,
                         idprov,
                         camposprov: nuevoanimal ? "animal" : "",
-                        show:{...data},
-                        motivo:"Guardar tratamiento"
+                        show: { ...data },
+                        motivo: "Guardar tratamiento",
                     };
-                    
+
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
                     //Add new trata
@@ -1154,8 +1164,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: "animal",
-                    show:{...data},
-                    motivo:"Nuevo animal"
+                    show: { ...data },
+                    motivo: "Nuevo animal",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -1184,7 +1194,11 @@
         }
     }
     async function guardarInseminacion() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_ins_" + generarIDAleatorio();
@@ -1261,8 +1275,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: `${nuevoanimal ? "animal" : ""}`,
-                    show:{...data},
-                    motivo:"Nueva inseminación"
+                    show: { ...data },
+                    motivo: "Nueva inseminación",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -1342,8 +1356,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
-                show:{...dataser},
-                motivo:"Nuevo servicio"
+                show: { ...dataser },
+                motivo: "Nuevo servicio",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -1362,15 +1376,18 @@
         }
     }
     async function guardarServicio() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_serv_" + generarIDAleatorio();
         //Animal seleccionado
         if (agregaranimal) {
             await guardarServicioAnimal(idprov);
-        }
-        else {
+        } else {
             let dataser = {
                 fechadesde: servicio.fechadesdeserv + " 03:00:00",
                 fechaparto: servicio.fechapartoser + " 03:00:00",
@@ -1425,8 +1442,8 @@
                 let nuevoanimal = servicio.idanimalser.split("_")[0] == "nuevo";
                 dataser.id = idprov;
                 let animalser = animales.filter(
-                                (an) => an.id == dataser.madre,
-                            )[0]
+                    (an) => an.id == dataser.madre,
+                )[0];
                 let comando = {
                     tipo: "add",
                     coleccion: "servicios",
@@ -1435,8 +1452,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: nuevoanimal ? "animal" : "",
-                    show:{...dataser},
-                    motivo:"Guardar servicio"
+                    show: { ...dataser },
+                    motivo: "Guardar servicio",
                 };
 
                 comandos.push(comando);
@@ -1526,8 +1543,8 @@
                 prioridad: 5,
                 idprov,
                 camposprov: "animal",
-                show:{...data},
-                motivo:"Guardar observación"
+                show: { ...data },
+                motivo: "Guardar observación",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -1548,7 +1565,11 @@
         }
     }
     async function guardarObservacion() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
         let idprov = "nuevo_obs_" + generarIDAleatorio();
@@ -1618,8 +1639,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov: nuevoanimal ? "animal" : "",
-                    show:{...data},
-                    motivo:"Guardar observación"
+                    show: { ...data },
+                    motivo: "Guardar observación",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -1684,7 +1705,7 @@
         totaleventos.observaciones = recordobservaciones.totalItems;
         totaleventos.pesajes = recordpesajes.totalItems;
         totaleventos.servicios = recordservicios.totalItems;
-        
+
         totaleventos.lotes = recordslotes.totalItems;
         totaleventos.rodeos = recordsrodeos.totalItems;
     }
@@ -1699,7 +1720,7 @@
         await setDefaultCabOffline();
         await setDefaultUserOffline();
     }
-    
+
     async function oldUpdateLocalSQL(db) {
         await setInternetSQL(db, 1, Date.now());
         let inicio = Date.now();
@@ -1762,7 +1783,7 @@
     }
     async function updateLocalSQL() {
         let inicio = Date.now();
-                
+
         let totales = await getTotalesEventosOnlineCab(pb, caboff.id);
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
 
@@ -1774,12 +1795,30 @@
         totaleventos.pesajes = totales.pesajes;
         totaleventos.servicios = totales.servicios;
 
-        let ultimotipotrat = await getUltimoTiposTratsSQL(db)
-        let tipotrats = await updateLocalTiposTratSQLUserUltimo(db, pb, usuarioid,ultimotipotrat.ultimo);
-        tipotrats.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-        let animalesuser = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,lastinter.ultimo);
-        animalesuser.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
-        animales = animalesuser
+        let ultimotipotrat = await getUltimoTiposTratsSQL(db);
+        let tipotrats = await updateLocalTiposTratSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimotipotrat.ultimo,
+        );
+        tipotrats.sort((tt1, tt2) =>
+            tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                ? -1
+                : 1,
+        );
+        let animalesuser = await updateLocalAnimalesSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            lastinter.ultimo,
+        );
+        animalesuser.sort((a1, a2) =>
+            a1.caravana.toLocaleLowerCase() < a2.caravana.toLocaleLowerCase()
+                ? -1
+                : 1,
+        );
+        animales = animalesuser;
 
         onChangeAnimales();
         totaleventos.animales = animales.filter(
@@ -1790,7 +1829,7 @@
         totaleventos.lotes = totalrodeoslotes.lotes;
         totaleventos.rodeos = totalrodeoslotes.rodeos;
         tipotratamientos = tipotrats.filter(
-            (t) => (t.cab == caboff.id || t.generico ) && t.active,
+            (t) => (t.cab == caboff.id || t.generico) && t.active,
         );
         await setInternetSQL(db, 1, Date.now());
         //await setUltimoAnimalesSQL(db);
@@ -1805,7 +1844,11 @@
         let dataanimales = await getAnimalesSQL(db);
         let data = await getEventosSQL(db);
 
-        animales = dataanimales.lista.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1);
+        animales = dataanimales.lista.sort((a1, a2) =>
+            a1.caravana.toLocaleLowerCase() < a2.caravana.toLocaleLowerCase()
+                ? -1
+                : 1,
+        );
 
         onChangeAnimales();
         //En este caso si va la lista porque es data que viene de SQL
@@ -1841,9 +1884,13 @@
             (t) => t.cab == caboff.id && t.active,
         ).length;
 
-        tipotratamientos = data.tipostrat.lista.filter(
-            (t) => (t.cab == caboff.id && t.active) || t.generico,
-        ).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);;
+        tipotratamientos = data.tipostrat.lista
+            .filter((t) => (t.cab == caboff.id && t.active) || t.generico)
+            .sort((tt1, tt2) =>
+                tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                    ? -1
+                    : 1,
+            );
 
         totaleventos.animales = animalescab.filter(
             (a) => a.cab == caboff.id && a.active,
@@ -1852,8 +1899,8 @@
         //loger.addTextError(JSON.stringify(data,null,2))
     }
     function onChangeAnimales() {
-        if(modedebug){
-            loger.addTextLinea(caboff.id)
+        if (modedebug) {
+            loger.addTextLinea(caboff.id);
         }
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
         listaanimales = animalescab.map((a) => {
@@ -1870,22 +1917,22 @@
         cargadoanimales = true;
     }
     async function limpiarAnimales() {
-        await setAnimalesSQL(db,[])
+        await setAnimalesSQL(db, []);
         let dataanimales = await getAnimalesSQL(db);
-        loger.addTextLog("animales: "+dataanimales.lista.length)
+        loger.addTextLog("animales: " + dataanimales.lista.length);
     }
-    async function borrarUltimo(){
-        delete localStorage["ultimo"]
-        await ultimoLocalStorage()
+    async function borrarUltimo() {
+        delete localStorage["ultimo"];
+        await ultimoLocalStorage();
     }
-    async function ultimoLocalStorage(hasLoggedIn){
+    async function ultimoLocalStorage(hasLoggedIn) {
         const hasUltimo = localStorage.getItem("ultimo") === "si";
-        if(!hasUltimo){
-            await setUltimoCeroAnimalesSQL(db)
-            await setUltimoCeroHistorialAnimalesSQL(db)
-            await setUltimoCeroEventosSQL(db)
-            await setUltimoCeroEstablecimientosSQL(db)
-            localStorage.setItem("ultimo","si")
+        if (!hasUltimo) {
+            await setUltimoCeroAnimalesSQL(db);
+            await setUltimoCeroHistorialAnimalesSQL(db);
+            await setUltimoCeroEventosSQL(db);
+            await setUltimoCeroEstablecimientosSQL(db);
+            localStorage.setItem("ultimo", "si");
         }
         //else if(hasLoggedIn){
         //    await setUltimoCeroAnimalesSQL(db)
@@ -1893,18 +1940,17 @@
         //    await setUltimoCeroEventosSQL(db)
         //    await setUltimoCeroEstablecimientosSQL(db)
         //}
-        tieneUltimo = hasUltimo
+        tieneUltimo = hasUltimo;
     }
     function getPlatform() {
         if (window.Capacitor) {
             if (window.Capacitor.getPlatform) {
-            return window.Capacitor.getPlatform(); // 'ios', 'android', 'web'
+                return window.Capacitor.getPlatform(); // 'ios', 'android', 'web'
             }
         }
-        return 'android'; // fallback
+        return "android"; // fallback
     }
     async function initPage() {
-        
         coninternet = await getInternet(
             modedebug,
             offliner.offline,
@@ -1919,10 +1965,12 @@
         getpermisos = caboff.permisos;
         usuarioid = useroff.id;
         cab = caber.cab;
-        const hasPlatform = localStorage.getItem("platform") === "ios"||localStorage.getItem("platform") === "android";
-        if(!hasPlatform){
-            let platform = getPlatform()
-            loger.addTextLog(JSON.stringify(platform))
+        const hasPlatform =
+            localStorage.getItem("platform") === "ios" ||
+            localStorage.getItem("platform") === "android";
+        if (!hasPlatform) {
+            let platform = getPlatform();
+            loger.addTextLog(JSON.stringify(platform));
         }
     }
     async function getDataSQL() {
@@ -1934,14 +1982,13 @@
 
         db = await openDB();
         const hasLoggedIn = localStorage.getItem("hasLoggedIn") === "si";
-        await ultimoLocalStorage(hasLoggedIn)
+        await ultimoLocalStorage(hasLoggedIn);
         //Reviso el internet
         lastinter = await getUltimoAnimalesSQL(db);
         let rescom = await getComandosSQL(db);
         //let ultimo_animal = await getUltimoAnimalesSQL(db)
         //verifica si venis del login
-        
-  
+
         if (hasLoggedIn) {
             //Elimino la lista de asociados y si quiero no eliminarla?
             await setEstablecimientosAsociadosSQL(db, []);
@@ -1957,10 +2004,9 @@
         let ahora = Date.now();
         let antes = lastinter.ultimo;
 
-        await getLocalSQL(db);  
+        await getLocalSQL(db);
         if (coninternet.connected) {
             let velocidad = await velocidader.medirVelocidadInternet();
-            
 
             try {
                 caboff = await updatePermisos(pb, usuarioid);
@@ -1985,8 +2031,8 @@
                 ahora,
                 antes,
             );
-            
-            await getTotales()
+
+            await getTotales();
             if (modedebug) {
                 getactualizacion = await actualizacion(
                     velocidad,
@@ -1994,19 +2040,19 @@
                     coninternet.connectionType,
                 );
             }
-            if(hasLoggedIn){
-                await updateLocalEstablecimientoSQL(db,pb,caboff.id)
+            if (hasLoggedIn) {
+                await updateLocalEstablecimientoSQL(db, pb, caboff.id);
             }
             if (hasLoggedIn || mustUpdate) {
                 //await updateLocalSQL(db);
-                nubetoast=true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
-                        
+
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -2057,18 +2103,8 @@
                 ? "sin internet"
                 : "con internet"}
         </button>
-        <button
-            onclick={borrarUltimo}
-            class="btn"
-        >
-            bye ultimo
-        </button>
-        <button
-            onclick={borrarUltimo}
-            class="btn"
-        >
-            Limpiar animales
-        </button>
+        <button onclick={borrarUltimo} class="btn"> bye ultimo </button>
+        <button onclick={borrarUltimo} class="btn"> Limpiar animales </button>
 
         <div class="grid grid-cols-2">
             <span>
@@ -2147,6 +2183,18 @@
     </div>
     {#if caboff.exist}
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">
+            <div
+                class="mt-2 w-full bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 text-center py-2 px-3"
+            >
+                <p class="text-lg">
+                    <button
+                        onclick={() => goto("/user/nivel")}
+                        class="ml-2 underline font-semibold hover:text-blue-600 dark:hover:text-blue-200"
+                    >
+                        Puedes mejorar tu plan ahora →
+                    </button>
+                </p>
+            </div>
             <!--Esto puede ser un componente aparte-->
             {#if cargados}
                 <div
@@ -2310,10 +2358,10 @@
     <span>La versión de la aplicación es {version} </span>
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModalTacto"
