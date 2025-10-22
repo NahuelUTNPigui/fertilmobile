@@ -44,14 +44,18 @@ workflows:
           npm run build && npx cap sync && date
       - name: Set up code signing settings on Xcode project
         script: | 
-          xcode-project use-profiles 
+          xcode-project use-profiles
+      - name: Auto increment build number
+        script: |
+          cd ios/App
+          BUILD_NUMBER=$(date +%s)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VITE_VERSION" "Info.plist"
+          echo "Build automático: $BUILD_NUMBER"
       - name: Build ipa for distribution
         script: | 
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
-      - name: Debug ipa location
-        script: |
-          echo "Buscando IPA..."
-          find . -name "*.ipa"
+      
 
     artifacts:
       - build/ios/ipa/*.ipa 
