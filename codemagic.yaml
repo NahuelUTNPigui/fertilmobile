@@ -45,13 +45,12 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: | 
           xcode-project use-profiles
-      - name: Auto increment build number
-        script: |
-          cd ios/App
-          BUILD_NUMBER=$(date +%s)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VITE_VERSION" "Info.plist"
-          echo "Build automático: $BUILD_NUMBER"
+        scripts:
+      - name: Set the build version
+        script: | 
+          #!/bin/sh
+          cd ./ios
+          agvtool new-version -all $((1 + 1))
       - name: Build ipa for distribution
         script: | 
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
