@@ -48,7 +48,6 @@ workflows:
         scripts:
       - name: Set the build version
         script: | 
-          #!/bin/sh
           cd ./ios
           agvtool new-version -all $((1 + 1))
       - name: Build ipa for distribution
