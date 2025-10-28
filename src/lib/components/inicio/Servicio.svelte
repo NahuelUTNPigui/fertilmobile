@@ -10,7 +10,7 @@
     import PredictSelect from '$lib/components/PredictSelect.svelte';
     import MultipleToros from '$lib/components/MultipleToros.svelte';
     import categorias from '$lib/stores/categorias';
-    
+    import InfoAnimal from "../InfoAnimal.svelte";
     let {
         caravana=$bindable(""),
         peso=$bindable(""),
@@ -35,9 +35,15 @@
     } = $props()
     let nombremadre = $state("")
     let nombrepadre = $state("")
+    //juntos
+    let madre = $state({})
+    let padre = $state({})
+    let botonhabilitadoins =$state(false)
+    let botonhabilitadoser =$state(false)
     //inseminacion
     let idanimalins = $state("")
     let padreins = $state("")
+    let pajuelains = $state("")
     //Servicio
     let idanimalser = $state("")
     let padreser = $state("")
@@ -53,6 +59,7 @@
 
     
     function validarBotonIns(){
+
         inseminacion.botonhabilitadoins = true
         if(!agregaranimal && isEmpty(inseminacion.idanimalins)){
             inseminacion.botonhabilitadoins = false
@@ -63,6 +70,7 @@
         if(isEmpty(inseminacion.fechainseminacion)){
             inseminacion.botonhabilitadoins = false
         }
+        botonhabilitadoins = inseminacion.botonhabilitadoins
     
     }
     function validarBotonSer(){
@@ -73,10 +81,12 @@
         if(!agregaranimal && servicio.idanimalser==""){
             servicio.botonhabilitadoser = false
         }
+        botonhabilitadoser = servicio.botonhabilitadoser
     }
 
     function onSelectAnimalIns(){
         let a = madres.filter(an=>an.id==inseminacion.idanimalins)[0]
+        madre = a
         if(a){
             inseminacion.categoriains = a.categoria
         }
@@ -87,6 +97,7 @@
     }
     function onSelectAnimalSer(){
         let a = madres.filter(an=>an.id==servicio.idanimalser)[0]
+        madre = a
         if(a){
             servicio.categoriaser = a.categoria
         }
@@ -97,7 +108,9 @@
     }
     function onSelectPadreIns(){
         let p = padres.filter(item=>item.id == inseminacion.padreins)[0]
-        inseminacion.pajuelains = p.caravana
+        padre = p
+        inseminacion.pajuelains = p.caravana;
+        inseminacion.padreins = p.id
     }
 
     function oninputIns(campo){
@@ -220,6 +233,11 @@
                     onelegir={()=>oninputSer("ANIMAL")}
                 >
                 </PredictSelect>
+                {#if idanimalser.length>0}
+                    <InfoAnimal
+                        bind:animal = {madre}
+                    />
+                {/if}
             {/if}
             <label for = "categoria" class="label">
                 <span class="label-text text-base">Categoria</span>
@@ -338,7 +356,13 @@
         <div class="modal-action justify-start ">
             <form method="dialog" >
                 <!-- if there is a button, it will close the modal -->
-                <button class="btn btn-success text-white" disabled='{!servicio.botonhabilitadoser}' onclick={guardarServicio} >Guardar</button>
+                <button 
+                    class="btn btn-success text-white" 
+                    disabled='{!botonhabilitadoser}' 
+                    onclick={guardarServicio} 
+                >
+                    Guardar
+                </button>
             </form>
         </div>
         
@@ -379,14 +403,18 @@
             </div>
             {#if cargadoanimales}
                 <PredictSelect 
-                    bind:valor={idanimalser} 
+                    bind:valor={idanimalins} 
                     etiqueta = {"Madre"} 
                     bind:cadena={nombremadre} 
                     bind:lista = {listamadres} 
-                    onelegir={()=>oninputSer("ANIMAL")}
+                    onelegir={() => oninputIns("ANIMAL")}
                 >
-                    
                 </PredictSelect>
+                {#if idanimalins.length>0}
+                    <InfoAnimal
+                        bind:animal = {madre}
+                    />
+                {/if}
             {/if}
             <label for = "tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
@@ -411,7 +439,18 @@
             </label>
         {/if}
         {#if cargadoanimales}
-            <PredictSelect bind:valor={inseminacion.padreins} etiqueta = {"Padre"} bind:cadena={inseminacion.pajuelains} lista = {listapadres}/>
+            <PredictSelect 
+                bind:valor={padreins} 
+                etiqueta = {"Padre"} 
+                bind:cadena={pajuelains} 
+                lista = {listapadres}
+                onelegir = {()=>oninputIns("PADRE")}
+            />
+            {#if padreins.length>0}
+                <InfoAnimal
+                    bind:animal = {padre}
+                />
+            {/if}
         {/if}
         <label for = "fechainseminacion" class="label">
             <span class="label-text text-base">Fecha de inseminacion</span>
@@ -478,7 +517,13 @@
     <div class="modal-action justify-start ">
         <form method="dialog" >
             <!--<button class="btn btn-success text-white" disabled='{!inseminacion.botonhabilitadoins}' onclick={guardarInseminacion} >Guardar</button>-->
-            <button class="btn btn-success text-white"  onclick={guardarInseminacion} >Guardar</button>
+            <button 
+                class="btn btn-success text-white"  
+                onclick={guardarInseminacion} 
+                disabled={!botonhabilitadoins}
+            >
+                Guardar
+            </button>
             
         </form>
     </div>

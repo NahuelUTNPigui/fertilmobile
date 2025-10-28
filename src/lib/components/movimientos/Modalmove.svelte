@@ -1,6 +1,7 @@
 <script>
     import estilos from "$lib/stores/estilos";
     import Animalesmodal from "./Animalesmodal.svelte";
+    
     let {
         //binds
         nuevacategoria = $bindable(""),

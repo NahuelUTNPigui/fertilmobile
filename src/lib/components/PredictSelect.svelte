@@ -15,6 +15,7 @@
     let listarow = $state(lista)
     let isOpen = $state(false)
     let nombre = $state("")
+
     if(valor != ""){
         nombre = cadena
     }
@@ -53,12 +54,12 @@
         cadena = listarow.filter(l=>l.id==id)[0].nombre
         nombre = cadena
     }
-    $effect(()=>{
-        if(valor.length !=0){
-            cadena = listarow.filter(l=>l.id==valor)[0].nombre
-            nombre = cadena
-        }
-    })
+    //$effect(()=>{
+    //    if(valor.length !=0){
+    //        cadena = listarow.filter(l=>l.id==valor)[0].nombre
+    //        nombre = cadena
+    //    }
+    //})
     onMount(()=>{
         if(valor.length !=0){
             cadena = listarow.filter(l=>l.id==valor)[0].nombre

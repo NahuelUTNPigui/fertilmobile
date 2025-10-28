@@ -1914,6 +1914,15 @@
         listapadres = padres.map((a) => {
             return { id: a.id, nombre: a.caravana };
         });
+         listamadres.sort((a, b) =>
+          a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+        );
+        listaanimales.sort((a, b) =>
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+        );
+        listapadres.sort((a, b) =>
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+        );
         cargadoanimales = true;
     }
     async function limpiarAnimales() {
@@ -2392,6 +2401,7 @@
             bind:prenadatacto
             bind:madres
             bind:listamadres
+            bind:listanimales = {animales}
             bind:cargadoanimales
             {guardarTacto}
         ></InicioTacto>

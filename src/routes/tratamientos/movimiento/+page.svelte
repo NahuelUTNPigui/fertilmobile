@@ -70,7 +70,7 @@
     } from "$lib/stores/sqlite/dbcomandos";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
-
+    import InfoAnimal from "$lib/components/InfoAnimal.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
@@ -1263,44 +1263,6 @@
                 />
             </div>
         </div>
-        <div class="hidden w-full grid grid-cols-1 justify-items-start">
-            <div class="flex overflow-x-auto">
-                <table class="table table-lg w-full">
-                    <thead>
-                        <tr>
-                            <th class="text-base">Caravana</th>
-                            <th class="text-base">Categoria</th>
-                            <th class="text-base">Observación</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each selectanimales as a, i}
-                            <tr>
-                                <td class="text-base">{a.caravana}</td>
-                                <td class="text-base">{a.categoria}</td>
-                                <td class="">
-                                    <input
-                                        bind:value={
-                                            selectanimales[i].observacionnuevo
-                                        }
-                                        class={`
-                                            px-1
-                                            h-12 border border-gray-300 
-                                            w-full
-                                            rounded-md
-                                            focus:outline-none focus:ring-2 
-                                            focus:ring-green-500 
-                                            focus:border-green-500
-                                            ${estilos.bgdark2}
-                                    `}
-                                    />
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
-        </div>
         <div class="block justify-items-center mx-1">
             {#each selectanimales as a, i}
                 <div
@@ -1311,8 +1273,13 @@
                             <div class="flex items-start col-span-2">
                                 <span>Caravana:</span>
                                 <span class="font-semibold">
-                                    {a.caravana}
+                                    {shorterWord(a.caravana)}
                                 </span>
+                            </div>
+                            <div class="flex items-start col-span-2">
+                                <InfoAnimal
+                                    animal={a}
+                                />
                             </div>
                             <div class="flex items-start col-span-2">
                                 <input

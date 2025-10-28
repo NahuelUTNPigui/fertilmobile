@@ -26,6 +26,7 @@
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
+    import InfoAnimal from "$lib/components/InfoAnimal.svelte";
     //Actualizacion
     import {
         actualizacion,
@@ -1785,6 +1786,9 @@
                                         {shorterWord(a.caravana)}
                                     </span>
                                 </div>
+                                <div class="flex items-start col-span-2">
+                                    <InfoAnimal animal={a} />
+                                </div>
                                 <div>
                                     {#if cargadoanimales}
                                         <MultipleToros
@@ -1938,83 +1942,6 @@
                 />
             </div>
         </div>
-        <div class="hidden w-full grid grid-cols-1 justify-items-start">
-            <div class="flex overflow-x-auto">
-                <table class="table table-lg w-full w-11/12">
-                    <thead>
-                        <tr>
-                            <th class="text-base px-1">Caravana</th>
-                            <th class="text-base px-1">Pajuela</th>
-                            <th class="text-base px-1">Padre</th>
-                            <th class="text-base px-1">Observaciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each selectanimales as a, i}
-                            <tr>
-                                <td class="text-base px-1">{a.caravana}</td>
-                                <td class="px-1">
-                                    <input
-                                        bind:value={selectanimales[i].pajuela}
-                                        class={`
-                                            h-12 w-32 border border-gray-300 
-                                            px-1
-                                            rounded-md
-                                            focus:outline-none focus:ring-2 
-                                            focus:ring-green-500 
-                                            focus:border-green-500
-                                            ${estilos.bgdark2}
-                                        `}
-                                    />
-                                </td>
-                                <td class="px-1">
-                                    <label class="input-group">
-                                        <select
-                                            class={`
-                                                select select-bordered 
-                                                rounded-md
-                                                px-1
-                                                w-32
-                                                focus:outline-none focus:ring-2 
-                                                focus:ring-green-500 
-                                                focus:border-green-500
-                                                ${estilos.bgdark2}
-                                            `}
-                                            bind:value={selectanimales[i].padre}
-                                            onchange={() =>
-                                                getNombrePadreTabla(i)}
-                                        >
-                                            {#each padres as p}
-                                                <option value={p.id}
-                                                    >{p.caravana}</option
-                                                >
-                                            {/each}
-                                        </select>
-                                    </label>
-                                </td>
-                                <td class="px-1">
-                                    <input
-                                        bind:value={
-                                            selectanimales[i].observacion
-                                        }
-                                        class={`
-                                            h-12 w-32 border border-gray-300 
-                                            
-                                            px-1
-                                            rounded-md
-                                            focus:outline-none focus:ring-2 
-                                            focus:ring-green-500 
-                                            focus:border-green-500
-                                            ${estilos.bgdark2}
-                                        `}
-                                    />
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
-        </div>
         <div class="block justify-items-center mx-1">
             {#each selectanimales as a, i}
                 <div
@@ -2027,6 +1954,9 @@
                                 <span class="font-semibold">
                                     {a.caravana}
                                 </span>
+                            </div>
+                            <div class="flex items-start col-span-2">
+                                <InfoAnimal animal={a} />
                             </div>
                             <div class="flex items-start col-span-2">
                                 {#if cargadoanimales}

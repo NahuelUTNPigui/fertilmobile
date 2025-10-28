@@ -8,6 +8,7 @@
     import tiposanimal from '$lib/stores/tiposanimal';
     import {isEmpty} from "$lib/stringutil/lib"
     import categorias from '$lib/stores/categorias';
+    import InfoAnimal from '../InfoAnimal.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     const HOY = new Date().toISOString().split("T")[0]
     let {
@@ -30,7 +31,10 @@
     } = $props()
     let nombreanimal = $state("")
     let animaltrat = $state("")
+    let animal = $state({})
+    let botonhabilitadotrat = $state(false)
     function validarBotonTrat(){
+
         tratamiento.botonhabilitadotrat = true
         if(!agregaranimal && isEmpty(tratamiento.animaltrat)){
             tratamiento.botonhabilitadotrat = false
@@ -42,9 +46,11 @@
         if(isEmpty(tratamiento.fechatrat)){
             tratamiento.botonhabilitadotrat = false
         }
+        botonhabilitadotrat = tratamiento.botonhabilitadotrat
     }
     function onSelectAnimalTrat(){
         let a = animales.filter(an=>an.id==tratamiento.animaltrat)[0]
+        animal = a
         if(a){
             tratamiento.categoriatrat = a.categoria
         }
@@ -131,9 +137,13 @@
                 bind:cadena={nombreanimal} 
                 lista = {listaanimales} 
                 onelegir={()=>oninputTrat("ANIMAL")}
-                >
-                
+            >    
             </PredictSelect>
+            {#if animaltrat.length>0}
+                <InfoAnimal
+                    bind:animal
+                />
+            {/if}
         {/if}
         <label for = "categoria" class="label">
             <span class="label-text text-base">Categoria</span>

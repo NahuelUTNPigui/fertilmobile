@@ -1204,9 +1204,9 @@
                         rounded-full
                         px-4 pt-2 pb-3
                     `} 
-                    onclick={() => goto("/animales/estadisticas")}
+                    onclick={() => goto("/animales/historial")}
                 >
-                    <span class="text-lg font-semibold">Estadísticas</span>
+                    <span class="text-lg font-semibold">Historial</span>
                 </button>
             </div>
         </div>
@@ -1490,78 +1490,4 @@
 {#if nubetoast}
     <Nube/>
 {/if}
-<dialog
-    id="nuevoModal"
-    class="
-            modal modal-top mt-10 ml-5
-            lg:items-start
-            rounded-xl
-            lg:modal-middle
-        "
->
-    <div
-        class="
-                modal-box w-11/12 max-w-xl
-                bg-gradient-to-br from-white to-gray-100
-                dark:from-gray-900 dark:to-gray-800
-            "
-    >
-        <form method="dialog">
-            <button
-                class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl"
-                >✕</button
-            >
-        </form>
-        {#if idanimal == ""}
-            <h3 class="text-lg font-bold">Nuevo Animal</h3>
-        {:else}
-            <h3 class="text-lg font-bold">Ver Animal</h3>
-        {/if}
-        <div class="form-control">
-            <NuevoAnimal
-                {lotes}
-                {rodeos}
-                {oninput}
-                {onSelectPadre}
-                cabid={caboff.id}
-                bind:madres
-                bind:padres
-                bind:caravana
-                bind:malcaravana
-                bind:rp
-                bind:sexo
-                bind:peso
-                bind:prenada
-                bind:categoria
-                bind:rodeo
-                bind:lote
-                bind:fechanacimiento
-                bind:idanimal
-                bind:conparicion
-                bind:nombremadre
-                bind:madre
-                bind:nombrepadre
-                bind:padre
-                bind:observacion
-                bind:nacimiento
-                bind:animal
-            ></NuevoAnimal>
-        </div>
 
-        <div class="modal-action justify-end">
-            <form method="dialog">
-                <!-- if there is a button, it will close the modal -->
-                <button class="btn btn-error text-white" onclick={cerrarModal}
-                    >Cancelar</button
-                >
-                {#if idanimal == ""}
-                    <button
-                        class="btn btn-success text-white"
-                        disabled={!botonhabilitado}
-                        onclick={guardar}>Guardar</button
-                    >
-                {/if}
-            </form>
-        </div>
-    </div>
-</dialog>

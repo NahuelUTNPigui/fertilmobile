@@ -92,6 +92,7 @@
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
     import Barrainternet from "$lib/components/internet/Barrainternet.svelte";
+
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
@@ -1413,6 +1414,11 @@
             >
         </form>
         <h3 class="text-lg font-bold">Movimiento</h3>
+        <div class="gap-1">
+            <p>
+                Se van a modificar {Object.entries(selecthashmap).length} animales
+            </p>
+        </div>
         <div class="form-control gap-1">
             <Modalmove
                 bind:nuevacategoria

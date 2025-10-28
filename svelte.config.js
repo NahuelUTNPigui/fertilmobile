@@ -17,6 +17,8 @@ const config = {
 				"/",
 				"/animales",
 				"/animales/1",
+				"/animales/estadisticas",
+				"/animales/historial",
 				"/inicio",
 				"/inicio/cab",
 				"/inicio/vet",

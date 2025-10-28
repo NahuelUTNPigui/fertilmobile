@@ -99,11 +99,7 @@
       customoffliner.customoffliner,
     );
     let platform = getPlatform()
-    if(modedebug){
-      
-      loger.addTextLog(JSON.stringify(platform))
-      
-    }
+    
     if(platform != "android"){
       mt = "mt-6"
     }

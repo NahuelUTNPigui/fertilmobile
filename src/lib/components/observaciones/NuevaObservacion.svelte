@@ -3,6 +3,7 @@
     import estilos from "$lib/stores/estilos";
     import categorias from "$lib/stores/categorias";
     import sexos from "$lib/stores/sexos";
+    import InfoAnimal from "$lib/components/InfoAnimal.svelte";
     let {
         oninput,
         idobservacion = $bindable(""),
@@ -25,6 +26,14 @@
         observacion = $bindable(""),
     } = $props();
     const HOY = new Date().toISOString().split("T")[0];
+    let veranimal = $state({})
+    function verInfoAnimal(){
+        let anis = animalescab.filter(a=>a.id == animal)
+        if(anis.length>0){
+            let ani = anis[0]
+            veranimal = ani
+        }
+    }
 </script>
 
 {#if idobservacion == ""}
@@ -54,13 +63,18 @@
                 ${estilos.bgdark2}
             `}
                 bind:value={animal}
-                onchange={() => oninput("ANIMAL")}
+                onchange={() => {verInfoAnimal();oninput("ANIMAL")}}
                 disabled={idobservacion != ""}
             >
                 {#each animalescab.filter((a) => a.active) as a}
                     <option value={a.id}>{a.caravana}</option>
                 {/each}
             </select>
+            {#if animal.length>0}
+                <InfoAnimal
+                    animal={veranimal}
+                />
+            {/if}
         {:else}
             <select
                 class={`

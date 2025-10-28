@@ -89,6 +89,7 @@
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
+
     
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
@@ -831,6 +832,7 @@
     }
     function changeAnimales() {
         animalescab = animales.filter((a) => a.cab == caboff.id);
+        animalescab.sort((a,b)=>a.caravana.toLocaleLowerCase()<b.caravana.toLocaleLowerCase()?-1:1)
     }
     async function ultimoLocalStorage(){
         const hasUltimo = localStorage.getItem("ultimo") === "si";

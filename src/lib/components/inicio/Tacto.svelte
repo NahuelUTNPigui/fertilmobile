@@ -8,6 +8,7 @@
     import tiposanimal from '$lib/stores/tiposanimal';
     import {isEmpty} from "$lib/stringutil/lib"
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import InfoAnimal from '../InfoAnimal.svelte';
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         caravana=$bindable(""),
@@ -22,6 +23,7 @@
         prenadatacto=$bindable(0),
         madres = $bindable([]),
         listamadres = $bindable([]),
+        listanimales = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarTacto
 
@@ -30,6 +32,7 @@
     let animaltacto = $state("")
     
     let option=$state(0)
+    let animal = $state({})
     const HOY = new Date().toISOString().split("T")[0]
     function validarBotonTacto(){
         tacto.botonhabilitadotacto = true
@@ -61,6 +64,7 @@
             else{
                 tacto.malanimaltacto = false
                 onSelectAnimalTacto()
+                selectAnimal()
             }
         }   
         if(inputName == "FECHA"){
@@ -71,6 +75,9 @@
                 tacto.malfechatacto = false
             }
         }
+    }
+    function selectAnimal(){
+        animal = listanimales.find(a=>a.id == animaltacto)
     }
     function clickLog(){
         
@@ -130,6 +137,11 @@
                 onelegir={()=>oninputTacto("ANIMAL")}>
                 
             </PredictSelect>
+            {#if animaltacto.length >0}
+                <InfoAnimal
+                    bind:animal
+                />
+            {/if}
         {/if}
         
         <label for = "tipo" class="label">

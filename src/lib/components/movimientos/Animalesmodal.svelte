@@ -1,9 +1,11 @@
 <script>
     import { shorterWord } from "$lib/stringutil/lib";
     import estilos from "$lib/stores/estilos";
+    
     let {
         listaanimales=$bindable([])
     } = $props()
+
 </script>
 <div class="block justify-items-center mx-1">
     {#each listaanimales as a,i}

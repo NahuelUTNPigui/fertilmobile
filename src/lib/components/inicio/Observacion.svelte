@@ -8,6 +8,7 @@
     import tiposanimal from '$lib/stores/tiposanimal';
     import {isEmpty} from "$lib/stringutil/lib"
     import categorias from '$lib/stores/categorias';
+    import InfoAnimal from "../InfoAnimal.svelte";
     const HOY = new Date().toISOString().split("T")[0]
     let {
         caravana=$bindable(""),
@@ -25,6 +26,8 @@
     } = $props()
     let nombreanimal = $state("")
     let animalobs = $state("")
+    let animal = $state("")
+    let botonhabilitadoobs = $state(false)
     function validarBotonObs(){
         observacion.botonhabilitadoobs = true
         if(!agregaranimal && isEmpty(observacion.animalobs)){
@@ -36,6 +39,7 @@
     }
     function onSelectAnimalObs(){
         let a = animales.filter(an=>an.id==observacion.animalobs)[0]
+        animal = a
         if(a){
             observacion.categoriaobs = a.categorias
         }
@@ -106,6 +110,11 @@
                 onelegir={()=>oninputObs("ANIMAL")}>
                 
             </PredictSelect>
+            {#if animalobs.length>0}
+                <InfoAnimal
+                    bind:animal
+                />
+            {/if}
         {/if}
         <label for = "categoria" class="label">
             <span class="label-text text-base">Categoria</span>
