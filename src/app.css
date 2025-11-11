@@ -13,4 +13,10 @@ html {
     color: white !important;
     border: 3px solid gold !important;
   }
+  option{
+    background-color: red !important;
+    color: white !important;
+    
+    border: 3px solid gold !important;
+  }
 }
