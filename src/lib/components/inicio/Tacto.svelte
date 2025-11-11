@@ -186,10 +186,19 @@
                 focus:border-green-500
                 ${estilos.bgdark2}
             `}
+            style="
+              background-color: white !important;
+              color: black !important;
+              border: 1px solid #ccc;
+              -webkit-appearance: none;
+              appearance: none;
+              padding: 8px 12px;
+              border-radius: 6px;
+            "
             bind:value={tacto.tipotacto}
         >
             {#each tipostacto as t}
-                <option value={t.id} class={`${estilos.bgdark2}`}>{t.nombre}</option>    
+                <option value={t.id} >{t.nombre}</option>    
             {/each}
         </select>
     </label>
