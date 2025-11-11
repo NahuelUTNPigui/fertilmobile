@@ -1,7 +1,7 @@
 export default{
     btntext:"text-white",
     bgdark1:"dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800",
-    bgdark2:"border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-gray-900 dark:text-gray-100",    
+    bgdark2:"border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100",    
     btnsecondary:"border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-gray-100 dark:border-gray-200 dark:text-gray-200 dark:hover:bg-gray-200 dark:hover:text-gray-800 focus:ring-gray-400 dark:focus:ring-gray-600 dark:focus:ring-offset-gray-800 bg-transparent",
     primario:"text-green-500 border-green-500 hover:bg-green-500 hover:bg-opacity-10 focus:ring-green-500  dark:text-green-400 dark:border-green-400 dark:hover:bg-green-400 dark:hover:bg-opacity-10 dark:focus:ring-offset-gray-800",
     secundario:"text-gray-600 border-gray-400 hover:bg-gray-200 hover:bg-opacity-50 focus:ring-gray-500  dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 dark:focus:ring-offset-gray-900",

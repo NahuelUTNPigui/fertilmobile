@@ -104,30 +104,6 @@
     {/if}
     <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
     {#if !agregaranimal}
-        <div class="hidden">
-            <label for = "animal" class="label">
-                <span class={estilos.labelForm}>Animal</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2}
-                    `}
-                    
-                    bind:value={tacto.animaltacto}
-                    onchange={()=>oninputTacto("ANIMAL")}
-                >
-                    {#each madres as a}
-                        <option value={a.id}>{a.caravana}</option>    
-                    {/each}
-                </select>
-            </label>
-        </div>
         {#if cargadoanimales}
             <PredictSelect 
                 bind:valor={animaltacto} 
@@ -213,7 +189,7 @@
             bind:value={tacto.tipotacto}
         >
             {#each tipostacto as t}
-                <option value={t.id}>{t.nombre}</option>    
+                <option value={t.id} class={`${estilos.bgdark2}`}>{t.nombre}</option>    
             {/each}
         </select>
     </label>
