@@ -179,22 +179,14 @@
     <label class="input-group ">
         <select 
             class={`
-                select select-bordered w-full
+                input input-bordered w-full
                 border border-gray-300 rounded-md
                 focus:outline-none focus:ring-2 
                 focus:ring-green-500 
                 focus:border-green-500
                 ${estilos.bgdark2}
             `}
-            style="
-              background-color: white !important;
-              color: black !important;
-              border: 1px solid #ccc;
-              -webkit-appearance: none;
-              appearance: none;
-              padding: 8px 12px;
-              border-radius: 6px;
-            "
+            
             bind:value={tacto.tipotacto}
         >
             {#each tipostacto as t}
