@@ -20,8 +20,12 @@
           window.history.back()
       }
     } )
+    if(isIOS){
+      document.documentElement.classList.add('ios');
+    }
     let d = document.documentElement
-    loger.addTextLog(JSON.stringify(d,null,2))
+    loger.addTextLog("d: "+JSON.stringify(d,null,2))
+    loger.addTextLog("document: "+JSON.stringify(document,null,2))
   }
   import "../app.css";
 </script>
