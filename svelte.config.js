@@ -19,6 +19,7 @@ const config = {
 				"/animales/1",
 				"/animales/estadisticas",
 				"/animales/historial",
+				"/animales/geneologia",
 				"/inicio",
 				"/inicio/cab",
 				"/inicio/vet",

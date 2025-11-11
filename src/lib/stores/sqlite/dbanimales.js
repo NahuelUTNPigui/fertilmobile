@@ -39,7 +39,8 @@ export async function setUltimoCeroAnimalesSQL(db) {
 export async function setUltimoAnimalesSQL(db) {
     await db.run(`UPDATE Colecciones SET ultimo = ${Date.now()} WHERE id = 1`)
 }
-export async function editarAnimalExpandSQL(db, id, p_expand = null) {
+//no se usa verificar funcionamiento
+export async function editarAnimalExpandSQL(db, id,animal, p_expand = null) {
     let animales = await getAnimalesSQL(db);
     let lista = animales.lista;
 
@@ -64,7 +65,7 @@ export async function editarAnimalExpandSQL(db, id, p_expand = null) {
             }
         }
         lista[idx].expand = expand
-        lista[idx] = { ...lista[idx] };
+        lista[idx] = { ...lista[idx],...animal };
         // Guarda la lista actualizada
         await setAnimalesSQL(db, lista);
         return true; // Edición exitosa

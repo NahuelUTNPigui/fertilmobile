@@ -101,13 +101,14 @@
                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
                         w-full
                         mb-0
+                        bg-white
                         ${estilos.bgdark2} 
                     `}>
                     <button
                         class={`
                             text-start 
                             py-2 pl-3 
-                            select-none pr-9 bg-transparent
+                            select-none pr-9
                             cursor-default
                             
                             
@@ -119,6 +120,7 @@
                                 
                                 truncate
                                 font-normal
+                                hover:bg-green-100 hover:text-green-800 dark:hover:text-green-800 dark:text-white
                             `}
                         >
                             No hay coincidencias

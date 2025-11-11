@@ -103,6 +103,9 @@
     if(platform != "android"){
       mt = "mt-6"
     }
+    else{
+      mt = "mt-6"
+    }
     //await cabuserSQL()
     let caber = createCaber();
     nombreestablecimiento = caber.cab.nombre;

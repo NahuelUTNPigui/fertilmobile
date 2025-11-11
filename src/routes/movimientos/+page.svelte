@@ -97,7 +97,7 @@
 
     //offline
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -135,6 +135,8 @@
     let rodeoseleccion = $state([]);
     let categoriaseleccion = $state([]);
     let sexo = $state("");
+    let raza = $state("");
+    let color = $state("");
     let categoria = $state("");
     let defaultfiltro = {
         buscar: "",
@@ -144,6 +146,8 @@
         rodeoseleccion: [],
         categoriaseleccion: [],
         sexo: "",
+        raza: "",
+        color: "",
         categoria: "",
     };
     let proxyfiltros = $state({
@@ -207,6 +211,8 @@
 
     function setFilters() {
         buscar = proxyfiltros.buscar;
+        raza = proxyfiltros.raza;
+        color = proxyfiltros.color;
         lote = proxyfiltros.lote;
         rodeo = proxyfiltros.rodeo;
         loteseleccion = proxyfiltros.loteseleccion;
@@ -218,6 +224,8 @@
 
     function setProxyFilter() {
         proxyfiltros.buscar = buscar;
+        proxyfiltros.raza = raza;
+        proxyfiltros.color = color;
         proxyfiltros.lote = lote;
         proxyfiltros.rodeo = rodeo;
         proxyfiltros.loteseleccion = loteseleccion;
@@ -349,7 +357,7 @@
             nuevoModal.showModal();
         }
     }
-    async function moverAnimalOffline(a, data,caravana) {
+    async function moverAnimalOffline(a, data, caravana) {
         let nlote = data.lote ? data.lote.split("_").length > 1 : false;
         let nrodeo = data.rodeo ? data.rodeo.split("_").length > 1 : false;
 
@@ -361,8 +369,8 @@
             prioridad: 3,
             idprov: a.id,
             camposprov: `${nlote ? "lote" : nrodeo ? "rodeo" : ""}`,
-            show:{...data,caravana},
-            motivo:"Editar animals"
+            show: { ...data, caravana },
+            motivo: "Editar animals",
         };
         comandos.push(comando);
 
@@ -414,8 +422,8 @@
             prioridad: 0,
             idprov: "nuevo_histo_" + generarIDAleatorio(),
             camposprov,
-            show:{...histo},
-            motivo:"Nuevo historal"
+            show: { ...histo },
+            motivo: "Nuevo historal",
         };
 
         comandos.push(comandohis);
@@ -499,7 +507,7 @@
                 }
             }
             try {
-                await moverAnimalOffline(a, data,animales[a_idx].caravana);
+                await moverAnimalOffline(a, data, animales[a_idx].caravana);
             } catch (err) {
                 conerrores.push(a.id);
                 errores = true;
@@ -835,11 +843,10 @@
             }
             try {
                 await moverAnimalOnline(a, data);
-                
             } catch (err) {
                 conerrores.push(a.id);
                 errores = true;
-                
+
                 if (modedebug) {
                     loger.addTextError(a.caravana);
                 }
@@ -872,13 +879,12 @@
         motivo = "";
         codigo = "";
         habilitarboton = false;
-        await setAnimalesSQL(db,animales)
+        await setAnimalesSQL(db, animales);
         onChangeAnimales();
         filterUpdate();
         if (conerrores.length > 0) {
             Swal.fire("Error movimiento", "Hubo animales con errores", "error");
         } else {
-            
             Swal.fire(
                 "Éxito movimiento",
                 "Se lograron mover todos los animales",
@@ -1064,9 +1070,8 @@
         animalescab = animales.filter((a) => a.active && a.cab == caboff.id);
     }
     async function updateLocalSQL() {
-
         caboff = await updatePermisos(pb, usuarioid);
-        
+
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
 
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
@@ -1077,8 +1082,8 @@
         );
         await setUltimoRodeosLotesSQL(db);
         await setUltimoAnimalesSQL(db);
-        lotes = lotesrodeos.lotes.filter(l=>l.active);
-        rodeos = lotesrodeos.rodeos.filter(l=>l.active);
+        lotes = lotesrodeos.lotes.filter((l) => l.active);
+        rodeos = lotesrodeos.rodeos.filter((l) => l.active);
         onChangeAnimales();
         filterUpdate();
         cargado = true;
@@ -1088,8 +1093,8 @@
         let lotesrodeos = await getLotesRodeosSQL(db, caboff.id);
         animales = resanimales.lista;
 
-        lotes = lotesrodeos.lotes.filter(l=>l.active);
-        rodeos = lotesrodeos.rodeos.filter(l=>l.active);
+        lotes = lotesrodeos.lotes.filter((l) => l.active);
+        rodeos = lotesrodeos.rodeos.filter((l) => l.active);
         onChangeAnimales();
 
         filterUpdate();
@@ -1142,14 +1147,14 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
-                        
+
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1186,8 +1191,9 @@
         await getDataSQL();
     });
 </script>
+
 {#if modedebug}
-<Barrainternet bind:coninternet/>
+    <Barrainternet bind:coninternet />
 {/if}
 <Navbarr>
     {#if modedebug}
@@ -1339,33 +1345,48 @@
                         {filterUpdate}
                     />
                 </div>
-                <div class="hidden">
-                    <label for="categorias" class="label">
-                        <span class="label-text text-base">Categorias</span>
+                <div class="my-0 py-0">
+                    <label for="raza" class="label mb-0">
+                        <span class="label-text text-base">Raza</span>
                     </label>
                     <label class="input-group">
-                        <select
+                        <input
+                            type="text"
                             class={`
-                                select select-bordered w-full
-                                rounded-md
-                                focus:outline-none 
-                                focus:ring-2 
-                                focus:ring-green-500 focus:border-green-500
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={categoria}
-                            onchange={filterUpdate}
-                        >
-                            <option value="">Todos</option>
-                            {#each categorias as r}
-                                <option value={r.id}>{r.nombre}</option>
-                            {/each}
-                        </select>
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={raza}
+                            oninput={filterUpdate}
+                        />
                     </label>
                 </div>
-                <button class="btn btn-neutral mt-2" onclick={limpiar}>
-                    Limpiar
-                </button>
+                <div class="my-0 py-0">
+                    <label for="color" class="label mb-0">
+                        <span class="label-text text-base">Color</span>
+                    </label>
+                    <label class="input-group">
+                        <input
+                            type="text"
+                            class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={color}
+                            oninput={filterUpdate}
+                        />
+                    </label>
+                </div>
             </div>
         {/if}
     </div>
@@ -1391,10 +1412,10 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"

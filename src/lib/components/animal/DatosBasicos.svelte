@@ -84,6 +84,11 @@
         rodeo = $bindable(""),
         sexo = $bindable(""),
         caravana = $bindable(""),
+        raza = $bindable(""),
+        color = $bindable(""),
+        padreobj=$bindable({}),
+        madreobj=$bindable({}),
+
 
         lotes,
         rodeos,
@@ -99,7 +104,7 @@
         connacimiento = $bindable(false),
         nacimiento = $bindable({}),
         fechanacimiento = $bindable(""),
-
+        irPadre,
         modohistoria = $bindable(false),
     } = $props();
     let ruta = import.meta.env.VITE_RUTA;
@@ -129,6 +134,8 @@
     let categoriavieja = $state("");
     let prenadaviejo = $state(false);
     let rpviejo = $state("");
+    let razaviejo = $state("");
+    let colorviejo = $state("");
 
     //Nacimiento
     let fechaviejo = $state("");
@@ -220,6 +227,8 @@
         sexoviejo = sexo;
         loteviejo = lote;
         rodeovieja = rodeo;
+        razaviejovieja = raza;
+        colorviejo = color;
         caravanavieja = caravana;
         categoriavieja = categoria;
         prenadaviejo = prenada;
@@ -232,6 +241,8 @@
         caravana = caravanavieja;
         rodeo = rodeovieja;
         lote = loteviejo;
+        raza = razaviejo
+        color = colorviejo
         categoria = categoriavieja;
         prenada = prenadaviejo;
         rp = rpviejo;
@@ -305,6 +316,8 @@
                 fechanacimiento: fechaviejo + " 03:00:00",
                 lote,
                 rodeo,
+                raza,
+                color,
                 user: userid,
                 categoria,
                 animal: id,
@@ -314,7 +327,7 @@
                 .collection("animales")
                 .update(id, datanimal);
 
-            await editarAnimalExpandSQL(db, id, datanimal, expand);
+            await editarAnimalSQL(db, id, datanimal, expand);
             //NO va porque tengo que evaluar las fechas
             let histo = await pb.collection("historialanimales").create(datahistorial);
             pushHistorial(histo)
@@ -433,6 +446,18 @@
         } else {
             await guardarNacimientoOffline();
         }
+        if(padre !=""){
+            padreobj={id:padre,caravana:nombrepadre}
+        }
+        else{
+            padreobj={id:-1}
+        }
+        if(madre !=""){
+            madreobj={id:madre,caravana:nombremadre}
+        }
+        else{
+            madreobj={id:-1}
+        }
     }
     async function editarNacimientoOffline() {
         let dataparicion = {
@@ -441,7 +466,7 @@
             fecha: fecha + " 03:00:00",
             nombremadre,
             nombrepadre,
-            observacion,
+            observacion,    
         };
         let nuevomadre = madre.split("_")[0] == "nuevo";
         let nuevopadre = padre.split("_")[0] == "nuevo";
@@ -511,6 +536,7 @@
         };
         await editarNacimientoSQL(db, dataparicion, idnacimiento);
         Swal.fire("Éxito editar", "Se pudo editar el nacimiento", "success");
+        
     }
     async function editarNacimientoOnline() {
         caboff = await updatePermisos(pb, usuarioid);
@@ -592,6 +618,18 @@
         } else {
             await editarNacimientoOffline();
         }
+        if(padre !=""){
+            padreobj={id:padre,caravana:nombrepadre}
+        }
+        else{
+            padreobj={id:-1}
+        }
+        if(madre !=""){
+            madreobj={id:madre,caravana:nombremadre}
+        }
+        else{
+            madreobj={id:-1}
+        }
     }
     function getNombreMadre() {
         let m = madres.filter((item) => item.id == madre)[0];
@@ -613,6 +651,8 @@
             prenada,
             categoria,
             rp,
+            raza,
+            color
         };
         caboff = await updatePermisos(pb, usuarioid);
         let listapermisos = getPermisosList(caboff.permisos);
@@ -636,6 +676,8 @@
             categoria = data.categoria;
             rp = data.rp;
             prenada = data.prenada;
+            raza = data.raza
+            color = data.color
             if (rodeo != "") {
                 nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
             } else {
@@ -665,7 +707,8 @@
             caravana,
             rodeo,
             lote,
-            
+            raza,
+            color,
             prenada,
             categoria,
             rp,
@@ -1186,40 +1229,38 @@
             </label>
         </div>
     </div>
-    <div class="grid grid-cols-2 lg:grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2">
-        <div class="hidden">
-            <label for="nombremadre" class="label">
-                <span class="label-text text-base">Nombre madre</span>
-            </label>
-            <label
-                for="nombremadre"
-                class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-            >
-                {nombremadre}
-            </label>
-        </div>
-        <div class="hidden">
-            <label for="nombrepadre" class="label">
-                <span class="label-text text-base">Nombre padre</span>
-            </label>
-            <label
-                for="nombrepadre"
-                class={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1`}
-            >
-                {nombrepadre}
-            </label>
-        </div>
-        <!--Hiper vinculos-->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2">
         <div>
             <label for="nombremadre" class="label">
-                <span class="label-text text-base">Madre: {nombremadre}</span>
+                <span class="label-text text-base"
+                    >Madre: {nombremadre}
+                    </span
+                >
             </label>
+            
+            {#if madreobj.id != -1 }
+                <div class="flex justify-start mx-0 px-0">
+                    <button 
+                    class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`} 
+                        onclick={async ()=>await irPadre(madreobj.id)}
+                    >Ver animal</button>
+                </div>
+            {/if}
         </div>
 
-        <div>
+        <div >
             <label for="nombrepadre" class="label">
                 <span class="label-text text-base">Padre: {nombrepadre}</span>
             </label>
+            
+            {#if padreobj.id != -1}
+                <div class="flex justify-start mx-0 px-0">
+                    <button 
+                    class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`} 
+                        onclick={async ()=>await irPadre(padreobj.id)}
+                    >Ver animal</button>
+                </div>
+            {/if}
         </div>
     </div>
 {:else}

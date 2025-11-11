@@ -1,7 +1,8 @@
 <script>
     import { goto } from "$app/navigation";
     //let pre = import.meta.env.VITE_PRE
-    let {titulo,valor,titsize="text-xl",urlto="",cargado=$bindable(false)} = $props()
+    let {titulo,valor=$bindable(0),titsize="text-xl",urlto="",cargado=$bindable(false)} = $props()
+    
 </script>
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2 transition-colors duration-200">
     {#if cargado}

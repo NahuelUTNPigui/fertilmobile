@@ -1899,9 +1899,7 @@
         //loger.addTextError(JSON.stringify(data,null,2))
     }
     function onChangeAnimales() {
-        if (modedebug) {
-            loger.addTextLinea(caboff.id);
-        }
+        
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
         listaanimales = animalescab.map((a) => {
             return { id: a.id, nombre: a.caravana };

@@ -741,12 +741,6 @@ function getNombre(id, lista) {
         //const historialFiltrado = reshistorial.lista.filter(h => idsAnimales.has(h.animal));
         historial = reshistorial.lista.filter(h => idsAnimales.has(h.animal));
         
-        if(modedebug){
-  
-            loger.addTextLinea(reshistorial.lista.length)
-            loger.addTextLinea(historial.length)
-            loger.addTextLinea(animalescab.length)
-        }
         procesarHistorial();
         filterUpdate();
         cargado = true;

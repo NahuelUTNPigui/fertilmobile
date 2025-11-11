@@ -493,7 +493,7 @@
     }
     function onChangePesajes() {
         pesajescab = pesajes.filter((p) => p.expand.animal.cab == caboff.id);
-        pesajescab.sort((p1, p2) =>
+        pesajescab = pesajescab.sort((p1, p2) =>
             new Date(p1.fecha) > new Date(p2.fecha) ? -1 : 1,
         );
     }

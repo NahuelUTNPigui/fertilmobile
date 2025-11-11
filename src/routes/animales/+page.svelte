@@ -181,6 +181,8 @@
         lotebuscar: "",
         estadobuscar: "",
         categoriabuscar: "",
+        raza:"",
+        color:"",
         activosbuscar: "activos",
     };
     let proxyfiltros = $state({
@@ -202,6 +204,8 @@
     let rodeo = $state("");
     let lote = $state("");
     let categoria = $state("");
+    let raza = $state("");
+    let color = $state("");
     //Datos paricion
     let madre = $state("");
     let padre = $state("");
@@ -663,6 +667,8 @@
     }
     function setFilters() {
         buscar = proxyfiltros.buscar;
+        raza = proxyfiltros.raza;
+        color = proxyfiltros.color;
         rodeobuscar = proxyfiltros.rodeobuscar;
         rodeoseleccion = proxyfiltros.rodeoseleccion;
         loteseleccion = proxyfiltros.loteseleccion;
@@ -676,6 +682,8 @@
 
     function setProxyFilter() {
         proxyfiltros.buscar = buscar;
+        proxyfiltros.raza = raza;
+        proxyfiltros.color = color;
         proxyfiltros.rodeobuscar = rodeobuscar;
         proxyfiltros.rodeoseleccion = rodeoseleccion;
         proxyfiltros.loteseleccion = loteseleccion;
@@ -696,6 +704,8 @@
         setProxyFilter();
         proxy.save(proxyfiltros);
         animalesrows = animalescab;
+        
+        ordenarAnimales(forma)
         madres = animalescab
             .filter((a) => a.sexo == "H" && a.active)
             .map((a) => ({ id: a.id, nombre: a.caravana })).sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1);
@@ -709,40 +719,40 @@
                     .toLocaleLowerCase()
                     .includes(buscar.toLocaleLowerCase()),
             );
-            totalAnimalesEncontrados = animalesrows.length;
+            
         }
         if (sexobuscar != "") {
             animalesrows = animalesrows.filter((a) => a.sexo == sexobuscar);
-            totalAnimalesEncontrados = animalesrows.length;
+            
         }
 
         if (rodeoseleccion.length != 0) {
             if (rodeoseleccion.length == 1 && rodeoseleccion[0] == "-1") {
                 animalesrows = animalesrows.filter((a) => !a.rodeo);
-                totalAnimalesEncontrados = animalesrows.length;
+                
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     rodeoseleccion.includes(a.rodeo),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
+                
             }
         }
         if (loteseleccion.length != 0) {
             if (loteseleccion.length == 1 && loteseleccion[0] == "-1") {
                 animalesrows = animalesrows.filter((a) => !a.lote);
-                totalAnimalesEncontrados = animalesrows.length;
+                
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     loteseleccion.includes(a.lote),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
+                
             }
         }
         if (estadobuscar != "") {
             animalesrows = animalesrows.filter(
                 (a) => a.prenada == estadobuscar,
             );
-            totalAnimalesEncontrados = animalesrows.length;
+            
         }
         if (categoriaseleccion.length != 0) {
             if (
@@ -750,22 +760,37 @@
                 categoriaseleccion[0] == "-1"
             ) {
                 animalesrows = animalesrows.filter((a) => !a.categoria);
-                totalAnimalesEncontrados = animalesrows.length;
+                
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     categoriaseleccion.includes(a.categoria),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
+                
             }
+        }
+        if(raza != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.raza
+                    .toLocaleLowerCase()
+                    .includes(raza.toLocaleLowerCase()),
+            );
+        }
+        if(color != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.color
+                    .toLocaleLowerCase()
+                    .includes(color.toLocaleLowerCase()),
+            );
         }
         if (activosbuscar == "activos") {
             animalesrows = animalesrows.filter((a) => a.active == true);
-            totalAnimalesEncontrados = animalesrows.length;
+            
         }
         if (activosbuscar == "inactivos") {
             animalesrows = animalesrows.filter((a) => a.active == false);
-            totalAnimalesEncontrados = animalesrows.length;
+            
         }
+        totalAnimalesEncontrados = animalesrows.length;
     }
     function onSelectPadre(sex) {
         if (sex == "H") {
@@ -969,6 +994,8 @@
                     : ""
                 : "",
             SEXO: item.sexo == "M" ? "Macho" : "Hembra",
+            RAZA: item.raza,
+            COLOR: item.color,
             PESO: item.peso,
             RODEO: item.expand
                 ? item.expand.rodeo
@@ -1067,7 +1094,7 @@
         forma = p_forma;
         if (forma == "caravana") {
             animalesrows.sort(
-                (a1, a2) => escalar * a1.caravana.localeCompare(a2.caravana),
+                (a1, a2) => escalar * (a1.caravana.toLocaleLowerCase()>a2.caravana.toLocaleLowerCase()?-1:1),
             );
         } else if (forma == "sexo") {
             animalesrows.sort(
@@ -1328,6 +1355,52 @@
                             margintop="mt-0"
                             {filterUpdate}
                         />
+                    </div>
+                    <div class="my-0 py-0">
+                        <label for="raza" class="label mb-0">
+                            <span class="label-text text-base">Raza</span>
+                        </label>
+                        <label class="input-group">
+                            <input
+                                type="text"
+                                class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                                bind:value={raza}
+                                oninput={filterUpdate}
+                            />
+                                
+                            
+                        </label>
+                    </div>
+                    <div class="my-0 py-0">
+                        <label for="color" class="label mb-0">
+                            <span class="label-text text-base">Color</span>
+                        </label>
+                        <label class="input-group">
+                            <input
+                                type="text"
+                                class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                                bind:value={color}
+                                oninput={filterUpdate}
+                            />
+                                
+                            
+                        </label>
                     </div>
                     <div>
                         <label for="estado" class="label">

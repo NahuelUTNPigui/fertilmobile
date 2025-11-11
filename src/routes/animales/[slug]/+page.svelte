@@ -24,6 +24,9 @@
     import tiponoti from "$lib/stores/tiponoti";
     import Servicios from "$lib/components/animal/Servicios.svelte";    
     import SelectTab from "$lib/components/animal/SelectTab.svelte";
+    //perfil padre
+    import { createStorageProxy } from "$lib/filtros/filtros";
+    import { navegarAPadre } from "$lib/geneologia/lib";
     //probar internet
     import { actualizacion,deboActualizar } from '$lib/stores/offline/actualizar';
     import { customoffliner } from '$lib/stores/offline/custom.svelte';
@@ -71,9 +74,6 @@
         updateLocalTratsSQLUser,
         getLotesRodeosSQL,
         getUpdateLocalRodeosLotesSQLUser
-
-
-
     } from "$lib/stores/sqlite/dbeventos"
     import {getTotalSQL,setTotalSQL,setUltimoTotalSQL} from "$lib/stores/sqlite/dbtotal"
     import { getComandosSQL, setComandosSQL, flushComandosSQL} from '$lib/stores/sqlite/dbcomandos';
@@ -103,6 +103,7 @@
     let pestañas = $state([])
     let tab=$state("")
     // Datos
+    let animal = $state({})
     let slug = $state("")
     let caravana = $state("")
     let active = $state(true)
@@ -110,6 +111,10 @@
     let connacimiento = $state(false)
     let sexo = $state("")
     let nacimiento = $state("")
+    let padre = $state({})
+    let madre = $state({})
+    let padreobj = $state({})
+    let madreobj = $state({})
     let rodeo = $state("")
     let lote = $state("")
     let peso = $state(0)
@@ -122,6 +127,11 @@
 
     let prenada = $state(0)
     let modohistoria = $state(false)
+    //Geneologia
+    const genealogiaStorage = createStorageProxy('genealogia_arbol', {
+        progenitores: [],
+        posicionActual: -1
+    });
     //EVENTOS
     let tactos = $state([])
     let observaciones = $state([])
@@ -418,13 +428,32 @@
         rodeos = lotesrodeos.rodeos.sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1)
 
     }
-
+    function getMadre(id) {
+        if(id==""){
+            madre = {id:-1}
+        }
+        else{
+            const record = animales.find(a=>a.id==id)
+            madre = record
+        }
+        
+    }
+    function getPadre(id) {
+        if(id==""){
+            padre = {id:-1}
+        }
+        else{
+            const record = animales.find(a=>a.id==id)
+            padre = record
+        }
+        
+    }
     async function getDataSQL() {
         db = await openDB()
         let rescom = await getComandosSQL(db)
         comandos = rescom.lista
         let data = await getAnimalSQLByID(db,slug)
-        
+        animal = data
         caravana = data.caravana
         
         
@@ -467,11 +496,38 @@
             if(n_idx != -1){
                 connacimiento = true
                 nacimientoobj = nacimientoscab[n_idx]
+                
+                getPadre(nacimientoobj.padre)
+                getMadre(nacimientoobj.madre)
             }
+            
             
         }
         
         cargado = true
+    }
+    async function irPadre(_id) {
+        //Revisar si esta en la cabaña
+        //Lo idea seria poder ver los datos del animaal este donde este
+        let recordxiste = animales.filter(p=>p.id==_id)
+        if (recordxiste.length > 0) {
+            genealogiaStorage.save({progenitores:[],posicionActual:-1})
+            padre = recordxiste[0]
+            navegarAPadre(animal.id,animal.caravana,animal)
+            
+            navegarAPadre(padre.id,padre.caravana,padre)
+
+            goto(`/animales/geneologia`);
+            //slug = $page.params.slug;
+            //await perfilAnimal(_id)
+            //window.location.reload();
+        } else {
+            Swal.fire(
+                "Error padre",
+                "No existe el animal en esta cabaña",
+                "error",
+            );
+        }
     }
     function pushHistorial(histo){
         historial.push(histo)
@@ -557,9 +613,11 @@
                     bind:connacimiento
                     bind:nacimiento={nacimientoobj} 
                     bind:fechanacimiento
-                    
+                    bind:padreobj={padre}
+                    bind:madreobj={madre}
                     bind:modohistoria
                     {pushHistorial}
+                    {irPadre}
                 />
             </CardAnimal>
             <Acciones 

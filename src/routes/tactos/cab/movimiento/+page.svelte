@@ -951,9 +951,6 @@
                         {filterUpdate}
                     />
                 </div>
-                <button class=" btn btn-neutral" onclick={limpiar}>
-                    Limpiar
-                </button>
             </div>
         {/if}
     </div>

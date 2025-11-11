@@ -130,6 +130,8 @@
     let cargadoanimales = $state(false);
     //Filtros
     let buscar = $state("");
+    let raza = $state("");
+    let color = $state("");
     let lote = $state("");
     let rodeo = $state("");
     let categoria = $state("");
@@ -141,6 +143,8 @@
 
     let defaultfiltro = {
         buscar: "",
+        raza: "",
+        color: "",
         lote: "",
         rodeo: "",
         categoria: "",
@@ -219,6 +223,8 @@
     }
     function setFilters() {
         buscar = proxyfiltros.buscar;
+        raza = proxyfiltros.raza;
+        color = proxyfiltros.color;
         lote = proxyfiltros.lote;
         rodeo = proxyfiltros.rodeo;
         categoria = proxyfiltros.categoria;
@@ -231,6 +237,8 @@
 
     function setProxyFilter() {
         proxyfiltros.buscar = buscar;
+        proxyfiltros.raza = raza;
+        proxyfiltros.color = color;
         proxyfiltros.lote = lote;
         proxyfiltros.rodeo = rodeo;
         proxyfiltros.categoria = categoria;
@@ -256,6 +264,20 @@
                 a.caravana
                     .toLocaleLowerCase()
                     .includes(buscar.toLocaleLowerCase()),
+            );
+        }
+        if(raza != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.raza
+                    .toLocaleLowerCase()
+                    .includes(raza.toLocaleLowerCase()),
+            );
+        }
+        if(color != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.color
+                    .toLocaleLowerCase()
+                    .includes(color.toLocaleLowerCase()),
             );
         }
         if (sexo != "") {
@@ -294,6 +316,7 @@
         if (estado != "") {
             animalesrows = animalesrows.filter((a) => a.prenada == estado);
         }
+        
     }
     function ordenarNombre(lista) {
         lista.sort((r1, r2) =>
@@ -1329,9 +1352,48 @@
                         {filterUpdate}
                     />
                 </div>
-                <button class="btn btn-neutral mt-3" onclick={limpiar}>
-                    Limpiar
-                </button>
+                <div class="my-0 py-0">
+                    <label for="raza" class="label mb-0">
+                        <span class="label-text text-base">Raza</span>
+                    </label>
+                    <label class="input-group">
+                        <input
+                            type="text"
+                            class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={raza}
+                            oninput={filterUpdate}
+                        />
+                    </label>
+                </div>
+                <div class="my-0 py-0">
+                    <label for="color" class="label mb-0">
+                        <span class="label-text text-base">Color</span>
+                    </label>
+                    <label class="input-group">
+                        <input
+                            type="text"
+                            class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={color}
+                            oninput={filterUpdate}
+                        />
+                    </label>
+                </div>
             </div>
         {/if}
     </div>

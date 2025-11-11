@@ -101,6 +101,7 @@
     let animales = $state([]);
     let animalesrows = $state([]);
     //Filtros
+    
     let buscar = $state("");
     let lote = $state("");
     let rodeo = $state("");
@@ -109,11 +110,15 @@
     let categoriaseleccion = $state([]);
     let categoria = $state("");
     let sexo = $state("H");
+    let raza = $state("");
+    let color = $state("");
 
     let defaultfiltro = {
         buscar: "",
         lote: "",
         rodeo: "",
+        raza: "",
+        color: "",
         categoria: "",
         sexo: "H",
         rodeoseleccion: [],
@@ -165,6 +170,8 @@
     }
     function setFilters() {
         buscar = proxyfiltros.buscar;
+        raza = proxyfiltros.raza;
+        color = proxyfiltros.color;
         lote = proxyfiltros.lote;
         rodeo = proxyfiltros.rodeo;
         categoria = proxyfiltros.categoria;
@@ -176,6 +183,8 @@
 
     function setProxyFilter() {
         proxyfiltros.buscar = buscar;
+        proxyfiltros.raza = raza;
+        proxyfiltros.color = color;
         proxyfiltros.lote = lote;
         proxyfiltros.rodeo = rodeo;
         proxyfiltros.categoria = categoria;
@@ -205,26 +214,37 @@
         if (sexo != "") {
             animalesrows = animalesrows.filter((a) => a.sexo == sexo);
         }
+        if(raza != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.raza
+                    .toLocaleLowerCase()
+                    .includes(raza.toLocaleLowerCase()),
+            );
+        }
+        if(color != ""){
+            animalesrows = animalesrows.filter((a) =>
+                a.color
+                    .toLocaleLowerCase()
+                    .includes(color.toLocaleLowerCase()),
+            );
+        }
         if (rodeoseleccion.length != 0) {
             if (rodeoseleccion.length == 1 && rodeoseleccion[0] == "-1") {
                 animalesrows = animalesrows.filter((a) => !a.rodeo);
-                totalAnimalesEncontrados = animalesrows.length;
+                
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     rodeoseleccion.includes(a.rodeo),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
             }
         }
         if (loteseleccion.length != 0) {
             if (loteseleccion.length == 1 && loteseleccion[0] == "-1") {
                 animalesrows = animalesrows.filter((a) => !a.lote);
-                totalAnimalesEncontrados = animalesrows.length;
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     loteseleccion.includes(a.lote),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
             }
         }
         if (categoriaseleccion.length != 0) {
@@ -233,12 +253,10 @@
                 categoriaseleccion[0] == "-1"
             ) {
                 animalesrows = animalesrows.filter((a) => !a.categoria);
-                totalAnimalesEncontrados = animalesrows.length;
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     categoriaseleccion.includes(a.categoria),
                 );
-                totalAnimalesEncontrados = animalesrows.length;
             }
         }
     }
@@ -541,8 +559,8 @@
                     prioridad: 5,
                     idprov,
                     camposprov,
-                    show:{...datatratamiento},
-                    motivo:"Nuevo tratamiento"
+                    show: { ...datatratamiento },
+                    motivo: "Nuevo tratamiento",
                 };
                 trats.push(datatratamiento);
                 comandos.push(comando);
@@ -588,27 +606,25 @@
                 return;
             }
             await guardarTratamientoOnline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         } else {
             await guardarTratamientoOffline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         }
     }
@@ -651,7 +667,7 @@
         filterUpdate();
         cargado = true;
     }
-    
+
     async function getDataSQL() {
         proxyfiltros = proxy.load();
         setFilters();
@@ -846,9 +862,48 @@
                         {filterUpdate}
                     />
                 </div>
-                <button class="btn btn-neutral" onclick={limpiar}>
-                    Limpiar
-                </button>
+                <div class="my-0 py-0">
+                    <label for="raza" class="label mb-0">
+                        <span class="label-text text-base">Raza</span>
+                    </label>
+                    <label class="input-group">
+                        <input
+                            type="text"
+                            class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={raza}
+                            oninput={filterUpdate}
+                        />
+                    </label>
+                </div>
+                <div class="my-0 py-0">
+                    <label for="color" class="label mb-0">
+                        <span class="label-text text-base">Color</span>
+                    </label>
+                    <label class="input-group">
+                        <input
+                            type="text"
+                            class={`
+                                        input input-bordered w-full
+                                        rounded-md
+                                        focus:outline-none focus:ring-2 
+                                        focus:ring-green-500 
+                                        focus:border-green-500
+                                        
+                                        ${estilos.bgdark2}
+                                    `}
+                            bind:value={color}
+                            oninput={filterUpdate}
+                        />
+                    </label>
+                </div>
             </div>
         {/if}
     </div>
@@ -1277,9 +1332,7 @@
                                 </span>
                             </div>
                             <div class="flex items-start col-span-2">
-                                <InfoAnimal
-                                    animal={a}
-                                />
+                                <InfoAnimal animal={a} />
                             </div>
                             <div class="flex items-start col-span-2">
                                 <input
