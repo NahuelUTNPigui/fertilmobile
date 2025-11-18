@@ -1,4 +1,5 @@
 <script>
+    
     import Navbarr from "$lib/components/Navbarr.svelte";
     import Exportar from "$lib/components/Exportar.svelte";
     import PocketBase from "pocketbase";
@@ -1075,7 +1076,7 @@
                     deshabilitado={false}
                 />
             </div>
-
+            
             <label for="fecha" class="label">
                 <span class="label-text text-base">Fecha </span>
             </label>

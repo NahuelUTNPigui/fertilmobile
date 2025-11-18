@@ -1,4 +1,5 @@
 <script>
+
     import Navbarr from "$lib/components/Navbarr.svelte";
     import Swal from "sweetalert2";
     import PocketBase from "pocketbase";
@@ -35,7 +36,10 @@
     import Nube from "$lib/components/toast/Nube.svelte";
     //Permisos
     import { getPermisosMessage, getPermisosList } from "$lib/permisosutil/lib";
+    //calendario
+    import CustomDate from "$lib/components/CustomDate.svelte";
     //Formularios
+    
     import InicioNacimiento from "$lib/components/inicio/Nacimiento.svelte";
     import InicioTacto from "$lib/components/inicio/Tacto.svelte";
     import InicioTratamiento from "$lib/components/inicio/Tratamiento.svelte";
@@ -140,6 +144,7 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import { setEstablecimientosAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
+    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
@@ -202,7 +207,7 @@
     let classbutton =
         "w-full flex items-center justify-center space-x-4 bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 dark:bg-green-700 dark:hover:bg-green-600";
     //Tacto
-    let tacto = $state({});
+    let tacto = $state({fechatacto:""});
     let prenadatacto = $state(0);
     //Nacimiento
     let nacimiento = $state({});
@@ -2100,6 +2105,7 @@
 {/if}
 <Navbarr bind:coninternet>
     {#if modedebug}
+        
         <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
         <button
             onclick={() =>
@@ -2182,11 +2188,20 @@
                 Ultimo update: {new Date(lastinter.ultimo).toLocaleDateString()}
             </span>
         </div>
+        <label for="calendar">
+            fecha prueba
+        </label>
+        <CustomDate etiqueta="Fecha prueba" fecha={new Date()} />
+
+        
     {/if}
     <div class="flex items-center justify-center">
         <h2 class="text-xl font-bold">
             ¡Proximamente Lanzamiento de Preventas!
         </h2>
+        
+    
+    
     </div>
     {#if caboff.exist}
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">

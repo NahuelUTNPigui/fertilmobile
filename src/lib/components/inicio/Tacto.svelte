@@ -9,6 +9,8 @@
     import {isEmpty} from "$lib/stringutil/lib"
     import { loger } from "$lib/stores/logs/logs.svelte";
     import InfoAnimal from '../InfoAnimal.svelte';
+    import CustomDate from '../CustomDate.svelte';
+
     let modedebug = import.meta.env.VITE_MODO_DEV == "si"
     let {
         caravana=$bindable(""),
@@ -150,6 +152,8 @@
         <RadioButton bind:option={prenadatacto} deshabilitado={false}/>
 
     </div>
+
+    <CustomDate etiqueta="Fecha prueba" bind:fecha = {tacto.fechatacto} onchange = {() => oninputTacto("FECHA")}/>
     <label for = "fecha" class="label">
         <span class={estilos.labelForm}>Fecha tacto</span>
     </label>
@@ -173,6 +177,7 @@
             </div>
         {/if}
     </label>
+
     <label for = "tipo" class="label">
         <span class={estilos.labelForm}>Tacto/Ecografia</span>
     </label>

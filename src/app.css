@@ -5,18 +5,3 @@ html {
     font-family: 'Noto Sans', sans-serif;
     src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300..900;1,300..900&display=swap');
 }
-/* === PRUEBA DE FUEGO: ¿Se aplica CSS en iOS? === */
-@supports (-webkit-touch-callout: none) {
-  /* Este bloque solo se aplica en Safari / iOS */
-  select {
-    background-color: red !important;
-    color: white !important;
-    border: 3px solid gold !important;
-  }
-  option{
-    background-color: red !important;
-    color: white !important;
-    
-    border: 3px solid gold !important;
-  }
-}
