@@ -17,6 +17,9 @@
     } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from "$lib/stringutil/lib";
     import { shorterWord } from "$lib/stringutil/lib";
+    //FORMULARIO
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
+    import CustomDate from "$lib/components/CustomDate.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -65,6 +68,7 @@
         setUltimoPesajesSQL,
         getUltimoPesajeSQL,
         setUltimoRodeosLotesSQL,
+        getUltimoRodeosSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import {
         getAnimalesSQL,
@@ -72,6 +76,7 @@
         setAnimalesSQL,
         updateLocalAnimalesSQLUser,
         setUltimoAnimalesSQL,
+        getUltimoAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import { ACTUALIZACION } from "$lib/stores/constantes";
@@ -80,9 +85,10 @@
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
     import InfoAnimal from "$lib/components/InfoAnimal.svelte";
+    
     //offline
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -153,7 +159,7 @@
     //movimiento
     let fecha = $state("");
     let nuevospesos = $state({});
-    let pesogeneral = $state("")
+    let pesogeneral = $state("");
 
     //Seleecionar
     let selectcategoria = $state(true);
@@ -178,7 +184,6 @@
         ninguno = true;
     }
 
-    
     function setFilters() {
         buscar = proxyfiltros.buscar;
         loteseleccion = proxyfiltros.loteseleccion;
@@ -211,6 +216,11 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
+        animalescab.sort((a1, a2) =>
+            a1.caravana.toLocaleLowerCase() < a2.caravana.toLocaleLowerCase()
+                ? -1
+                : 1,
+        );
         animalesrows = animalescab;
         if (buscar != "") {
             animalesrows = animalesrows.filter((a) =>
@@ -389,7 +399,6 @@
                 };
 
                 pesajes.push(p);
-
             } catch (err) {
                 pesajeserror.push(ps.id);
                 console.error(err);
@@ -468,8 +477,8 @@
                     prioridad: 2,
                     idprov,
                     camposprov: nanimal ? "animal" : "",
-                    show:{...data,caravana:animales[aidx].caravana},
-                    motivo:"Nuevo pesaje"
+                    show: { ...data, caravana: animales[aidx].caravana },
+                    motivo: "Nuevo pesaje",
                 };
                 let comandoani = {
                     tipo: "update",
@@ -479,8 +488,8 @@
                     prioridad: 2,
                     idprov: idanimal,
                     camposprov: "",
-                    show:{...dataupdate},
-                    motivo:"Nuevo pesaje"
+                    show: { ...dataupdate },
+                    motivo: "Nuevo pesaje",
                 };
                 comandos.push(comandopesaje);
                 comandos.push(comandoani);
@@ -573,8 +582,11 @@
         cargado = true;
     }
     async function updateLocalSQL() {
+        //Hacer cambios a ultimos
+        let ultimo_pasaje = await getUltimoPesajeSQL(db);
+        let ultimo_animal = await getUltimoAnimalesSQL(db);
+        let ultimo_rodeo = await getUltimoRodeosSQL(db);
 
-        
         pesajes = await updateLocalPesajesSQLUser(db, pb, usuarioid);
         animales = await updateLocalAnimalesSQLUser(db, pb, usuarioid);
         animalescab = animales.filter((a) => a.active && a.cab == caboff.id);
@@ -598,30 +610,6 @@
             if (modedebug) {
                 loger.addTextError(JSON.stringify(err), null, 2);
                 loger.addTextError("Error en flush comandos pesajes");
-            }
-        }
-    }
-    async function oldUpdate(params) {
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
-            }
-        }
-        if (lastinter.internet == 0) {
-            await setInternetSQL(db, 1, 0);
-            await updateLocalSQL();
-        } else {
-            const cincoMinEnMs = ACTUALIZACION;
-            if (ahora - antes >= cincoMinEnMs) {
-                await updateLocalSQL();
-            } else {
-                await getLocalSQL();
             }
         }
     }
@@ -661,14 +649,14 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
-                        
+
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -686,14 +674,11 @@
                 }, 0);
             }
         }
-
     }
-    function cambioPesoGeneral(){
-        for(let i = 0;i<selectanimales.length;i++){
-            selectanimales[i].pesonuevo = pesogeneral
-            
+    function cambioPesoGeneral() {
+        for (let i = 0; i < selectanimales.length; i++) {
+            selectanimales[i].pesonuevo = pesogeneral;
         }
-        
     }
     onMount(async () => {
         await initPage();
@@ -790,7 +775,13 @@
                 transition:slide
                 class="grid grid-cols-1 lg:grid-cols-4 m-1 gap-2 w-11/12"
             >
-                <div>
+                <SelectFertil
+                    etiqueta="Sexo"
+                    bind:value={sexo}
+                    opciones={[{ id: "", nombre: "Todos" }].concat(sexos)}
+                    onchange={filterUpdate}
+                />
+                <div class="hidden">
                     <label for="sexo" class="label">
                         <span class="label-text text-base">Sexo</span>
                     </label>
@@ -814,6 +805,7 @@
                         </select>
                     </label>
                 </div>
+
                 <div class="mt-0">
                     <MultiSelect
                         opciones={[{ id: "-1", nombre: "Sin rodeo" }].concat(
@@ -844,9 +836,6 @@
                         {filterUpdate}
                     />
                 </div>
-                <button class="btn btn-neutral" onclick={limpiar}>
-                    Limpiar
-                </button>
             </div>
         {/if}
     </div>
@@ -1161,10 +1150,10 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"
@@ -1175,7 +1164,8 @@
             modal-box w-11/12 max-w-xl
             bg-gradient-to-br from-white to-gray-100
             dark:from-gray-900 dark:to-gray-800
-            "
+            
+        "
     >
         <form method="dialog">
             <button
@@ -1185,15 +1175,17 @@
         </form>
 
         <h3 class="text-lg font-bold">Movimiento</h3>
-        <label for="fechapesaje" class="label">
-            <span class="label-text text-base">Fecha </span>
-        </label>
-        <label class="input-group">
-            <input
-                id="fechapesaje"
-                type="date"
-                max={HOY}
-                class={`
+        <CustomDate etiqueta="Fecha" bind:fecha />
+        <div class="hidden">
+            <label for="fechapesaje" class="label">
+                <span class="label-text text-base">Fecha </span>
+            </label>
+            <label class="input-group">
+                <input
+                    id="fechapesaje"
+                    type="date"
+                    max={HOY}
+                    class={`
                     input input-bordered w-full
                     border border-gray-300 rounded-md
                     focus:outline-none focus:ring-2 
@@ -1201,9 +1193,11 @@
                     focus:border-green-500
                     ${estilos.bgdark2} 
                 `}
-                bind:value={fecha}
-            />
-        </label>
+                    bind:value={fecha}
+                />
+            </label>
+        </div>
+
         <label for="fechapesaje" class="label">
             <span class="label-text text-base">Peso general </span>
         </label>
@@ -1231,13 +1225,10 @@
                     <div class="block p-4">
                         <div class="grid grid-cols-2 gap-y-2">
                             <div class="col-span-2">
-                                <InfoAnimal
-                                    animal={a}
-                                />
+                                <InfoAnimal animal={a} />
                             </div>
-                            
+
                             <div class="flex items-start col-span-2">
-                                
                                 <span>Caravana:</span>
                                 <span class="font-semibold">
                                     {a.caravana}

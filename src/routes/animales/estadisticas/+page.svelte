@@ -15,6 +15,9 @@
     import { createPer } from "$lib/stores/permisos.svelte";
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //filtros
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -119,7 +122,6 @@
     import Historico from "$lib/components/animales/Historico.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
-    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
@@ -197,7 +199,7 @@
     //lotes
     let lotesestadisticas = $state([]);
     let lotehistorico = $state([]);
-function getNombre(id, lista) {
+    function getNombre(id, lista) {
         let ops = lista.filter((o) => o.id == id);
         if (ops.length == 0) {
             return "";
@@ -734,13 +736,12 @@ function getNombre(id, lista) {
 
         animales = resanimales.lista;
         animalescab = animales.filter((a) => a.cab == caboff.id);
-        
-        const idsAnimales = new Set(animalescab.map(a => a.id));
 
-        
+        const idsAnimales = new Set(animalescab.map((a) => a.id));
+
         //const historialFiltrado = reshistorial.lista.filter(h => idsAnimales.has(h.animal));
-        historial = reshistorial.lista.filter(h => idsAnimales.has(h.animal));
-        
+        historial = reshistorial.lista.filter((h) => idsAnimales.has(h.animal));
+
         procesarHistorial();
         filterUpdate();
         cargado = true;
@@ -758,7 +759,7 @@ function getNombre(id, lista) {
         getpermisos = caboff.permisos;
         usuarioid = useroff.id;
     }
-    
+
     async function getDataSQL() {
         proxyfiltros = proxy.load();
 
@@ -767,7 +768,7 @@ function getNombre(id, lista) {
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         ultimo_animal = await getUltimoAnimalesSQL(db);
-        
+
         let ahora = Date.now();
         let antes = ultimo_animal.ultimo;
 
@@ -1041,7 +1042,12 @@ function getNombre(id, lista) {
                 <div
                     class="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-10 w-full my-1"
                 >
-                    <div class="">
+                    <CustomDate
+                        bind:fecha={fechadesde}
+                        onchange={filterUpdate}
+                        etiqueta="Fecha desde"
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1060,7 +1066,12 @@ function getNombre(id, lista) {
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        bind:fecha={fechahasta}
+                        onchange={filterUpdate}
+                        etiqueta="Fecha hasta"
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1089,7 +1100,13 @@ function getNombre(id, lista) {
                             {filterUpdate}
                         />
                     </div>
-                    <div class="my-0 py-0">
+                    <SelectFertil
+                        etiqueta="Sexo"
+                        opciones={[{ id: "", nombre: "Todos" }].concat(sexos)}
+                        onchange={filterUpdate}
+                        bind:value={sexobuscar}
+                    />
+                    <div class="hidden my-0 py-0">
                         <label for="sexo" class="label mb-0">
                             <span class="label-text text-base">Sexo</span>
                         </label>
@@ -1137,7 +1154,13 @@ function getNombre(id, lista) {
                             {filterUpdate}
                         />
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Estado"
+                        opciones={[{ id: "", nombre: "Todos" }].concat(estados)}
+                        bind:value={estadobuscar}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label for="estado" class="label">
                             <span class="label-text text-base">Estado</span>
                         </label>
@@ -1161,7 +1184,13 @@ function getNombre(id, lista) {
                             </select>
                         </label>
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Activos"
+                        opciones={activos}
+                        bind:value={activosbuscar}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label for="activo" class="label">
                             <span class="label-text text-base">Activos</span>
                         </label>

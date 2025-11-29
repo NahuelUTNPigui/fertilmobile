@@ -15,6 +15,9 @@
     import { createPer } from "$lib/stores/permisos.svelte";
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //filtros
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -1281,7 +1284,13 @@
                             {filterUpdate}
                         />
                     </div>
-                    <div class="my-0 py-0">
+                    <SelectFertil
+                        etiqueta = "Sexo"
+                        bind:value={sexobuscar}
+                        onchange={filterUpdate}
+                        opciones={[{id:"",nombre:"Todos"}].concat(sexos)}
+                    />
+                    <div class="hidden my-0 py-0">
                         <label for="sexo" class="label mb-0">
                             <span class="label-text text-base">Sexo</span>
                         </label>
@@ -1329,7 +1338,13 @@
                             {filterUpdate}
                         />
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta = "Estado"
+                        bind:value={estadobuscar}
+                        onchange={filterUpdate}
+                        opciones={[{id:"",nombre:"Todos"}].concat(estados)}
+                    />
+                    <div class="hidden">
                         <label for="estado" class="label">
                             <span class="label-text text-base">Estado</span>
                         </label>
@@ -1353,7 +1368,13 @@
                             </select>
                         </label>
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta = "Activos"
+                        bind:value={activosbuscar}
+                        onchange={filterUpdate}
+                        opciones={activos}
+                    />
+                    <div class="hidden">
                         <label for="activo" class="label">
                             <span class="label-text text-base">Activos</span>
                         </label>

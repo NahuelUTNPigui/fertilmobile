@@ -1,4 +1,6 @@
 <script>
+    import { loger } from "$lib/stores/logs/logs.svelte";
+
     import { onDestroy, onMount } from "svelte";
 
     let {
@@ -7,10 +9,10 @@
         onchange = () => {},
     } = $props();
     let isOpen = $state(false);
-    let fechaSeleccionada = $state(new Date(fecha));
-    let mesActual = $state(
-        fecha ? new Date(fecha.getFullYear(), fecha.getMonth(), 1) : new Date(),
-    );
+    let fechaSeleccionada = $derived(fecha.length>0?new Date(fecha):new Date());
+    
+    
+    let mesActual = $state();
     let containerRef = $state(null);
     let days = $derived(daysInMonth(mesActual));
     let firstDay = $derived(firstDayOfMonth(mesActual));
@@ -47,6 +49,12 @@
 
     onMount(() => {
         document.addEventListener("click", handleClickOutside);
+        
+        mesActual = 
+            fecha.length>0
+                ? new Date(fechaSeleccionada.getFullYear(), fechaSeleccionada.getMonth(), 1)
+                : new Date()
+        
     });
     onDestroy(() => {
         document.removeEventListener("click", handleClickOutside);
@@ -68,11 +76,7 @@
     const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const formatDate = (date) => {
         if (!date) return "";
-        return date.toLocaleDateString("es-ES", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        });
+        return date.toLocaleDateString();
     };
     const isToday = (day) => {
         const today = new Date();
@@ -88,7 +92,9 @@
             mesActual.getMonth(),
             day,
         );
-        fechaSeleccionada = newDate;
+        
+        fecha = newDate.toISOString().split("T")[0]
+        
         onchange();
         isOpen = false;
     };
@@ -114,15 +120,15 @@
         onclick={() => (isOpen = !isOpen)}
         class={`
             w-full flex items-center 
-            justify-between px-4 
-            py-2 border border-gray-300 
-            dark:border-gray-600 rounded-xl 
-            shadow-sm bg-white dark:bg-gray-800 
-            hover:border-gray-400 
-            dark:hover:border-gray-500 transition
+            justify-between px-4 py-2 
+            border border-gray-300 dark:border-gray-700 
+            rounded-xl shadow-sm bg-white 
+            dark:bg-gray-800 
+            hover:border-green-500/30 dark:hover:border-green-500/40 
+            transition
         `}
     >
-        {fechaSeleccionada
+        {fecha.length>0
             ? formatDate(fechaSeleccionada)
             : "Selecciona una fecha"}
     </button>
@@ -135,7 +141,10 @@
                     aria-label="PrevMont"
                     type="button"
                     onclick={handlePrevMonth}
-                    class="p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center text-foreground"
+                    class={`
+                        p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center text-foreground hover:bg-green-500/10 dark:hover:bg-green-500/15 focus:ring-2 focus:ring-green-500/30
+                        
+                    `}
                 >
                     <svg
                         class="w-6 h-6"
@@ -160,7 +169,10 @@
                     aria-labelledby="ForMonth"
                     type="button"
                     onclick={handleNextMonth}
-                    class="p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center text-foreground"
+                    class={`
+                        p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center text-foreground hover:bg-green-500/10 dark:hover:bg-green-500/15 focus:ring-2 focus:ring-green-500/30
+                        
+                    `}
                 >
                     <svg
                         class="w-6 h-6"
@@ -195,15 +207,28 @@
                         type="button"
                         onclick={() => handleDateSelect(day)}
                         class={`
-                            aspect-square rounded-md text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[40px] flex items-center justify-center
-                            ${isSelected(day) ? "hover:bg-primary/90" : ""}
+                            aspect-square rounded-md text-base 
+                            font-medium transition-colors 
+                            hover:bg-green-500/10 hover:text-green-700 dark:hover:text-green-300
+                            focus:outline-none focus:ring-2 
+                            focus:ring-ring min-h-[40px] flex items-center justify-center
+                            ${
+                                isSelected(day) ? 
+                                "hover:bg-green-500/90 bg-green-500/20 text-green-700 dark:text-green-300" :
+                                "text-foreground"
+                            }
+                            ${  
+                                isToday(day)?
+                                "":
+                                ""
+                            }
+                            ${
+                                isToday(day) && !isSelected(day)?
+                                "border-2 border-green-500/50":
+                                ""
+                            }
 
                         `}
-                        class:bg-primary={isSelected(day)}
-                        class:text-primary-foreground={isSelected(day)}
-                        class:border-2={isToday(day) && !isSelected(day)}
-                        class:border-primary={isToday(day) && !isSelected(day)}
-                        class:text-foreground={!isSelected(day)}
                     >
                         {day}
                     </button>

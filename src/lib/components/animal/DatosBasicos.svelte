@@ -18,7 +18,10 @@
         guardarHistorialOffline,
     } from "$lib/historial/lib";
     import PredictSelect from "../PredictSelect.svelte";
+
     import { shorterWord } from "$lib/stringutil/lib";
+    //formulario
+
     //permisos
     import {
         verificarNivel,
@@ -65,6 +68,9 @@
     } from "$lib/stores/sqlite/dbcomandos";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    import CustomDate from "../CustomDate.svelte";
+    import SelectFertil from "../SelectFertil.svelte";
+    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     //let db = $state(null)
@@ -86,9 +92,8 @@
         caravana = $bindable(""),
         raza = $bindable(""),
         color = $bindable(""),
-        padreobj=$bindable({}),
-        madreobj=$bindable({}),
-
+        padreobj = $bindable({}),
+        madreobj = $bindable({}),
 
         lotes,
         rodeos,
@@ -164,55 +169,6 @@
 
     function onwrite() {}
     function onelegir() {}
-    //rodeos
-    async function getRodeos() {
-        const records = await pb.collection("rodeos").getFullList({
-            filter: `active = true && cab ='${cab.id}'`,
-            sort: "-nombre",
-        });
-        rodeos = records;
-        if (rodeo != "") {
-            nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
-        } else {
-            nombrerodeo = "";
-        }
-    }
-    //Lotes
-    async function getLotes() {
-        const records = await pb.collection("lotes").getFullList({
-            filter: `active = true && cab ='${cab.id}'`,
-            sort: "-nombre",
-        });
-        lotes = records;
-        if (lote != "") {
-            nombrelote = lotes.filter((l) => l.id == lote)[0].nombre;
-        } else {
-            nombrelote = "";
-        }
-    }
-    //Animales
-    //Si quiero tener animales fallecidos
-    async function getAnimales() {
-        const recordsa = await pb.collection("animales").getFullList({
-            filter: `active=true && cab='${cab.id}' `,
-            expand: "nacimiento",
-        });
-        madres = recordsa.filter((a) => a.sexo == "H" && a.delete == false);
-        padres = recordsa.filter((a) => a.sexo == "M" && a.delete == false);
-        listamadres = madres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-            };
-        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-        listapadres = padres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-            };
-        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-        cargadoanimales = true;
-    }
     function getSexo(sex) {
         let obj = sexos.filter((s) => s.id == sex)[0];
         if (obj) {
@@ -227,7 +183,7 @@
         sexoviejo = sexo;
         loteviejo = lote;
         rodeovieja = rodeo;
-        razaviejovieja = raza;
+        razaviejo = raza;
         colorviejo = color;
         caravanavieja = caravana;
         categoriavieja = categoria;
@@ -241,8 +197,8 @@
         caravana = caravanavieja;
         rodeo = rodeovieja;
         lote = loteviejo;
-        raza = razaviejo
-        color = colorviejo
+        raza = razaviejo;
+        color = colorviejo;
         categoria = categoriavieja;
         prenada = prenadaviejo;
         rp = rpviejo;
@@ -329,9 +285,11 @@
 
             await editarAnimalSQL(db, id, datanimal, expand);
             //NO va porque tengo que evaluar las fechas
-            let histo = await pb.collection("historialanimales").create(datahistorial);
-            pushHistorial(histo)
-            await addNewHistorialAnimalesSQL(db,histo)
+            let histo = await pb
+                .collection("historialanimales")
+                .create(datahistorial);
+            pushHistorial(histo);
+            await addNewHistorialAnimalesSQL(db, histo);
             //await guardarHistorial(pb,madre)
             //// Pero si las fechas no me coinciden, si guardo un nacimiento viejo
             //let datamadre = {
@@ -412,17 +370,17 @@
             prioridad: 2,
             idprov,
             camposprov: "nacimientos",
-            show: { ...dataani,caravana },
+            show: { ...dataani, caravana },
             motivo: "Nuevo nacimiento",
         };
         let comandoshisto = await guardarHistorialOffline(db, id, usuarioid);
         await editarAnimalSQL(db, id, dataani, expand);
-        await addNewHistorialAnimalesSQL(db,comandoshisto.data)
-        pushHistorial(comandoshisto.data)
+        await addNewHistorialAnimalesSQL(db, comandoshisto.data);
+        pushHistorial(comandoshisto.data);
         //Es importante respetar el orden
         comandos.push(comandonac);
         comandos.push(comandoani);
-        comandos.push(comandoshisto)
+        comandos.push(comandoshisto);
         await setComandosSQL(db, comandos);
         dataparicion = {
             animalid: id,
@@ -446,17 +404,15 @@
         } else {
             await guardarNacimientoOffline();
         }
-        if(padre !=""){
-            padreobj={id:padre,caravana:nombrepadre}
+        if (padre != "") {
+            padreobj = { id: padre, caravana: nombrepadre };
+        } else {
+            padreobj = { id: -1 };
         }
-        else{
-            padreobj={id:-1}
-        }
-        if(madre !=""){
-            madreobj={id:madre,caravana:nombremadre}
-        }
-        else{
-            madreobj={id:-1}
+        if (madre != "") {
+            madreobj = { id: madre, caravana: nombremadre };
+        } else {
+            madreobj = { id: -1 };
         }
     }
     async function editarNacimientoOffline() {
@@ -466,7 +422,7 @@
             fecha: fecha + " 03:00:00",
             nombremadre,
             nombrepadre,
-            observacion,    
+            observacion,
         };
         let nuevomadre = madre.split("_")[0] == "nuevo";
         let nuevopadre = padre.split("_")[0] == "nuevo";
@@ -523,11 +479,11 @@
         let comandohisto = await guardarHistorialOffline(db, id, usuarioid);
 
         await editarAnimalSQL(db, id, dataani, expand);
-        await addNewHistorialAnimalesSQL(db,comandohisto.data)
-        pushHistorial(comandohisto.data)
+        await addNewHistorialAnimalesSQL(db, comandohisto.data);
+        pushHistorial(comandohisto.data);
         comandos.push(comandonac);
         comandos.push(comandoani);
-        comandos.push(comandohisto)
+        comandos.push(comandohisto);
         await setComandosSQL(db, comandos);
         dataparicion = {
             animalid: id,
@@ -536,7 +492,6 @@
         };
         await editarNacimientoSQL(db, dataparicion, idnacimiento);
         Swal.fire("Éxito editar", "Se pudo editar el nacimiento", "success");
-        
     }
     async function editarNacimientoOnline() {
         caboff = await updatePermisos(pb, usuarioid);
@@ -618,17 +573,15 @@
         } else {
             await editarNacimientoOffline();
         }
-        if(padre !=""){
-            padreobj={id:padre,caravana:nombrepadre}
+        if (padre != "") {
+            padreobj = { id: padre, caravana: nombrepadre };
+        } else {
+            padreobj = { id: -1 };
         }
-        else{
-            padreobj={id:-1}
-        }
-        if(madre !=""){
-            madreobj={id:madre,caravana:nombremadre}
-        }
-        else{
-            madreobj={id:-1}
+        if (madre != "") {
+            madreobj = { id: madre, caravana: nombremadre };
+        } else {
+            madreobj = { id: -1 };
         }
     }
     function getNombreMadre() {
@@ -652,7 +605,7 @@
             categoria,
             rp,
             raza,
-            color
+            color,
         };
         caboff = await updatePermisos(pb, usuarioid);
         let listapermisos = getPermisosList(caboff.permisos);
@@ -661,11 +614,9 @@
             return;
         }
         try {
-            
-
             let his = await guardarHistorial(pb, id);
-            await addNewHistorialAnimalesSQL(db,his)
-            pushHistorial(his)
+            await addNewHistorialAnimalesSQL(db, his);
+            pushHistorial(his);
 
             const record = await pb.collection("animales").update(id, data);
             sexo = data.sexo;
@@ -676,8 +627,8 @@
             categoria = data.categoria;
             rp = data.rp;
             prenada = data.prenada;
-            raza = data.raza
-            color = data.color
+            raza = data.raza;
+            color = data.color;
             if (rodeo != "") {
                 nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
             } else {
@@ -715,8 +666,8 @@
         };
         try {
             let comandohis = await guardarHistorialOffline(db, id, usuarioid);
-            await addNewHistorialAnimalesSQL(db,comandohis.data)
-            pushHistorial(comandohis.data)
+            await addNewHistorialAnimalesSQL(db, comandohis.data);
+            pushHistorial(comandohis.data);
             if (rodeo != "") {
                 nombrerodeo = rodeos.filter((t) => t.id == rodeo)[0].nombre;
             } else {
@@ -803,18 +754,30 @@
         madres = animales.filter((a) => a.sexo == "H" && a.delete == false);
         padres = animales.filter((a) => a.sexo == "M" && a.delete == false);
 
-        listamadres = madres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-            };
-        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-        listapadres = padres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-            };
-        }).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+        listamadres = madres
+            .map((item) => {
+                return {
+                    id: item.id,
+                    nombre: item.caravana,
+                };
+            })
+            .sort((tt1, tt2) =>
+                tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                    ? -1
+                    : 1,
+            );
+        listapadres = padres
+            .map((item) => {
+                return {
+                    id: item.id,
+                    nombre: item.caravana,
+                };
+            })
+            .sort((tt1, tt2) =>
+                tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                    ? -1
+                    : 1,
+            );
 
         cargadoanimales = true;
     }
@@ -848,7 +811,12 @@
                     a.sexo == "H" &&
                     a.id != id,
             )
-            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
+            .map((a) => ({ id: a.id, nombre: a.caravana }))
+            .sort((tt1, tt2) =>
+                tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                    ? -1
+                    : 1,
+            );
 
         listapadres = animales
             .filter(
@@ -858,8 +826,12 @@
                     a.sexo == "M" &&
                     a.id != id,
             )
-            .map((a) => ({ id: a.id, nombre: a.caravana })).sort((tt1,tt2)=>tt1.nombre.toLocaleLowerCase()<tt2.nombre.toLocaleLowerCase()?-1:1);
-
+            .map((a) => ({ id: a.id, nombre: a.caravana }))
+            .sort((tt1, tt2) =>
+                tt1.nombre.toLocaleLowerCase() < tt2.nombre.toLocaleLowerCase()
+                    ? -1
+                    : 1,
+            );
     }
     async function getDataSQL() {
         await getLocalSQL();
@@ -985,27 +957,30 @@
         {/if}
     </div>
     <div class="mb-1 lg:mb-0">
-        <label for="sexo" class="label">
-            <span class="label-text text-base">Sexo</span>
-        </label>
         {#if modoedicion}
-            <label class="input-group">
-                <select
-                    class={`
+            <SelectFertil bind:value={sexo} etiqueta="Sexo" opciones={sexos} largo={"w-48"}/>
+            <div class="hidden">
+                <label class="input-group">
+                    <select
+                        class={`
                         select select-bordered
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
                         focus:ring-green-500 focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={sexo}
-                >
-                    {#each sexos as s}
-                        <option value={s.id}>{s.nombre}</option>
-                    {/each}
-                </select>
-            </label>
+                        bind:value={sexo}
+                    >
+                        {#each sexos as s}
+                            <option value={s.id}>{s.nombre}</option>
+                        {/each}
+                    </select>
+                </label>
+            </div>
         {:else}
+            <label for="sexo" class="label">
+                <span class="label-text text-base">Sexo</span>
+            </label>
             <label
                 for="sexo"
                 class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
@@ -1015,11 +990,14 @@
         {/if}
     </div>
     <div class="mb-1 lg:mb-0">
-        <label for="rodeo" class="label">
-            <span class="label-text text-base">Rodeo</span>
-        </label>
         {#if modoedicion}
-            <label class="input-group">
+            <SelectFertil
+                bind:value={rodeo}
+                etiqueta="Rodeo"
+                opciones={rodeos.filter((r) => r.active && r.cab == caboff.id)}
+                largo={"w-48"}
+            />
+            <label class="hidden input-group">
                 <select
                     class={`
                         select select-bordered w-full
@@ -1030,12 +1008,15 @@
                     `}
                     bind:value={rodeo}
                 >
-                    {#each rodeos.filter(r=>r.active && r.cab == caboff.id) as t}
+                    {#each rodeos.filter((r) => r.active && r.cab == caboff.id) as t}
                         <option value={t.id}>{t.nombre}</option>
                     {/each}
                 </select>
             </label>
         {:else}
+            <label for="rodeo" class="label">
+                <span class="label-text text-base">Rodeo</span>
+            </label>
             <label
                 for="rodeo"
                 class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
@@ -1045,11 +1026,14 @@
         {/if}
     </div>
     <div class="mb-1 lg:mb-0">
-        <label for="lote" class="label">
-            <span class="label-text text-base">Lote</span>
-        </label>
         {#if modoedicion}
-            <label class="input-group">
+            <SelectFertil
+                bind:value={lote}
+                etiqueta="Lote"
+                opciones={lotes.filter((l) => l.active && l.cab == caboff.id)}
+                largo={"w-48"}
+            />
+            <label class="hidden input-group">
                 <select
                     class={`
                         select select-bordered w-full
@@ -1060,12 +1044,15 @@
                     `}
                     bind:value={lote}
                 >
-                    {#each lotes.filter(l=>l.active && l.cab == caboff.id) as l}
+                    {#each lotes.filter((l) => l.active && l.cab == caboff.id) as l}
                         <option value={l.id}>{l.nombre}</option>
                     {/each}
                 </select>
             </label>
         {:else}
+            <label for="lote" class="label">
+                <span class="label-text text-base">Lote</span>
+            </label>
             <label
                 for="lote"
                 class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
@@ -1075,11 +1062,14 @@
         {/if}
     </div>
     <div class="mb-1 lg:mb-0">
-        <label for="categoria" class="label">
-            <span class="label-text text-base">Categoria</span>
-        </label>
         {#if modoedicion}
-            <label class="input-group">
+            <SelectFertil
+                bind:value={categoria}
+                etiqueta="Categoría"
+                opciones={categorias}
+                largo={"w-48"}
+            />
+            <label class="hidden input-group">
                 <select
                     class={`
                         select select-bordered w-full
@@ -1096,6 +1086,9 @@
                 </select>
             </label>
         {:else}
+            <label for="categoria" class="label">
+                <span class="label-text text-base">Categoria</span>
+            </label>
             <label
                 for="lote"
                 class={`block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1 p-1`}
@@ -1232,33 +1225,32 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2">
         <div>
             <label for="nombremadre" class="label">
-                <span class="label-text text-base"
-                    >Madre: {nombremadre}
-                    </span
-                >
+                <span class="label-text text-base">Madre: {nombremadre} </span>
             </label>
-            
-            {#if madreobj.id != -1 }
+
+            {#if madreobj.id != -1}
                 <div class="flex justify-start mx-0 px-0">
-                    <button 
-                    class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`} 
-                        onclick={async ()=>await irPadre(madreobj.id)}
-                    >Ver animal</button>
+                    <button
+                        class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`}
+                        onclick={async () => await irPadre(madreobj.id)}
+                        >Ver animal</button
+                    >
                 </div>
             {/if}
         </div>
 
-        <div >
+        <div>
             <label for="nombrepadre" class="label">
                 <span class="label-text text-base">Padre: {nombrepadre}</span>
             </label>
-            
+
             {#if padreobj.id != -1}
                 <div class="flex justify-start mx-0 px-0">
-                    <button 
-                    class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`} 
-                        onclick={async ()=>await irPadre(padreobj.id)}
-                    >Ver animal</button>
+                    <button
+                        class={`${estilos.basico} ${estilos.chico} ${estilos.primario}`}
+                        onclick={async () => await irPadre(padreobj.id)}
+                        >Ver animal</button
+                    >
                 </div>
             {/if}
         </div>
@@ -1322,15 +1314,16 @@
             <h3 class="text-lg font-bold">Nuevo nacimiento</h3>
         {/if}
         <div class="form-control">
-            <label for="fechanacimiento" class="label">
-                <span class="label-text text-base">Fecha nacimiento</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fechanacimiento"
-                    type="date"
-                    max={HOY}
-                    class={`
+            <div class="hidden">
+                <label for="fechanacimiento" class="label">
+                    <span class="label-text text-base">Fecha nacimiento</span>
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fechanacimiento"
+                        type="date"
+                        max={HOY}
+                        class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1338,9 +1331,17 @@
                         focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={fecha}
-                />
-            </label>
+                        bind:value={fecha}
+                    />
+                </label>
+            </div>
+            <CustomDate
+                bind:fecha = {fecha}
+                etiqueta = "Fecha nacimiento"
+                
+
+            />
+
             {#if cargadoanimales}
                 <PredictSelect
                     bind:valor={madre}

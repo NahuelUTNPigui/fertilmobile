@@ -1,96 +1,88 @@
 <script>
-    import PredictSelect from '$lib/components/PredictSelect.svelte';
-    import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
-    import estilos from '$lib/stores/estilos';
-    import RadioButton from '$lib/components/RadioButton.svelte';
-    import tipostacto from '$lib/stores/tipostacto';
+    import PredictSelect from "$lib/components/PredictSelect.svelte";
+    import AgregarAnimal from "$lib/components/eventos/AgregarAnimal.svelte";
+    import estilos from "$lib/stores/estilos";
+    import RadioButton from "$lib/components/RadioButton.svelte";
+    import tipostacto from "$lib/stores/tipostacto";
     import estados from "$lib/stores/estados";
-    import tiposanimal from '$lib/stores/tiposanimal';
-    import {isEmpty} from "$lib/stringutil/lib"
+    import tiposanimal from "$lib/stores/tiposanimal";
+    import { isEmpty } from "$lib/stringutil/lib";
     import { loger } from "$lib/stores/logs/logs.svelte";
-    import InfoAnimal from '../InfoAnimal.svelte';
-    import CustomDate from '../CustomDate.svelte';
+    import InfoAnimal from "../InfoAnimal.svelte";
+    import CustomDate from "../CustomDate.svelte";
+    import SelectFertil from "../SelectFertil.svelte";
 
-    let modedebug = import.meta.env.VITE_MODO_DEV == "si"
+    let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     let {
-        caravana=$bindable(""),
-        peso=$bindable(""),
-        sexo=$bindable(""),
-        fechanacimiento=$bindable(""),
-        categoria=$bindable(""),
-        agregaranimal=$bindable(false),
-
+        caravana = $bindable(""),
+        peso = $bindable(""),
+        sexo = $bindable(""),
+        fechanacimiento = $bindable(""),
+        categoria = $bindable(""),
+        agregaranimal = $bindable(false),
 
         tacto = $bindable({}),
-        prenadatacto=$bindable(0),
+        prenadatacto = $bindable(0),
         madres = $bindable([]),
         listamadres = $bindable([]),
         listanimales = $bindable([]),
         cargadoanimales = $bindable(false),
-        guardarTacto
+        guardarTacto,
+    } = $props();
+    let nombreanimal = $state("");
+    let animaltacto = $state("");
 
-    } = $props()
-    let nombreanimal = $state("")
-    let animaltacto = $state("")
-    
-    let option=$state(0)
-    let animal = $state({})
-    const HOY = new Date().toISOString().split("T")[0]
-    function validarBotonTacto(){
-        tacto.botonhabilitadotacto = true
-        if(!agregaranimal && isEmpty(tacto.animaltacto)){
-            tacto.botonhabilitadotacto=false
+    let option = $state(0);
+    let animal = $state({});
+    const HOY = new Date().toISOString().split("T")[0];
+    function validarBotonTacto() {
+        tacto.botonhabilitadotacto = true;
+        if (!agregaranimal && isEmpty(tacto.animaltacto)) {
+            tacto.botonhabilitadotacto = false;
         }
-        if(isEmpty(tacto.fechatacto)){
-            tacto.botonhabilitadotacto=false
+        if (isEmpty(tacto.fechatacto)) {
+            tacto.botonhabilitadotacto = false;
         }
     }
-    function onSelectAnimalTacto(){
-        let a = madres.filter(an=>an.id==tacto.animaltacto)[0]
-        if(a){
-            tacto.categoriatacto = a.categoria
+    function onSelectAnimalTacto() {
+        let a = madres.filter((an) => an.id == tacto.animaltacto)[0];
+        if (a) {
+            tacto.categoriatacto = a.categoria;
+        } else {
+            tacto.categoriatacto = "";
         }
-        else{
-            tacto.categoriatacto = ""
-        }
-        
     }
-    function oninputTacto(inputName){
-        tacto.animaltacto = animaltacto
-        validarBotonTacto()
-        if(!agregaranimal && inputName == "ANIMAL"){
-            
-            if(isEmpty(tacto.animaltacto)){
-                tacto.malanimaltacto = true
+    function oninputTacto(inputName) {
+        tacto.animaltacto = animaltacto;
+        validarBotonTacto();
+        if (!agregaranimal && inputName == "ANIMAL") {
+            if (isEmpty(tacto.animaltacto)) {
+                tacto.malanimaltacto = true;
+            } else {
+                tacto.malanimaltacto = false;
+                onSelectAnimalTacto();
+                selectAnimal();
             }
-            else{
-                tacto.malanimaltacto = false
-                onSelectAnimalTacto()
-                selectAnimal()
-            }
-        }   
-        if(inputName == "FECHA"){
-            if(isEmpty(tacto.fechatacto)){
-                tacto.malfechatacto = true
-            }
-            else{
-                tacto.malfechatacto = false
+        }
+        if (inputName == "FECHA") {
+            if (isEmpty(tacto.fechatacto)) {
+                tacto.malfechatacto = true;
+            } else {
+                tacto.malfechatacto = false;
             }
         }
     }
-    function selectAnimal(){
-        animal = listanimales.find(a=>a.id == animaltacto)
+    function selectAnimal() {
+        animal = listanimales.find((a) => a.id == animaltacto);
     }
-    function clickLog(){
-        
+    function clickLog() {
         loger.addLog({
-            time:Date.now(),
-            text:"click desde tacto incio"
-        })
-        
+            time: Date.now(),
+            text: "click desde tacto incio",
+        });
     }
-
 </script>
+
 <div class="form-control">
     {#if modedebug}
         <div class="label">
@@ -99,34 +91,35 @@
         <div class="label">
             prenadatacto - {prenadatacto}
         </div>
-        <button
-            class="btn btn-primary"
-            onclick={clickLog}
-        >test log</button>
+        <button class="btn btn-primary" onclick={clickLog}>test log</button>
     {/if}
-    <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
+    <AgregarAnimal
+        bind:agregaranimal
+        bind:caravana
+        bind:categoria
+        bind:sexo
+        bind:peso
+        bind:fechanacimiento
+    />
     {#if !agregaranimal}
         {#if cargadoanimales}
-            <PredictSelect 
-                bind:valor={animaltacto} 
-                etiqueta = {"Animal"} 
-                bind:cadena={nombreanimal} 
-                bind:lista = {listamadres} 
-                onelegir={()=>oninputTacto("ANIMAL")}>
-                
-            </PredictSelect>
-            {#if animaltacto.length >0}
-                <InfoAnimal
-                    bind:animal
-                />
+            <PredictSelect
+                bind:valor={animaltacto}
+                etiqueta={"Animal"}
+                bind:cadena={nombreanimal}
+                bind:lista={listamadres}
+                onelegir={() => oninputTacto("ANIMAL")}
+            ></PredictSelect>
+            {#if animaltacto.length > 0}
+                <InfoAnimal bind:animal />
             {/if}
         {/if}
-        
-        <label for = "tipo" class="label">
+
+        <label for="tipo" class="label">
             <span class={estilos.labelForm}>Categoria</span>
         </label>
-        <label class="input-group ">
-            <select 
+        <label class="input-group">
+            <select
                 class={`
                     select select-bordered w-full
                     border border-gray-300 rounded-md
@@ -139,27 +132,34 @@
                 bind:value={tacto.categoriatacto}
             >
                 {#each tiposanimal as t}
-                    <option value={t.id}>{t.nombre}</option>    
+                    <option value={t.id}>{t.nombre}</option>
                 {/each}
             </select>
         </label>
     {/if}
     <div class="form-group mt-2">
-        <label for = "prenada" class="label ">
+        <label for="prenada" class="label">
             <span class={estilos.labelForm}>Estado</span>
         </label>
         <!--No funciona el prenada tacto, si lo pongo como un atributo de objecto-->
-        <RadioButton bind:option={prenadatacto} deshabilitado={false}/>
-
+        <RadioButton bind:option={prenadatacto} deshabilitado={false} />
     </div>
 
-    <CustomDate etiqueta="Fecha prueba" bind:fecha = {tacto.fechatacto} onchange = {() => oninputTacto("FECHA")}/>
-    <label for = "fecha" class="label">
-        <span class={estilos.labelForm}>Fecha tacto</span>
-    </label>
-    <label class="input-group ">
-        <input id ="fecha" type="date" max={HOY}  
-            class={`
+    <CustomDate
+        etiqueta="Fecha tacto"
+        bind:fecha={tacto.fechatacto}
+        onchange={() => oninputTacto("FECHA")}
+    />
+    <div class="hidden">
+        <label for="fecha" class="label">
+            <span class={estilos.labelForm}>Fecha tacto</span>
+        </label>
+        <label class="input-group">
+            <input
+                id="fecha"
+                type="date"
+                max={HOY}
+                class={`
                 input input-bordered 
                 w-full
                 border border-gray-300 rounded-md
@@ -167,23 +167,31 @@
                 focus:ring-green-500 
                 focus:border-green-500
                 ${estilos.bgdark2}
-            `} 
-            bind:value={tacto.fechatacto}
-            onchange={()=>oninputTacto("FECHA")}
-        />
-        {#if tacto.malfechatacto}
-            <div class="label">
-                <span class="label-text-alt text-red-500">Debe seleccionar la fecha del tacto</span>                    
-            </div>
-        {/if}
-    </label>
-
-    <label for = "tipo" class="label">
-        <span class={estilos.labelForm}>Tacto/Ecografia</span>
-    </label>
-    <label class="input-group ">
-        <select 
-            class={`
+            `}
+                bind:value={tacto.fechatacto}
+                onchange={() => oninputTacto("FECHA")}
+            />
+            {#if tacto.malfechatacto}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del tacto</span
+                    >
+                </div>
+            {/if}
+        </label>
+    </div>
+    <SelectFertil
+        bind:value = {tacto.tipotacto}
+        opciones= {tipostacto}
+        etiqueta = {"Tacto/Ecografia"}
+    /> 
+    <div class="hidden">
+        <label for="tipo" class="label">
+            <span class={estilos.labelForm}>Tacto/Ecografia</span>
+        </label>
+        <label class="input-group">
+            <select
+                class={`
                 input input-bordered w-full
                 border border-gray-300 rounded-md
                 focus:outline-none focus:ring-2 
@@ -191,22 +199,22 @@
                 focus:border-green-500
                 ${estilos.bgdark2}
             `}
-            
-            bind:value={tacto.tipotacto}
-        >
-            {#each tipostacto as t}
-                <option value={t.id} >{t.nombre}</option>    
-            {/each}
-        </select>
-    </label>
+                bind:value={tacto.tipotacto}
+            >
+                {#each tipostacto as t}
+                    <option value={t.id}>{t.nombre}</option>
+                {/each}
+            </select>
+        </label>
+    </div>
 
     <label class="form-control">
         <div class="label">
-            <span class={estilos.labelForm}>Observacion</span>                    
+            <span class={estilos.labelForm}>Observacion</span>
         </div>
-        <input 
-            id ="observaciontacto" 
-            type="text"  
+        <input
+            id="observaciontacto"
+            type="text"
             class={`
                 input 
                 input-bordered 
@@ -219,10 +227,13 @@
         />
     </label>
 </div>
-<div class="modal-action justify-start ">
-    <form method="dialog" >
-      <!-- if there is a button, it will close the modal -->              
-        <button class="btn btn-success text-white" disabled='{!tacto.botonhabilitadotacto}' onclick={guardarTacto} >Guardar</button>              
-        
+<div class="modal-action justify-start">
+    <form method="dialog">
+        <!-- if there is a button, it will close the modal -->
+        <button
+            class="btn btn-success text-white"
+            disabled={!tacto.botonhabilitadotacto}
+            onclick={guardarTacto}>Guardar</button
+        >
     </form>
 </div>

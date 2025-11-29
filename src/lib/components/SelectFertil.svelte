@@ -1,131 +1,110 @@
 <script>
     import estilos from "$lib/stores/estilos";
+    import { onMount, onDestroy } from "svelte";
+    let {
+        largo = "w-64",
+        z_value ="z-10",
+        opciones = $bindable([]),
+        value = $bindable(""),
+        etiqueta = "",
+        maxOpciones = "max-h-60",
+        onchange = () => {},
+        getNombreOpcion = (id) => {
+            let p_idx = opciones.findIndex((pes) => pes.id === id);
+            if (p_idx != -1) {
+                return opciones[p_idx].nombre;
+            } else {
+                return "";
+            }
+        },
+    } = $props();
+    let abierto = $state(false);
+    let container = $state(null); // referencia al div principal
 
-    let {lista,etiqueta,valor=$bindable(""),cadena=$bindable("")} = $props()
-    let listarow = $state(lista)
-    let isOpen = $state(false)
-    let nombre = $state("")
-    function cambioCadena(){
-        if(cadena.length == 0){
-            listarow = lista
-            valor = ""
-        }
-        else{
-            isOpen = true
-            listarow = lista.filter(e=>e.nombre.toLowerCase().includes(cadena.toLowerCase()))
-            if(listarow.length == 1){
-                valor = listarow[0].id
-                nombre = listarow[0].nombre
-            }
-            if(listarow.length == 0){
-                valor = ""
-            }
+    function toggle() {
+        abierto = !abierto;
+    }
+
+    function select(option) {
+        value = option;
+        onchange()
+        abierto = false;
+    }
+    function handleClickOutside(event) {
+        if (!container.contains(event.target)) {
+            abierto = false;
         }
     }
-    function clickOption(id){
-        valor = id
-        isOpen = !isOpen
-        cadena = listarow.filter(l=>l.id==id)[0].nombre
-        nombre = cadena
-    }
-    
-    
+    onMount(() => {
+        document.addEventListener("click", handleClickOutside);
+    });
+
+    onDestroy(() => {
+        document.removeEventListener("click", handleClickOutside);
+    });
+    let clase_opciones = `
+        absolute mt-2 w-full bg-white dark:bg-gray-800
+         border border-gray-200 dark:border-gray-600 
+         rounded-xl shadow-lg ${z_value} 
+         ${maxOpciones} overflow-y-auto
+    `;
+    let clase_original = `
+        absolute mt-2 w-full bg-white dark:bg-gray-800 
+        border border-gray-200 dark:border-gray-600 
+        rounded-xl shadow-lg ${z_value}
+    `;
 </script>
-<div class="w-full">
-    <label for="" class={estilos.labelForm}>{etiqueta}</label>
-    <input
-        type="text"  
-        class={`
-            input 
-            input-bordered 
-            border border-gray-300 rounded-md
-            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-            w-full
-            mb-0
-            ${estilos.bgdark2} 
-        `}
-        
-        oninput={cambioCadena}
-        onclick={()=>isOpen = !isOpen}
-        bind:value={cadena}
 
-    />
-    {#if isOpen}
-        <div class="w-4/5 mt-0 absolute z-10 max-h-40 overflow-auto ">
-            {#if listarow.length == 0}
-                
-                <div 
-                    class={`
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                        w-full
-                        mb-0
-                        ${estilos.bgdark2} 
-                    `}>
-                    <button
-                        class={`
-                            text-start 
-                            py-2 pl-3 
-                            select-none pr-9 bg-transparent
-                            cursor-default
-                            
-                            
-                        `}
-                        
-                    >   
-                        <span
-                            class={`
-                                
-                                truncate
-                                font-normal
-                            `}
-                        >
-                            No hay coincidencias
-                        </span>
-                    </button>
-                    
-                </div>
-            {:else}
-                <div 
-                    class={`
-                    
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                        w-full
-                        mb-0
-                        ${estilos.bgdark2} 
-                    `}
-                >
-                    {#each listarow as v}
-                        <button
-                            class={`
-                                text-start w-full 
-                                relative py-2 pl-3 
-                                select-none pr-9 bg-transparent
-                                hover:bg-green-100 hover:text-green-800 dark:hover:text-green-800 dark:text-white
-                            `}
-                            onclick={()=>clickOption(v.id)}
-                        >   
-                            <span
-                                class={`
-                                    block
-                                    truncate
-                                    font-normal
-                                `}
-                            >
-                                {v.nombre}
-                            </span>
-                        </button>
-                    {/each}
-                </div>
+<div class={`relative ${largo}`} bind:this={container}>
+    <label for="prenada" class="label">
+        <span class={estilos.labelForm}>{etiqueta}</span>
+    </label>
+    <button
+        onclick={toggle}
+        class={`
+            w-full flex items-center justify-between 
+            px-4 py-2 border border-gray-300 dark:border-gray-600 
+            rounded-xl shadow-sm bg-white dark:bg-gray-800 
+            hover:border-gray-400 dark:hover:border-gray-500 
+            transition
+        `}
+    >
+        <div class="flex items-center gap-2">
             
-            {/if}
+            <span class="text-gray-800 dark:text-gray-100"
+                >{getNombreOpcion(value)}</span
+            >
+        </div>
+        <svg
+            class="w-4 text-gray-600 dark:text-gray-300 transform transition-transform duration-200"
+            class:rotate-180={abierto}
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    {#if abierto}
+        <div
+            class={`${clase_opciones}`}
+        >
+            <div class="flex flex-col">
+                {#each opciones as option}
+                    <button
+                        onclick={() => select(option.id)}
+                        class="text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition text-gray-700 dark:text-gray-200"
+                    >
+                        {getNombreOpcion(option.id)}
+                    </button>
+                {/each}
+            </div>
         </div>
     {/if}
-    {#if valor.length != 0}
-        <span class="text-sm mt-1 ">Elegiste a {nombre}</span>
-    {/if}
-
-    
-
 </div>

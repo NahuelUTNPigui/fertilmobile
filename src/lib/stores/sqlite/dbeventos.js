@@ -2,6 +2,7 @@ import { loger } from "../logs/logs.svelte"
 import { getEstablecimientosAsociadosSQL } from "./dbasociados"
 import { getCabOffline } from "../capacitor/offlinecab"
 import { addDays } from "$lib/stringutil/lib"
+
 let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 export async function getTotalesEventosOnlineCab(pb,cabid) {
     let pesajes = 0
@@ -962,7 +963,7 @@ export async function updateLocalLotesSQLUserUltimo(db, pb, userid,ultimo) {
     //Fin Asociados
     let dblotes = await getLotesSQL(db)
     let locallotes = dblotes.lista
-    if(lotes.length == 0){
+    if(locallotes.length == 0){
         await setLotesSQL(db, lotes)
         locallotes = lotes
     }
@@ -989,6 +990,7 @@ export async function updateLocalLotesSQLUserUltimo(db, pb, userid,ultimo) {
 }
 
 export async function updateLocalLotesSQLUser(db, pb, userid) {
+    
     const records = await pb.collection('lotes').getFullList({
         filter: `cab.user='${userid}'`,
         sort: 'nombre',

@@ -1,3 +1,4 @@
+import { loger } from "../logs/logs.svelte"
 export async function updateLocalIDAsociadosSQL(db,pb,userid) {
     const recordcolabcab = await pb.collection('estxcolabs').getFullList({
         filter:`colab.user='${userid}'`,

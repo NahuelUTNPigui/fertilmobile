@@ -1,5 +1,4 @@
 <script>
-    
     import Navbarr from "$lib/components/Navbarr.svelte";
     import Exportar from "$lib/components/Exportar.svelte";
     import PocketBase from "pocketbase";
@@ -24,6 +23,9 @@
         getEstadoNombre,
         getEstadoColor,
     } from "$lib/components/estadosutils/lib";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -56,7 +58,7 @@
         getUltimoAnimalesSQL,
         updateLocalAnimalesSQL,
         updateLocalAnimalesSQLUser,
-        updateLocalAnimalesSQLUserUltimo
+        updateLocalAnimalesSQLUserUltimo,
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -84,7 +86,7 @@
         getTactosSQL,
         setUltimoTactosSQL,
         getUltimoTactosSQL,
-        setUltimoCeroEventosSQL
+        setUltimoCeroEventosSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import { setUltimoCeroEstablecimientosSQL } from "$lib/stores/sqlite/dballestablecimientos";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
@@ -96,9 +98,9 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
     //offline
-    let tieneUltimo = $state(false)
+    let tieneUltimo = $state(false);
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -177,11 +179,11 @@
     function clickFilter() {
         isOpenFilter = !isOpenFilter;
     }
-    
+
     function isEmpty(str) {
         return !str || str.length === 0;
     }
-    
+
     function openNewModal() {
         if (permisos[4]) {
             tacto = null;
@@ -284,7 +286,9 @@
                     active: false,
                 };
                 try {
-                    let eliminartacto = tactos.filter((t) => t.id == idtacto)[0]
+                    let eliminartacto = tactos.filter(
+                        (t) => t.id == idtacto,
+                    )[0];
                     let nanimal = animal.split("_").length > 1;
                     let comando = {
                         tipo: "update",
@@ -294,8 +298,8 @@
                         prioridad: 2,
                         idprov: idtacto,
                         camposprov: nanimal ? "animal" : "",
-                        show:{...eliminartacto,...data},
-                        motivo:"Eliminar tacto"
+                        show: { ...eliminartacto, ...data },
+                        motivo: "Eliminar tacto",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -428,27 +432,36 @@
         caboff = await getCabOffline();
         usuarioid = useroff.id;
     }
-    async function ultimoLocalStorage(){
+    async function ultimoLocalStorage() {
         const hasUltimo = localStorage.getItem("ultimo") === "si";
-        if(!hasUltimo){
-            await setUltimoCeroAnimalesSQL(db)
-            
-            await setUltimoCeroHistorialAnimalesSQL(db)
-            await setUltimoCeroEventosSQL(db)
-            await setUltimoCeroEstablecimientosSQL(db)
-            localStorage.setItem("ultimo","si")
+        if (!hasUltimo) {
+            await setUltimoCeroAnimalesSQL(db);
+
+            await setUltimoCeroHistorialAnimalesSQL(db);
+            await setUltimoCeroEventosSQL(db);
+            await setUltimoCeroEstablecimientosSQL(db);
+            localStorage.setItem("ultimo", "si");
         }
-        tieneUltimo = hasUltimo
+        tieneUltimo = hasUltimo;
     }
     async function updateLocalSQL() {
+        let ultimo_animal = await getUltimoAnimalesSQL(db);
 
-        let ultimo_animal = await getUltimoAnimalesSQL(db)
-
-        animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+        animales = await updateLocalAnimalesSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_animal.ultimo,
+        );
 
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
 
-        tactos = await updateLocalTactosSQLUserUltimo(db, pb, usuarioid,ultimo_tacto.ultimo);
+        tactos = await updateLocalTactosSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_tacto.ultimo,
+        );
 
         //await setUltimoTactosSQL(db);
         //await setUltimoAnimalesSQL(db);
@@ -489,7 +502,7 @@
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
-        await ultimoLocalStorage()
+        await ultimoLocalStorage();
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -522,12 +535,12 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;
@@ -581,8 +594,8 @@
                 prioridad: 2,
                 idprov: idtacto,
                 camposprov: nanimal ? "animal" : "",
-                show:{...data},
-                motivo:"Editar tacto"
+                show: { ...data },
+                motivo: "Editar tacto",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -647,7 +660,11 @@
         }
     }
     async function editarTacto() {
-        coninternet = await getInternet(modedebug, offliner.offline,customoffliner.customoffline);
+        coninternet = await getInternet(
+            modedebug,
+            offliner.offline,
+            customoffliner.customoffline,
+        );
         if (coninternet.connected) {
             await editarOnline();
         } else {
@@ -743,7 +760,7 @@
             </div>
         </div>
     </div>
-    <div 
+    <div
         class="grid grid-cols-1 lg:grid-cols-2 m-1 gap-2 lg:gap-10 mb-2 mt-1 mx-1 lg:mx-10 w-11/12"
     >
         <div class="w-full lg:w-1/2">
@@ -794,7 +811,12 @@
         {#if isOpenFilter}
             <div transition:slide>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-1 w-full">
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha desde"
+                        bind:fecha={fechadesde}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -812,7 +834,12 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha hasta"
+                        bind:fecha={fechahasta}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -830,7 +857,15 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Categoría"
+                        bind:value={buscarcategoria}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(
+                            categorias.filter((cat) => cat.sexo == "H"),
+                        )}
+                    />
+                    <div class="hidden">
                         <label for="categoria" class="tracking-wide label">
                             <span class="label-text text-base">Categoria</span>
                         </label>
@@ -854,7 +889,15 @@
                             </select>
                         </label>
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Tipo"
+                        bind:value={buscartipo}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(
+                            tipostacto,
+                        )}
+                    />
+                    <div class="hidden">
                         <label for="tipotacto" class="tracking-wide label">
                             <span class="label-text text-base">Tipo</span>
                         </label>
@@ -878,7 +921,13 @@
                             </select>
                         </label>
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Estado"
+                        bind:value={buscarestado}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(estados)}
+                    />
+                    <div class="hidden">
                         <label for="estado" class=" tracking-wide label">
                             <span class="label-text text-base">Estado</span>
                         </label>
@@ -1018,7 +1067,7 @@
     <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"
@@ -1076,16 +1125,24 @@
                     deshabilitado={false}
                 />
             </div>
-            
-            <label for="fecha" class="label">
-                <span class="label-text text-base">Fecha </span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fecha"
-                    type="date"
-                    max={HOY}
-                    class={`
+            <CustomDate etiqueta="Fecha" bind:fecha />
+            {#if malfecha}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del tacto</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
+                <label for="fecha" class="label">
+                    <span class="label-text text-base">Fecha </span>
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fecha"
+                        type="date"
+                        max={HOY}
+                        class={`
                         input input-bordered 
                         w-full
                         border border-gray-300 rounded-md
@@ -1094,22 +1151,29 @@
                         focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={fecha}
-                />
-                {#if malfecha}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500"
-                            >Debe seleccionar la fecha del tacto</span
-                        >
-                    </div>
-                {/if}
-            </label>
-            <label for="tipo" class="label">
-                <span class="label-text text-base">Tacto/Ecografia</span>
-            </label>
-            <label class="input-group">
-                <select
-                    class={`
+                        bind:value={fecha}
+                    />
+                    {#if malfecha}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500"
+                                >Debe seleccionar la fecha del tacto</span
+                            >
+                        </div>
+                    {/if}
+                </label>
+            </div>
+            <SelectFertil
+                etiqueta="Tacto/Ecografía"
+                bind:value={tipo}
+                opciones={tipostacto}
+            />
+            <div class="hidden">
+                <label for="tipo" class="label">
+                    <span class="label-text text-base">Tacto/Ecografia</span>
+                </label>
+                <label class="input-group">
+                    <select
+                        class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1117,13 +1181,15 @@
                         focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={tipo}
-                >
-                    {#each tipostacto as t}
-                        <option value={t.id}>{t.nombre}</option>
-                    {/each}
-                </select>
-            </label>
+                        bind:value={tipo}
+                    >
+                        {#each tipostacto as t}
+                            <option value={t.id}>{t.nombre}</option>
+                        {/each}
+                    </select>
+                </label>
+            </div>
+
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>

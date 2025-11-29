@@ -206,30 +206,6 @@
             expand: "colab,cab",
         });
     }
-    async function onMountOriginal() {
-        let pb_json = JSON.parse(localStorage.getItem("pocketbase_auth"));
-        usuarioid = pb_json.record.id;
-        cab = caber.cab;
-        const records = await pb.collection("cabs").getFullList({
-            filter: `active = True && user = '${usuarioid}'`,
-        });
-        const restxcolab = await pb.collection("estxcolabs").getFullList({
-            filter: `colab.user = '${usuarioid}' && cab.active = true`,
-            expand: "colab,cab",
-        });
-        establecimientoscolab = restxcolab;
-
-        establecimientos = records;
-
-        for (let i = 0; i < establecimientos.length; i++) {
-            totales.push(await getTotalAnimales(establecimientos[i].id));
-        }
-        for (let i = 0; i < establecimientoscolab.length; i++) {
-            totalescolab.push(
-                await getTotalAnimales(establecimientoscolab[i].expand.cab.id),
-            );
-        }
-    }
     async function initPage() {
         coninternet = await getInternet(
             modedebug,
@@ -256,7 +232,7 @@
             return e.user == usuarioid;
             //return !sincronizadas.includes(s => s == e.id)
         });
-        
+
         establecimientoscolab = resestablecimientos.lista.filter((e) => {
             //Reviso que los establecimientos si sean colaborador
             return e.user != usuarioid;
@@ -293,14 +269,20 @@
         establecimientoscolab = restxcolab;
     }
     async function updateLocalSQL() {
+        
         await updateLocalIDAsociadosSQL(db, pb, usuarioid);
         
-        let resestablecimientos = await getUpdateLocalEstablecimientosSQLUltimo(
+        //let resestablecimientos = await getUpdateLocalEstablecimientosSQLUltimo(
+        //    db,
+        //    pb,
+        //    usuarioid,
+        //    ultimo_establecimiento.ultimo
+        //);
+        let resestablecimientos = await getUpdateLocalEstablecimientosSQL(
             db,
             pb,
-            usuarioid,
-            ultimo_establecimiento.ultimo
-        );
+            usuarioid
+        )
         //await setUltimoEstablecimientosSQL(db);
         establecimientos = resestablecimientos.filter((e) => {
             //Reviso que los establecimientos no sea colaborador
@@ -314,15 +296,27 @@
             //return sincronizadas.includes(s => s == e.id)
         });
         //await getOnlineColabs();
+        //for (let i = 0; i < establecimientos.length; i++) {
+        //    totales.push(await getTotalAnimales(establecimientos[i].id));
+        //}
+
+        //for (let i = 0; i < establecimientoscolab.length; i++) {
+        //    totalescolab.push(
+        //        await getTotalAnimales(establecimientoscolab[i].expand.cab.id),
+        //    );
+        //}
+        let resanimales = await getAnimalesSQL(db);
+        let animales = resanimales.lista;
         for (let i = 0; i < establecimientos.length; i++) {
-            totales.push(await getTotalAnimales(establecimientos[i].id));
+            totales.push(getTotalAnimalesSQL(establecimientos[i].id, animales));
         }
         for (let i = 0; i < establecimientoscolab.length; i++) {
             totalescolab.push(
-                await getTotalAnimales(establecimientoscolab[i].expand.cab.id),
+                getTotalAnimalesSQL(establecimientoscolab[i].id, animales),
             );
         }
         cargado = true;
+
     }
     async function actualizarComandos() {
         try {
@@ -370,6 +364,7 @@
                 antes,
             );
             if (modedebug) {
+                mustUpdate = true
                 getactualizacion = await actualizacion(
                     velocidad,
                     confiabilidad,
@@ -381,6 +376,7 @@
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
+
                         // Notificar cambios solo si hay diferencias
                         infotoast = true;
                         setTimeout(() => {

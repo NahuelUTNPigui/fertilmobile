@@ -157,7 +157,7 @@
             telefono = record.telefono;
             mail = record.mail;
             localidadesProv = localidades.filter(
-                (lo) => lo.idProv == provincia,
+                (lo) => lo.idProv == provincia||lo.idProv=="",
             );
             caber.setCab(record.nombre, record.id);
         } catch (err) {
@@ -570,7 +570,7 @@
     }
     function getLocalidades(idProv) {
         localidad = "";
-        localidadesProv = localidades.filter((lo) => lo.idProv == idProv);
+        localidadesProv = localidades.filter((lo) => lo.idProv == idProv||lo.idProv=="");
     }
     function escribirRenspa() {
         if (!renspaValido) {
@@ -653,7 +653,7 @@
         provincia = res.provincia;
         telefono = res.telefono;
         mail = res.mail;
-        localidadesProv = localidades.filter((lo) => lo.idProv == provincia);
+        localidadesProv = localidades.filter((lo) => lo.idProv == provincia||lo.idProv=="");
         cargado = true;
         
     }
@@ -682,7 +682,7 @@
         provincia = establecimiento.provincia;
         telefono = establecimiento.telefono;
         mail = establecimiento.mail;
-        localidadesProv = localidades.filter((lo) => lo.idProv == provincia);
+        localidadesProv = localidades.filter((lo) => lo.idProv == provincia||lo.idProv=="");
         let allcolabs = await updateLocalColabSQLUser(db, pb, usuarioid);
         colabs = allcolabs.filter((colab) => colab.cab == caboff.id);
         cargado = true;

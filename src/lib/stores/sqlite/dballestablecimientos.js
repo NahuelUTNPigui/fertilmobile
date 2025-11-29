@@ -63,10 +63,12 @@ export async function addNewEstablecimientoSQL(db,establecimiento) {
 export async function getUpdateLocalEstablecimientosSQLUltimo(db,pb,userid,ultimo) {
     let fechaultimo = addDays(new Date(ultimo),-1)
     let fechaultimostring =  fechaultimo.toISOString().split("T")[0]
+    let previo_establecimientos = await getEstablecimientosSQL(db)
+    let lista_previo_establecimientos = previo_establecimientos.lista
     const records = await pb.collection('cabs').getFullList({
         filter:`user='${userid}' && updated> '${fechaultimostring}'`,
     });
-    let establecimientos = records
+    let establecimientos = previo_establecimientos.concat(records)
     //Asociados
     let resasociados = await getEstablecimientosAsociadosSQL(db)
     let asociados = resasociados.lista
@@ -87,6 +89,7 @@ export async function getUpdateLocalEstablecimientosSQLUltimo(db,pb,userid,ultim
             establecimientos.push(est_asociados[0])
         }
     }
+    
     //Fin Asociados
     await setEstablecimientosSQL(db,establecimientos)
     await setUltimoEstablecimientosSQL(db)

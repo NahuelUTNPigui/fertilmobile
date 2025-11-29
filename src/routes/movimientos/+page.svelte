@@ -22,6 +22,9 @@
         getEstadoColor,
     } from "$lib/components/estadosutils/lib";
     import { getSexoNombre } from "$lib/stringutil/lib";
+    //formularios
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -85,6 +88,7 @@
         setUltimoAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import Modalmove from "$lib/components/movimientos/Modalmove.svelte";
+    import CustomModalMove from "$lib/components/movimientos/CustomModalMove.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
@@ -1290,7 +1294,13 @@
                 transition:slide
                 class="grid grid-cols-1 lg:grid-cols-4 m-1 gap-2 w-11/12"
             >
-                <div>
+                <SelectFertil
+                    etiqueta = "Sexo"
+                    bind:value = {sexo}
+                    onchange={filterUpdate}
+                    opciones={[{id:"",nombre:"Todos"}].concat(sexos)}
+                />
+                <div class="hidden">
                     <label for="sexo" class="label">
                         <span class="label-text text-base">Sexo</span>
                     </label>
@@ -1419,7 +1429,7 @@
 {/if}
 <dialog
     id="nuevoModal"
-    class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle"
+    class="modal modal-top mt-10 ml-5 lg:items-start rounded-xl lg:modal-middle z-20"
 >
     <div
         class="
@@ -1441,7 +1451,7 @@
             </p>
         </div>
         <div class="form-control gap-1">
-            <Modalmove
+            <CustomModalMove
                 bind:nuevacategoria
                 bind:nuevolote
                 bind:nuevorodeo

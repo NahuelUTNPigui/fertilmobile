@@ -16,6 +16,9 @@
     import { loger } from "$lib/stores/logs/logs.svelte";
     import { ACTUALIZACION } from "$lib/stores/constantes";
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
+    //formularios
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
+    import CustomDate from "$lib/components/CustomDate.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -44,12 +47,8 @@
         setUltimoCeroAnimalesSQL,
         setUltimoHistorialAnimalesSQL,
         getUltimoAnimalesSQL,
-
         updateLocalAnimalesSQLUserUltimo,
-
-        setUltimoCeroHistorialAnimalesSQL
-
-
+        setUltimoCeroHistorialAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -80,7 +79,7 @@
         setUltimoObservacionesSQL,
         getUltimoObservacionesSQL,
         setUltimoCeroEventosSQL,
-        updateLocalObservacionesSQLUserUltimo
+        updateLocalObservacionesSQLUserUltimo,
     } from "$lib/stores/sqlite/dbeventos";
     import NuevaObservacion from "$lib/components/observaciones/NuevaObservacion.svelte";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
@@ -90,12 +89,11 @@
     import Info from "$lib/components/toast/Info.svelte";
     import Nube from "$lib/components/toast/Nube.svelte";
 
-    
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
-    let tieneUltimo = $state(false)
+    let tieneUltimo = $state(false);
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -228,6 +226,11 @@
         categoria = obs.categoria;
         fecha = obs.fecha.split(" ")[0];
         animal = obs.animal;
+        let idx_animales = animales.findIndex((a) => a.id == animal);
+        if (idx_animales != -1) {
+            let o_animal = animales[idx_animales];
+            caravana = o_animal.caravana;
+        }
         nuevoModal.showModal();
     }
     function eliminarOffline(id) {
@@ -241,7 +244,9 @@
         }).then(async (result) => {
             if (result.value) {
                 idobservacion = id;
-                let eliminarobservacion = observaciones.filter(o=>o.id==idobservacion)[0]
+                let eliminarobservacion = observaciones.filter(
+                    (o) => o.id == idobservacion,
+                )[0];
                 let data = {
                     active: false,
                 };
@@ -254,8 +259,8 @@
                         prioridad: 0,
                         idprov: id,
                         camposprov: "",
-                        show:{...eliminarobservacion,...data},
-                        motivo:"Eliminar observación"
+                        show: { ...eliminarobservacion, ...data },
+                        motivo: "Eliminar observación",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -312,7 +317,7 @@
                         (o) => o.id != idobservacion,
                     );
                     changeObservacion();
-                    await setObservacionesSQL(db,observaciones)
+                    await setObservacionesSQL(db, observaciones);
                     filterUpdate();
                     Swal.fire(
                         "Observación eliminada!",
@@ -441,11 +446,11 @@
             sexo: sexonuevo,
             peso: pesonuevo,
             cab: caboff.id,
-            rp:"",
-            fechafallecimiento:"",
-            nacimiento:"",
-            lote:"",
-            rodeo:"",
+            rp: "",
+            fechafallecimiento: "",
+            nacimiento: "",
+            lote: "",
+            rodeo: "",
         };
         if (fechanacimientonuevo) {
             data.fechanacimiento = fechanacimientonuevo + " 03:00:00";
@@ -472,8 +477,8 @@
                 idprov,
                 //No tiene poque no lotes y rodeos
                 camposprov: "",
-                show:{...data},
-                motivo:"Nuevo animal"
+                show: { ...data },
+                motivo: "Nuevo animal",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -511,9 +516,7 @@
             let record = await pb.collection("observaciones").create(data);
             record.expand = { animal: a, cab: { id: caboff.id } };
             observaciones.push(record);
-            observaciones = observaciones.filter(
-                        (o) => o.id != idobservacion,
-                    );
+            observaciones = observaciones.filter((o) => o.id != idobservacion);
             changeObservacion();
             await setObservacionesSQL(db, observaciones);
             filterUpdate();
@@ -532,17 +535,15 @@
                 prioridad: 3,
                 idprov,
                 camposprov: "animal",
-                show:{...data},
-                motivo:"Guardar observación"
+                show: { ...data },
+                motivo: "Guardar observación",
             };
 
             comandos.push(comando);
             await setComandosSQL(db, comandos);
             data.expand = { animal: a, cab: { id: caboff.id } };
             observaciones.push(data);
-            observaciones = observaciones.filter(
-                        (o) => o.id != idobservacion,
-                    );
+            observaciones = observaciones.filter((o) => o.id != idobservacion);
             changeObservacion();
             await setObservacionesSQL(db, observaciones);
             Swal.fire(
@@ -572,12 +573,12 @@
                 return;
             }
             let record = await pb.collection("observaciones").create(data);
-            let animalobservacion = animales.filter((an) => an.id == animal)[0]
+            let animalobservacion = animales.filter((an) => an.id == animal)[0];
             record.expand = {
-                animal:{...animalobservacion} ,
+                animal: { ...animalobservacion },
                 cab: { id: caboff.id },
             };
-            
+
             observaciones.push(record);
             observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
@@ -592,7 +593,7 @@
             );
         } else {
             let nuevoanimal = animal.split("_")[0] == "nuevo";
-            
+
             let comando = {
                 tipo: "add",
                 coleccion: "observaciones",
@@ -601,15 +602,15 @@
                 prioridad: 3,
                 idprov,
                 camposprov: nuevoanimal ? "animal" : "",
-                show:{...data},
-                motivo:"Nueva observación"
+                show: { ...data },
+                motivo: "Nueva observación",
             };
             comandos.push(comando);
             data.id = idprov;
             await setComandosSQL(db, comandos);
-            let animalobservacion = animales.filter((an) => an.id == animal)[0]
+            let animalobservacion = animales.filter((an) => an.id == animal)[0];
             data.expand = {
-                animal:{...animalobservacion} ,
+                animal: { ...animalobservacion },
                 cab: { id: caboff.id },
             };
             observaciones.push(data);
@@ -635,7 +636,6 @@
         let isOnline = await getOnlyInternet();
         intermitenter.addIntermitente(isOnline);
 
-        
         if (agregaranimal) {
             await guardarConAnimal();
         }
@@ -660,17 +660,16 @@
                 prioridad: 0,
                 idprov: idobservacion,
                 camposprov: animal.split("_").length > 1 ? "animal" : "",
-                show:{...data},
-                motivo:"Editar observación"
+                show: { ...data },
+                motivo: "Editar observación",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
-            
+
             let idx = observaciones.findIndex((o) => o.id == idobservacion);
             observaciones[idx] = {
                 ...observaciones[idx],
-                ...data
-
+                ...data,
             };
             observaciones[idx].expand = { animal: a };
             observaciones.sort((o1, o2) =>
@@ -679,7 +678,7 @@
             await setObservacionesSQL(db, observaciones);
             changeObservacion();
             filterUpdate();
-            
+
             Swal.fire(
                 "Éxito editar",
                 "Se pudo editar la observación",
@@ -713,21 +712,20 @@
                 .update(idobservacion, data);
             let a = animales.filter((an) => an.id == animal)[0];
             let idx = observaciones.findIndex((o) => o.id == idobservacion);
-            
+
             observaciones[idx] = {
                 ...observaciones[idx],
-                ...data
-
+                ...data,
             };
-            
-            await setObservacionesSQL(db,observaciones)
+
+            await setObservacionesSQL(db, observaciones);
             observaciones.sort((o1, o2) =>
                 new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
             );
             changeObservacion();
-            
+
             filterUpdate();
-            
+
             Swal.fire(
                 "Éxito editar",
                 "Se pudo editar la observación",
@@ -828,39 +826,49 @@
         usuarioid = useroff.id;
     }
     function changeObservacion() {
-        observacionescab = observaciones.filter((o) => o.cab == caboff.id  && o.active);
+        observacionescab = observaciones.filter(
+            (o) => o.cab == caboff.id && o.active,
+        );
     }
     function changeAnimales() {
         animalescab = animales.filter((a) => a.cab == caboff.id);
-        animalescab.sort((a,b)=>a.caravana.toLocaleLowerCase()<b.caravana.toLocaleLowerCase()?-1:1)
+        animalescab.sort((a, b) =>
+            a.caravana.toLocaleLowerCase() < b.caravana.toLocaleLowerCase()
+                ? -1
+                : 1,
+        );
     }
-    async function ultimoLocalStorage(){
+    async function ultimoLocalStorage() {
         const hasUltimo = localStorage.getItem("ultimo") === "si";
-        if(!hasUltimo){
-            await setUltimoCeroAnimalesSQL(db)
-            await setUltimoCeroHistorialAnimalesSQL(db)
-            await setUltimoCeroEventosSQL(db)
-            await setUltimoCeroEstablecimientosSQL(db)
-            localStorage.setItem("ultimo","si")
+        if (!hasUltimo) {
+            await setUltimoCeroAnimalesSQL(db);
+            await setUltimoCeroHistorialAnimalesSQL(db);
+            await setUltimoCeroEventosSQL(db);
+            await setUltimoCeroEstablecimientosSQL(db);
+            localStorage.setItem("ultimo", "si");
         }
-        tieneUltimo = hasUltimo
+        tieneUltimo = hasUltimo;
     }
     async function updateLocalSQL() {
-
-        let ultimo_animal = await getUltimoAnimalesSQL(db)
+        let ultimo_animal = await getUltimoAnimalesSQL(db);
 
         observaciones = await updateLocalObservacionesSQLUserUltimo(
             db,
             pb,
             usuarioid,
-            ultimo_observaciones.ultimo
+            ultimo_observaciones.ultimo,
         );
 
         observaciones.sort((o1, o2) =>
-                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+            new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
         );
 
-        animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+        animales = await updateLocalAnimalesSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_animal.ultimo,
+        );
 
         //await setUltimoObservacionesSQL(db);
         //await setUltimoAnimalesSQL(db);
@@ -877,8 +885,8 @@
         let resanimales = await getAnimalesSQL(db);
         observaciones = resobservaciones.lista;
         observaciones.sort((o1, o2) =>
-                new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
-            );
+            new Date(o1.fecha) > new Date(o2.fecha) ? -1 : 1,
+        );
         animales = resanimales.lista;
         changeObservacion();
         changeAnimales();
@@ -900,7 +908,7 @@
         proxyfiltros = proxy.load();
         setFilters();
         db = await openDB();
-        await ultimoLocalStorage()
+        await ultimoLocalStorage();
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -933,14 +941,14 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
-                        
+
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1014,8 +1022,10 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 m-1 mb-2 mt-1 mx-1 lg:mx-10 w-11/12">
-        <div class="w-11/12">
+    <div
+        class="grid grid-cols-1 lg:grid-cols-2 m-1 mb-2 mt-1 mx-1 lg:mx-10 w-11/12"
+    >
+        <div class="w-11/12 my-1">
             <label
                 class={`
                         input input-bordered flex items-center gap-2
@@ -1032,9 +1042,7 @@
             </label>
         </div>
         <div class="w-11/12">
-            <Limpiar
-                {limpiarFiltros}
-            />
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1065,7 +1073,12 @@
         {#if isOpenFilter}
             <div transition:slide>
                 <div class="grid grid-cols-1 lg:grid-cols-4">
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha desde"
+                        bind:fecha={fechadesde}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1084,7 +1097,12 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha hasta"
+                        bind:fecha={fechahasta}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1103,7 +1121,15 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Categoría"
+                        bind:value={buscarcategoria}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(
+                            categorias,
+                        )}
+                    />
+                    <div class="hidden">
                         <label for="categoria" class="tracking-wide label">
                             <span class="label-text text-base">Categoria</span>
                         </label>
@@ -1215,10 +1241,10 @@
     {/if}
 </Navbarr>
 {#if infotoast}
-    <Info/>
+    <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"
@@ -1229,6 +1255,7 @@
             modal-box w-11/12 max-w-xl
             bg-gradient-to-br from-white to-gray-100
             dark:from-gray-900 dark:to-gray-800
+            h-[80vh]
         "
     >
         <form method="dialog">
@@ -1243,27 +1270,29 @@
             <h3 class="text-lg font-bold">Editar observación</h3>
         {/if}
         <div class="form-control">
-            <NuevaObservacion
-                {oninput}
-                bind:agregaranimal
-                bind:caravananuevo
-                bind:categorianuevo
-                bind:sexonuevo
-                bind:pesonuevo
-                bind:fechanacimientonuevo
-                bind:animal
-                bind:animalescab
-                bind:malanimal
-                bind:categoria
-                bind:caravana
-                bind:idobservacion
-                bind:malcaravana
-                bind:sexo
-                bind:peso
-                bind:fecha
-                bind:malfecha
-                bind:observacion
-            ></NuevaObservacion>
+            {#if cargado}
+                <NuevaObservacion
+                    {oninput}
+                    bind:agregaranimal
+                    bind:caravananuevo
+                    bind:categorianuevo
+                    bind:sexonuevo
+                    bind:pesonuevo
+                    bind:fechanacimientonuevo
+                    bind:animal
+                    bind:animalescab
+                    bind:malanimal
+                    bind:categoria
+                    bind:caravana
+                    bind:idobservacion
+                    bind:malcaravana
+                    bind:sexo
+                    bind:peso
+                    bind:fecha
+                    bind:malfecha
+                    bind:observacion
+                ></NuevaObservacion>
+            {/if}
         </div>
         <div class="modal-action justify-start">
             <form method="dialog">

@@ -21,6 +21,9 @@
     import RadioButton from "$lib/components/RadioButton.svelte";
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { shorterWord } from "$lib/stringutil/lib";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -88,7 +91,7 @@
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //OFLINE
-    let infotoast = $state(false)
+    let infotoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -504,8 +507,8 @@
                     prioridad: 3,
                     idprov,
                     camposprov: `${nanimal ? "animal" : ""}`,
-                    show:{...datatacto},
-                    motivo:"Nuevo tacto"
+                    show: { ...datatacto },
+                    motivo: "Nuevo tacto",
                 };
                 comandos.push(comando);
                 let comandoani = {
@@ -516,8 +519,8 @@
                     prioridad: 3,
                     idprov: animales[aidx].id,
                     camposprov: ``,
-                    show:{...animales[aidx]},
-                    motivo:"Editar animal"
+                    show: { ...animales[aidx] },
+                    motivo: "Editar animal",
                 };
                 comandos.push(comandoani);
                 datatacto = {
@@ -681,27 +684,25 @@
                 return;
             }
             await crearTactosOnline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         } else {
             await crearTactosOffline();
-            if(Object.keys(selecthashmap).length>0){
-                todos =false
-                algunos = true
-                ninguno = false
-            }
-            else{
-                todos =false
-                algunos = false
-                ninguno = true
+            if (Object.keys(selecthashmap).length > 0) {
+                todos = false;
+                algunos = true;
+                ninguno = false;
+            } else {
+                todos = false;
+                algunos = false;
+                ninguno = true;
             }
         }
     }
@@ -886,9 +887,7 @@
             </label>
         </div>
         <div class="w-11/12">
-            <Limpiar
-                {limpiarFiltros}
-            />
+            <Limpiar {limpiarFiltros} />
         </div>
     </div>
     <div class="w-11/12 m-1 mb-2 lg:mx-10 rounded-lg bg-transparent">
@@ -1279,7 +1278,27 @@
         </form>
         <h3 class="text-lg font-bold">Tactos múltiples</h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
-            <div>
+            <CustomDate
+                etiqueta="Fecha"
+                bind:fecha
+                onchange={() => {
+                    if (fecha == "") {
+                        malfecha = true;
+                        botonhabilitado = false;
+                    } else {
+                        malfecha = false;
+                        botonhabilitado = true;
+                    }
+                }}
+            />
+            {#if malfecha}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del tacto</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
                 <label for="fechatacto" class="label">
                     <span class="label-text text-base">Fecha </span>
                 </label>
@@ -1316,7 +1335,13 @@
                     {/if}
                 </label>
             </div>
-            <div>
+            <SelectFertil
+                etiqueta = "Tipo"
+                bind:value={tipotactoselect}
+                onchange={onchangeTipoTacto}
+                opciones={tipostacto}
+            />
+            <div class="hidden">
                 <label for="tipotacto" class="tracking-wide label">
                     <span class="label-text text-base">Tipo</span>
                 </label>
@@ -1373,9 +1398,7 @@
                                 </span>
                             </div>
                             <div class="flex items-start col-span-2">
-                                <InfoAnimal
-                                    animal={a}
-                                />
+                                <InfoAnimal animal={a} />
                             </div>
                             <div class="flex items-start col-span-2">
                                 <span>Estado actual:</span>

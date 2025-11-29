@@ -1,207 +1,225 @@
 <script>
-    import {addDays} from "$lib/stringutil/lib"
-    import AgregarAnimal from '$lib/components/eventos/AgregarAnimal.svelte';
-    import estilos from '$lib/stores/estilos';
-    import RadioButton from '$lib/components/RadioButton.svelte';
-    import tipostacto from '$lib/stores/tipostacto';
+    import { addDays } from "$lib/stringutil/lib";
+    import AgregarAnimal from "$lib/components/eventos/AgregarAnimal.svelte";
+    import estilos from "$lib/stores/estilos";
+    import RadioButton from "$lib/components/RadioButton.svelte";
+    import tipostacto from "$lib/stores/tipostacto";
     import estados from "$lib/stores/estados";
-    import tiposanimal from '$lib/stores/tiposanimal';
-    import {isEmpty} from "$lib/stringutil/lib"
-    import PredictSelect from '$lib/components/PredictSelect.svelte';
-    import MultipleToros from '$lib/components/MultipleToros.svelte';
-    import categorias from '$lib/stores/categorias';
+    import tiposanimal from "$lib/stores/tiposanimal";
+    import { isEmpty } from "$lib/stringutil/lib";
+    import PredictSelect from "$lib/components/PredictSelect.svelte";
+    import MultipleToros from "$lib/components/MultipleToros.svelte";
+    import categorias from "$lib/stores/categorias";
     import InfoAnimal from "../InfoAnimal.svelte";
+    import SelectFertil from "../SelectFertil.svelte";
+    import CustomDate from "../CustomDate.svelte";
+    import { loger } from "$lib/stores/logs/logs.svelte";
     let {
-        caravana=$bindable(""),
-        peso=$bindable(""),
-        sexo=$bindable(""),
-        fechanacimiento=$bindable(""),
-        categoria=$bindable(""),
-        agregaranimal=$bindable(false),
-
+        caravana = $bindable(""),
+        peso = $bindable(""),
+        sexo = $bindable(""),
+        fechanacimiento = $bindable(""),
+        categoria = $bindable(""),
+        agregaranimal = $bindable(false),
 
         servicio = $bindable({}),
         inseminacion = $bindable({}),
-        esServicio = $bindable(true) ,
-        padres =  $bindable([]),
-        listapadres  = $bindable([]),
-        listamadres  = $bindable([]),
-        madres =  $bindable([]),
+        esServicio = $bindable(true),
+        padres = $bindable([]),
+        listapadres = $bindable([]),
+        listamadres = $bindable([]),
+        madres = $bindable([]),
         animales = $bindable([]),
         cargadoanimales = $bindable(false),
         guardarServicio,
-        guardarInseminacion
-
-    } = $props()
-    let nombremadre = $state("")
-    let nombrepadre = $state("")
+        guardarInseminacion,
+    } = $props();
+    let nombremadre = $state("");
+    let nombrepadre = $state("");
     //juntos
-    let madre = $state({})
-    let padre = $state({})
-    let botonhabilitadoins =$state(false)
-    let botonhabilitadoser =$state(false)
+    let madre = $state({});
+    let padre = $state({});
+    let botonhabilitadoins = $state(false);
+    let botonhabilitadoser = $state(false);
     //inseminacion
-    let idanimalins = $state("")
-    let padreins = $state("")
-    let pajuelains = $state("")
+    let idanimalins = $state("");
+    let padreins = $state("");
+    let pajuelains = $state("");
     //Servicio
-    let idanimalser = $state("")
-    let padreser = $state("")
+    let idanimalser = $state("");
+    let padreser = $state("");
     let options = [
-        {id:true,nombre:"Servicio"},
-        {id:false,nombre:"Inseminación"}
-    ]
+        { id: true, nombre: "Servicio" },
+        { id: false, nombre: "Inseminación" },
+    ];
 
-    function select(id){  
-        esServicio = id
+    function select(id) {
+        esServicio = id;
     }
-    const HOY = new Date().toISOString().split("T")[0]
+    const HOY = new Date().toISOString().split("T")[0];
 
-    
-    function validarBotonIns(){
-
-        inseminacion.botonhabilitadoins = true
-        if(!agregaranimal && isEmpty(inseminacion.idanimalins)){
-            inseminacion.botonhabilitadoins = false
+    function validarBotonIns() {
+        inseminacion.botonhabilitadoins = true;
+        if (!agregaranimal && isEmpty(inseminacion.idanimalins)) {
+            inseminacion.botonhabilitadoins = false;
         }
-        if(isEmpty(inseminacion.pajuelains)){
-            inseminacion.botonhabilitadoins = false
+        if (isEmpty(inseminacion.pajuelains)) {
+            inseminacion.botonhabilitadoins = false;
         }
-        if(isEmpty(inseminacion.fechainseminacion)){
-            inseminacion.botonhabilitadoins = false
+        if (isEmpty(inseminacion.fechainseminacion)) {
+            inseminacion.botonhabilitadoins = false;
         }
-        botonhabilitadoins = inseminacion.botonhabilitadoins
-    
+        botonhabilitadoins = inseminacion.botonhabilitadoins;
     }
-    function validarBotonSer(){
-        servicio.botonhabilitadoser = true
-        if(servicio.fechadesdeserv==""){
-            servicio.botonhabilitadoser = false
+    function validarBotonSer() {
+        servicio.botonhabilitadoser = true;
+        if (servicio.fechadesdeserv == "") {
+            servicio.botonhabilitadoser = false;
         }
-        if(!agregaranimal && servicio.idanimalser==""){
-            servicio.botonhabilitadoser = false
+        if (!agregaranimal && servicio.idanimalser == "") {
+            servicio.botonhabilitadoser = false;
         }
-        botonhabilitadoser = servicio.botonhabilitadoser
+        botonhabilitadoser = servicio.botonhabilitadoser;
     }
 
-    function onSelectAnimalIns(){
-        let a = madres.filter(an=>an.id==inseminacion.idanimalins)[0]
-        madre = a
-        if(a){
-            inseminacion.categoriains = a.categoria
+    function onSelectAnimalIns() {
+        let a = madres.filter((an) => an.id == inseminacion.idanimalins)[0];
+        madre = a;
+        if (a) {
+            inseminacion.categoriains = a.categoria;
+        } else {
+            inseminacion.categoriains = "";
         }
-        else{
-            inseminacion.categoriains = ""
-        }
-        
     }
-    function onSelectAnimalSer(){
-        let a = madres.filter(an=>an.id==servicio.idanimalser)[0]
-        madre = a
-        if(a){
-            servicio.categoriaser = a.categoria
+    function onSelectAnimalSer() {
+        let a = madres.filter((an) => an.id == servicio.idanimalser)[0];
+        madre = a;
+        if (a) {
+            servicio.categoriaser = a.categoria;
+        } else {
+            servicio.categoriaser = "";
         }
-        else{
-            servicio.categoriaser = ""
-        }
-        
     }
-    function onSelectPadreIns(){
-        let p = padres.filter(item=>item.id == inseminacion.padreins)[0]
-        padre = p
+    function onSelectPadreIns() {
+        let p = padres.filter((item) => item.id == padreins)[0];
+        padre = p;
         inseminacion.pajuelains = p.caravana;
-        inseminacion.padreins = p.id
+        inseminacion.padreins = p.id;
     }
 
-    function oninputIns(campo){
-        inseminacion.idanimalins = idanimalins
-        validarBotonIns()
-        if(!agregaranimal && campo == "ANIMAL"){
-            if(isEmpty(inseminacion.idanimalins)){
-                inseminacion.malanimalins = true
-            }
-            else{
-                onSelectAnimalIns()
-                inseminacion.malanimalins = false
-            }
-        }
-        if(campo == "PADRE"){
-
-            if(isEmpty(inseminacion.padreins)){
-                inseminacion.malpadreins = true
-            }
-            else{
-                onSelectPadreIns()
-                inseminacion.malpadreins = false
+    function oninputIns(campo) {
+        inseminacion.idanimalins = idanimalins;
+        inseminacion.pajuelains = pajuelains;
+        inseminacion.padreins = padreins;
+        validarBotonIns();
+        if (!agregaranimal && campo == "ANIMAL") {
+            if (isEmpty(inseminacion.idanimalins)) {
+                inseminacion.malanimalins = true;
+            } else {
+                onSelectAnimalIns();
+                inseminacion.malanimalins = false;
             }
         }
-        if(campo == "FECHAPARTO"){
-            if(isEmpty(inseminacion.fechapartoins)){
-                inseminacion.malfechapartoins = true
-            }
-            else{
-                inseminacion.malfechapartoins = false
+        if (campo == "PADRE") {
+            if (isEmpty(inseminacion.padreins)) {
+                inseminacion.malpadreins = true;
+            } else {
+                onSelectPadreIns();
+                inseminacion.malpadreins = false;
             }
         }
-        if(campo == "FECHAINSEMINACION"){
-            if(isEmpty(inseminacion.fechainseminacion)){
-                inseminacion.malfechainseminacion = true
+        if (campo == "FECHAPARTO") {
+            if (isEmpty(inseminacion.fechapartoins)) {
+                inseminacion.malfechapartoins = true;
+            } else {
+                inseminacion.malfechapartoins = false;
             }
-            else{
-                inseminacion.malfechainseminacion = false
-                inseminacion.fechapartoins = addDays(inseminacion.fechainseminacion, 280).toISOString().split("T")[0]
+        }
+        if (campo == "FECHAINSEMINACION") {
+            if (isEmpty(inseminacion.fechainseminacion)) {
+                inseminacion.malfechainseminacion = true;
+            } else {
+                inseminacion.malfechainseminacion = false;
+                try {
+                    inseminacion.fechapartoins = addDays(
+                        inseminacion.fechainseminacion,
+                        280,
+                    )
+                        .toISOString()
+                        .split("T")[0];
+                } catch (err) {
+                    inseminacion.fechapartoins = "";
+                }
             }
         }
     }
-    function oninputSer(campo){
-        servicio.idanimalser = idanimalser
-        validarBotonSer()
-        if(campo == "ANIMAL"){
-            if(servicio.idanimalser==""){
-                servicio.malanimalser = true
-            }
-            else{
-                servicio.malanimalser = false
-                onSelectAnimalSer()
+    function oninputSer(campo) {
+        servicio.idanimalser = idanimalser;
+        validarBotonSer();
+        if (campo == "ANIMAL") {
+            if (servicio.idanimalser == "") {
+                servicio.malanimalser = true;
+            } else {
+                servicio.malanimalser = false;
+                onSelectAnimalSer();
             }
         }
-        if(campo == "DESDE"){
-            if(servicio.fechadesdeserv == ""){
-                servicio.malfechadesdeser = true
-            }
-            else{
-                servicio.malfechadesdeser = false
-                servicio.fechapartoser = addDays(servicio.fechadesdeserv, 280).toISOString().split("T")[0]
+        if (campo == "DESDE") {
+            if (servicio.fechadesdeserv == "") {
+                servicio.malfechadesdeser = true;
+            } else {
+                servicio.malfechadesdeser = false;
+                try {
+                    servicio.fechapartoser = addDays(
+                        servicio.fechadesdeserv,
+                        280
+                    )
+                        .toISOString()
+                        .split("T")[0];
+                } catch (err) {
+                    servicio.fechapartoser = "";
+                }
             }
         }
     }
 </script>
-<div class="bg-transparent grid grid-cols-2 lg:grid-cols-3 lg:grid-cols-4 ">
+
+<div class="bg-transparent grid grid-cols-2 lg:grid-cols-3 lg:grid-cols-4">
     {#each options as op}
-        <button id={op.id} onclick={()=>select(op.id)}
+        <button
+            id={op.id}
+            onclick={() => select(op.id)}
             class={`
                 flex-1 m-1 py-2 px-2 rounded-lg font-medium text-sm transition-all duration-200 ease-in-out
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500
-                ${esServicio==op.id?
-                    "bg-green-600 text-white shadow-lg transform scale-105":
-                    "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-gray-700 dark:text-green-300 dark:hover:bg-gray-600"
+                ${
+                    esServicio == op.id
+                        ? "bg-green-600 text-white shadow-lg transform scale-105"
+                        : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-gray-700 dark:text-green-300 dark:hover:bg-gray-600"
                 }
-            `}>
-                {op.nombre}
+            `}
+        >
+            {op.nombre}
         </button>
-        
     {/each}
 </div>
 {#if esServicio}
     <div class="form-control">
-        <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
+        <AgregarAnimal
+            bind:agregaranimal
+            bind:caravana
+            bind:categoria
+            bind:sexo
+            bind:peso
+            bind:fechanacimiento
+        />
         {#if !agregaranimal}
             <div class="hidden">
-                <label for = "animal" class="label">
+                <label for="animal" class="label">
                     <span class="label-text text-base">Animal</span>
                 </label>
-                <label class="input-group ">
-                    <select 
+                <label class="input-group">
+                    <select
                         class={`
                             select select-bordered w-full
                             border border-gray-300 rounded-md
@@ -211,39 +229,38 @@
                             ${estilos.bgdark2}
                         `}
                         bind:value={servicio.idanimalser}
-                        onchange={()=>oninputSer("ANIMAL")}
-                    >   
+                        onchange={() => oninputSer("ANIMAL")}
+                    >
                         {#each madres as a}
-                            <option value={a.id}>{a.caravana}</option>    
+                            <option value={a.id}>{a.caravana}</option>
                         {/each}
                     </select>
                     {#if servicio.malanimalser}
                         <div class="label">
-                            <span class="label-text-alt text-red-500">Debe seleccionar el animal</span>                    
+                            <span class="label-text-alt text-red-500"
+                                >Debe seleccionar el animal</span
+                            >
                         </div>
                     {/if}
                 </label>
             </div>
             {#if cargadoanimales}
-                <PredictSelect 
-                    bind:valor={idanimalser} 
-                    etiqueta = {"Madre"} 
-                    bind:cadena={nombremadre} 
-                    bind:lista = {listamadres} 
-                    onelegir={()=>oninputSer("ANIMAL")}
-                >
-                </PredictSelect>
-                {#if idanimalser.length>0}
-                    <InfoAnimal
-                        bind:animal = {madre}
-                    />
+                <PredictSelect
+                    bind:valor={idanimalser}
+                    etiqueta={"Madre"}
+                    bind:cadena={nombremadre}
+                    bind:lista={listamadres}
+                    onelegir={() => oninputSer("ANIMAL")}
+                ></PredictSelect>
+                {#if idanimalser.length > 0}
+                    <InfoAnimal bind:animal={madre} />
                 {/if}
             {/if}
-            <label for = "categoria" class="label">
+            <label for="categoria" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>
-            <label class="input-group ">
-                <select 
+            <label class="input-group">
+                <select
                     class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
@@ -255,27 +272,45 @@
                     bind:value={servicio.categoriaser}
                 >
                     {#each categorias as c}
-                        <option value={c.id}>{c.nombre}</option>    
+                        <option value={c.id}>{c.nombre}</option>
                     {/each}
                 </select>
             </label>
         {/if}
-        <div >
-            <label for = "toros" class="label">
+        <div>
+            <label for="toros" class="label">
                 <span class="label-text text-base">Toros</span>
             </label>
-            <label class="input-group ">
+            <label class="input-group">
                 {#if cargadoanimales}
-                    <MultipleToros toros={padres} bind:valor={servicio.padreser} bind:listavalores={servicio.padreserlista} />
+                    <MultipleToros
+                        toros={padres}
+                        bind:valor={servicio.padreser}
+                        bind:listavalores={servicio.padreserlista}
+                    />
                 {/if}
             </label>
         </div>
-        <div>
-            <label for = "fechadesde" class="label">
+        <CustomDate
+            etiqueta="Fecha desde"
+            onchange={() => oninputSer("DESDE")}
+            bind:fecha={servicio.fechadesdeserv}
+        />
+        {#if servicio.malfechadesdeser}
+            <div class="label">
+                <span class="label-text-alt text-red-500"
+                    >Debe seleccionar la fecha inicial del servicio</span
+                >
+            </div>
+        {/if}
+        <div class="hidden">
+            <label for="fechadesde" class="label">
                 <span class="label-text text-base">Fecha desde</span>
             </label>
-            <label class="input-group ">
-                <input id ="fechadesde" type="date"   
+            <label class="input-group">
+                <input
+                    id="fechadesde"
+                    type="date"
                     class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
@@ -285,21 +320,29 @@
                         ${estilos.bgdark2} 
                     `}
                     bind:value={servicio.fechadesdeserv}
-                    onchange={()=>oninputSer("DESDE")}
+                    onchange={() => oninputSer("DESDE")}
                 />
                 {#if servicio.malfechadesdeser}
                     <div class="label">
-                        <span class="label-text-alt text-red-500">Debe seleccionar la fecha inicial del servicio</span>                    
+                        <span class="label-text-alt text-red-500"
+                            >Debe seleccionar la fecha inicial del servicio</span
+                        >
                     </div>
                 {/if}
             </label>
         </div>
-        <div>
-            <label for = "fechahasta" class="label">
+        <CustomDate
+            etiqueta="Fecha hasta"
+            bind:fecha={servicio.fechahastaserv}
+        />
+        <div class="hidden">
+            <label for="fechahasta" class="label">
                 <span class="label-text text-base">Fecha hasta</span>
             </label>
-            <label class="input-group ">
-                <input id ="fechahasta" type="date"   
+            <label class="input-group">
+                <input
+                    id="fechahasta"
+                    type="date"
                     class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
@@ -313,11 +356,13 @@
             </label>
         </div>
         <div>
-            <label for = "fechaparto" class="label">
+            <label for="fechaparto" class="label">
                 <span class="label-text text-base">Fecha parto</span>
             </label>
-            <label class="input-group ">
-                <input id ="fechaparto" type="date"   
+            <label class="input-group">
+                <input
+                    id="fechaparto"
+                    type="date"
                     class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
@@ -327,20 +372,17 @@
                         ${estilos.bgdark2} 
                     `}
                     bind:value={servicio.fechapartoser}
-                    
                 />
-                
             </label>
-
         </div>
-        
-        <div >
-            <label for = "observacion" class="label">
+
+        <div>
+            <label for="observacion" class="label">
                 <span class="label-text text-base">Observación</span>
             </label>
-            <input 
-                id ="obs" 
-                type="text"  
+            <input
+                id="obs"
+                type="text"
                 class={`
                     input 
                     input-bordered 
@@ -350,77 +392,78 @@
                     ${estilos.bgdark2}
                 `}
                 bind:value={servicio.observacionser}
-                
             />
         </div>
-        <div class="modal-action justify-start ">
-            <form method="dialog" >
+        <div class="modal-action justify-start">
+            <form method="dialog">
                 <!-- if there is a button, it will close the modal -->
-                <button 
-                    class="btn btn-success text-white" 
-                    disabled='{!botonhabilitadoser}' 
-                    onclick={guardarServicio} 
+                <button
+                    class="btn btn-success text-white"
+                    disabled={!botonhabilitadoser}
+                    onclick={guardarServicio}
                 >
                     Guardar
                 </button>
             </form>
         </div>
-        
     </div>
 {:else}
     <div class="form-control">
-        <AgregarAnimal bind:agregaranimal bind:caravana bind:categoria bind:sexo bind:peso bind:fechanacimiento/>
+        <AgregarAnimal
+            bind:agregaranimal
+            bind:caravana
+            bind:categoria
+            bind:sexo
+            bind:peso
+            bind:fechanacimiento
+        />
         {#if !agregaranimal}
             <div class="hidden">
-
-            
-            <label for = "nombre" class="label">
-                <span class="label-text text-base">Caravana</span>
-            </label>
-            <label class="input-group ">
-                <select 
-                    class={`
+                <label for="nombre" class="label">
+                    <span class="label-text text-base">Caravana</span>
+                </label>
+                <label class="input-group">
+                    <select
+                        class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
                         focus:ring-green-500 focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={inseminacion.idanimalins}
-                    onchange={()=>oninputIns("ANIMAL")}
-                >
-                    {#each madres as m}
-                        <option value={m.id}>{m.caravana}</option>    
-                    {/each}
-                </select>
-                {#if inseminacion.malanimalins}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500">Debe seleccionar el animal</span>                    
-                    </div>
-                {/if}
-
-            </label>
+                        bind:value={inseminacion.idanimalins}
+                        onchange={() => oninputIns("ANIMAL")}
+                    >
+                        {#each madres as m}
+                            <option value={m.id}>{m.caravana}</option>
+                        {/each}
+                    </select>
+                    {#if inseminacion.malanimalins}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500"
+                                >Debe seleccionar el animal</span
+                            >
+                        </div>
+                    {/if}
+                </label>
             </div>
             {#if cargadoanimales}
-                <PredictSelect 
-                    bind:valor={idanimalins} 
-                    etiqueta = {"Madre"} 
-                    bind:cadena={nombremadre} 
-                    bind:lista = {listamadres} 
+                <PredictSelect
+                    bind:valor={idanimalins}
+                    etiqueta={"Madre"}
+                    bind:cadena={nombremadre}
+                    bind:lista={listamadres}
                     onelegir={() => oninputIns("ANIMAL")}
-                >
-                </PredictSelect>
-                {#if idanimalins.length>0}
-                    <InfoAnimal
-                        bind:animal = {madre}
-                    />
+                ></PredictSelect>
+                {#if idanimalins.length > 0}
+                    <InfoAnimal bind:animal={madre} />
                 {/if}
             {/if}
-            <label for = "tipo" class="label">
+            <label for="tipo" class="label">
                 <span class="label-text text-base">Categoria</span>
             </label>
-            <label class="input-group ">
-                <select 
+            <label class="input-group">
+                <select
                     class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
@@ -433,31 +476,44 @@
                     bind:value={inseminacion.categoriains}
                 >
                     {#each tiposanimal as t}
-                        <option value={t.id}>{t.nombre}</option>    
+                        <option value={t.id}>{t.nombre}</option>
                     {/each}
                 </select>
             </label>
         {/if}
         {#if cargadoanimales}
-            <PredictSelect 
-                bind:valor={padreins} 
-                etiqueta = {"Padre"} 
-                bind:cadena={pajuelains} 
-                lista = {listapadres}
-                onelegir = {()=>oninputIns("PADRE")}
+            <PredictSelect
+                bind:valor={padreins}
+                etiqueta={"Padre"}
+                bind:cadena={pajuelains}
+                lista={listapadres}
+                onelegir={() => oninputIns("PADRE")}
             />
-            {#if padreins.length>0}
-                <InfoAnimal
-                    bind:animal = {padre}
-                />
+            {#if padreins.length > 0}
+                <InfoAnimal bind:animal={padre} />
             {/if}
         {/if}
-        <label for = "fechainseminacion" class="label">
-            <span class="label-text text-base">Fecha de inseminacion</span>
-        </label>
-        <label class="input-group ">
-            <input id ="fechainseminacion" type="date" 
-                class={`
+        <CustomDate
+            etiqueta="Fecha de inseminación"
+            onchange={() => oninputIns("FECHAINSEMINACION")}
+            bind:fecha={inseminacion.fechainseminacion}
+        />
+        {#if inseminacion.malfechainseminacion}
+            <div class="label">
+                <span class="label-text-alt text-red-500"
+                    >Debe seleccionar la fecha de inseminacion</span
+                >
+            </div>
+        {/if}
+        <div class="hidden">
+            <label for="fechainseminacion" class="label">
+                <span class="label-text text-base">Fecha de inseminacion</span>
+            </label>
+            <label class="input-group">
+                <input
+                    id="fechainseminacion"
+                    type="date"
+                    class={`
                     input input-bordered w-full
                     border border-gray-300 rounded-md
                     focus:outline-none focus:ring-2 
@@ -465,20 +521,27 @@
                     focus:border-green-500
                     ${estilos.bgdark2} 
                 `}
-                bind:value={inseminacion.fechainseminacion}
-                onchange={()=>oninputIns("FECHAINSEMINACION")}
-            />
-            {#if inseminacion.malfechainseminacion}
-                <div class="label">
-                    <span class="label-text-alt text-red-500">Debe seleccionar la fecha de inseminacion</span>                    
-                </div>
-            {/if}
-        </label>
-        <label for = "fechaparto" class="label">
+                    bind:value={inseminacion.fechainseminacion}
+                    onchange={() => oninputIns("FECHAINSEMINACION")}
+                />
+                {#if inseminacion.malfechainseminacion}
+                    <div class="label">
+                        <span class="label-text-alt text-red-500"
+                            >Debe seleccionar la fecha de inseminacion</span
+                        >
+                    </div>
+                {/if}
+            </label>
+        </div>
+
+        <label for="fechaparto" class="label">
             <span class="label-text text-base">Fecha estimada de parto</span>
         </label>
-        <label class="input-group ">
-            <input disabled id="fechaparto" type="date" 
+        <label class="input-group">
+            <input
+                disabled
+                id="fechaparto"
+                type="date"
                 class={`
                     input input-bordered w-full
                     border border-gray-300 rounded-md
@@ -488,20 +551,22 @@
                     ${estilos.bgdark2} 
                 `}
                 bind:value={inseminacion.fechapartoins}
-                onchange={()=>oninputIns("FECHAPARTO")}
+                onchange={() => oninputIns("FECHAPARTO")}
             />
             {#if inseminacion.malfechapartoins}
                 <div class="label">
-                    <span class="label-text-alt text-red-500">Debe seleccionar la fecha aproximada de parto</span>                    
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha aproximada de parto</span
+                    >
                 </div>
             {/if}
         </label>
-        <label for = "observacion" class="label">
+        <label for="observacion" class="label">
             <span class="label-text text-base">Observación</span>
         </label>
-        <input 
-            id ="obs" 
-            type="text"  
+        <input
+            id="obs"
+            type="text"
             class={`
                 input 
                 input-bordered 
@@ -511,20 +576,18 @@
                 ${estilos.bgdark2}
             `}
             bind:value={inseminacion.observacion}
-            
         />
     </div>
-    <div class="modal-action justify-start ">
-        <form method="dialog" >
+    <div class="modal-action justify-start">
+        <form method="dialog">
             <!--<button class="btn btn-success text-white" disabled='{!inseminacion.botonhabilitadoins}' onclick={guardarInseminacion} >Guardar</button>-->
-            <button 
-                class="btn btn-success text-white"  
-                onclick={guardarInseminacion} 
+            <button
+                class="btn btn-success text-white"
+                onclick={guardarInseminacion}
                 disabled={!botonhabilitadoins}
             >
                 Guardar
             </button>
-            
         </form>
     </div>
 {/if}

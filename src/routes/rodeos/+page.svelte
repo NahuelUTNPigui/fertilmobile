@@ -5,6 +5,7 @@
     import { onMount } from "svelte";
     import estilos from "$lib/stores/estilos";
     import { createCaber } from "$lib/stores/cab.svelte";
+    import { goto } from "$app/navigation";
     //Permisos
     import { getPermisosList, getPermisosMessage } from "$lib/permisosutil/lib";
     //actaualizacion

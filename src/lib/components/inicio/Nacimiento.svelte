@@ -6,7 +6,10 @@
     import AgregarAnimal from "../eventos/AgregarAnimal.svelte";
     import { loger } from "$lib/stores/logs/logs.svelte";
     import InfoAnimal from "../InfoAnimal.svelte";
+    import SelectFertil from "../SelectFertil.svelte";
+    import CustomDate from "../CustomDate.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
+
     const HOY = new Date().toISOString().split("T")[0];
     //ESTE REPRESENTA EL MODAL DE NACIMIENTO EN INICIO
     //El final de guardar lo hace el inicio
@@ -137,16 +140,28 @@
         bind:fechanacimiento
         confechanac={true}
     />
-
-    <label for="fechanacimiento" class="label">
-        <span class={estilos.labelForm}>Fecha nacimiento</span>
-    </label>
-    <label class="input-group">
-        <input
-            id="fechanacimiento"
-            type="date"
-            max={HOY}
-            class={`
+    <CustomDate
+        etiqueta={"Fecha nacimiento"}
+        onchange={() => oninputNacimiento("FECHA")}
+        bind:fecha={nacimiento.fechanac}
+    />
+    {#if malfechanac}
+        <div class="label">
+            <span class="label-text-alt text-red-500"
+                >Debe seleccionar la fecha del nacimiento</span
+            >
+        </div>
+    {/if}
+    <div class="hidden">
+        <label for="fechanacimiento" class="label">
+            <span class={estilos.labelForm}>Fecha nacimiento</span>
+        </label>
+        <label class="input-group">
+            <input
+                id="fechanacimiento"
+                type="date"
+                max={HOY}
+                class={`
                 input input-bordered w-full
                 border border-gray-300 rounded-md
                 focus:outline-none focus:ring-2 
@@ -154,17 +169,19 @@
                 focus:border-green-500
                 ${estilos.bgdark2} 
             `}
-            bind:value={nacimiento.fechanac}
-            onchange={() => oninputNacimiento("FECHA")}
-        />
-        {#if malfechanac}
-            <div class="label">
-                <span class="label-text-alt text-red-500"
-                    >Debe seleccionar la fecha del nacimiento</span
-                >
-            </div>
-        {/if}
-    </label>
+                bind:value={nacimiento.fechanac}
+                onchange={() => oninputNacimiento("FECHA")}
+            />
+            {#if malfechanac}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del nacimiento</span
+                    >
+                </div>
+            {/if}
+        </label>
+    </div>
+
     {#if cargadoanimales}
         <PredictSelect
             bind:valor={madrenac}
@@ -185,10 +202,8 @@
             lista={listapadres}
             onelegir={() => oninputNacimiento("COMBOPADRE")}
         ></PredictSelect>
-        {#if padrenac.length>0}
-            <InfoAnimal
-                bind:animal = {padre}
-            />
+        {#if padrenac.length > 0}
+            <InfoAnimal bind:animal={padre} />
         {/if}
     {/if}
     <label class="form-control">

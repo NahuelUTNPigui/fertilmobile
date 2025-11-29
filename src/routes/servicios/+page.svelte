@@ -21,9 +21,14 @@
     import MultipleToros from "$lib/components/MultipleToros.svelte";
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import { shorterWord } from "$lib/stringutil/lib";
+    //formulario
+
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //actualizacion
     import {
         actualizacion,
@@ -65,7 +70,7 @@
         getUltimoServiciosSQL,
         setUltimoServiciosSQL,
         updateLocalInseminacionesSQLUserUltimo,
-        setUltimoCeroEventosSQL
+        setUltimoCeroEventosSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import {
         addNewAnimalSQL,
@@ -78,7 +83,7 @@
         updateLocalHistorialAnimalesSQLUser,
         updateLocalHistorialAnimalesSQLUserUltimo,
         setUltimoCeroAnimalesSQL,
-        setUltimoCeroHistorialAnimalesSQL
+        setUltimoCeroHistorialAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import {
         getComandosSQL,
@@ -96,11 +101,11 @@
     let pre = "";
 
     //offline
-    let tieneUltimo = $state(false)
+    let tieneUltimo = $state(false);
 
     let infotoast = $state(false);
     let nubetoast = $state(false);
-    
+
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -199,17 +204,19 @@
     function clickFilter() {
         isOpenFilter = !isOpenFilter;
     }
-    function limpiarPadres(serpadres){
-        let padresnotransferidos = []
-        for(let i = 0;i<serpadres.length;i++){
-            let valor = serpadres[i]
-            let lista_padres =  padres.filter((p) => p.id == valor).map(p=>p.id)
-            if(lista_padres.length>0){
-                padresnotransferidos = padresnotransferidos.concat(lista_padres)
+    function limpiarPadres(serpadres) {
+        let padresnotransferidos = [];
+        for (let i = 0; i < serpadres.length; i++) {
+            let valor = serpadres[i];
+            let lista_padres = padres
+                .filter((p) => p.id == valor)
+                .map((p) => p.id);
+            if (lista_padres.length > 0) {
+                padresnotransferidos =
+                    padresnotransferidos.concat(lista_padres);
             }
-            
         }
-        return padresnotransferidos
+        return padresnotransferidos;
     }
     function openEditModal(id) {
         esservicio = true;
@@ -356,7 +363,7 @@
                     await setServiciosSQL(db, servicios);
                     let nuevamadre = dataser.madre.split("_").length > 1;
                     let nuevopadre = dataser.padres.split("_").length > 1;
-                   
+
                     let comando = {
                         tipo: "update",
                         coleccion: "servicios",
@@ -365,8 +372,8 @@
                         prioridad: 0,
                         idprov: idserv,
                         camposprov: `${nuevamadre && nuevopadre ? "madre,padres" : nuevamadre ? "madre" : nuevopadre ? "padres" : ""}`,
-                        show:{...dataser},
-                        motivo:"Editar servicio"
+                        show: { ...dataser },
+                        motivo: "Editar servicio",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -401,17 +408,19 @@
                 let idx = inseminaciones.findIndex((ins) => ins.id == idserv);
                 if (idx != -1) {
                     inseminaciones[idx].fechaparto = data.fechaparto;
-                    inseminaciones[idx].fechainseminacion = data.fechainseminacion;
+                    inseminaciones[idx].fechainseminacion =
+                        data.fechainseminacion;
                     inseminaciones[idx].padre = data.padre;
                     inseminaciones[idx].pajuela = data.pajuela;
                     inseminaciones[idx].observacion = data.observacion;
                     inseminaciones[idx].categoria = data.categoria;
                     await setInseminacionesSQL(db, inseminaciones);
-                    
-                    let nuevamadre = inseminaciones[idx].animal.split("_").length > 1;
-                    
+
+                    let nuevamadre =
+                        inseminaciones[idx].animal.split("_").length > 1;
+
                     let nuevopadre = data.padre.split("_").length > 1;
-                    
+
                     let comando = {
                         tipo: "update",
                         coleccion: "inseminacion",
@@ -420,9 +429,8 @@
                         prioridad: 0,
                         idprov: idserv,
                         camposprov: `${nuevamadre && nuevopadre ? "madre,padre" : nuevamadre ? "madre" : nuevopadre ? "padre" : ""}`,
-                        show:{...data},
-                        motivo:"Editar inseminación"
-
+                        show: { ...data },
+                        motivo: "Editar inseminación",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -467,7 +475,7 @@
         if (!esInseminacion) {
             try {
                 let eliminarservicio = servicios.filter((s) => s.id == id)[0];
-                
+
                 servicios = servicios.filter((s) => s.id != id);
                 await setServiciosSQL(db, servicios);
                 let comando = {
@@ -478,9 +486,8 @@
                     prioridad: 0,
                     idprov: id,
                     camposprov: "",
-                    show:{...eliminarservicio},
-                    motivo:"Eliminar servicio"
-                    
+                    show: { ...eliminarservicio },
+                    motivo: "Eliminar servicio",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -494,8 +501,10 @@
             }
         } else {
             try {
-                let eliminarinseminacion = inseminaciones.filter((s) => s.id == id)[0]
-                
+                let eliminarinseminacion = inseminaciones.filter(
+                    (s) => s.id == id,
+                )[0];
+
                 inseminaciones = inseminaciones.filter((s) => s.id != id);
                 await setInseminacionesSQL(db, inseminaciones);
                 let comando = {
@@ -506,8 +515,8 @@
                     prioridad: 0,
                     idprov: id,
                     camposprov: "",
-                    show:{...eliminarinseminacion},
-                    motivo:"Eliminar inseminación"
+                    show: { ...eliminarinseminacion },
+                    motivo: "Eliminar inseminación",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -537,7 +546,7 @@
             try {
                 await pb.collection("servicios").update(id, { active: false });
                 servicios = servicios.filter((s) => s.id != id);
-                await setServiciosSQL(db,servicios)
+                await setServiciosSQL(db, servicios);
                 Swal.fire(
                     "Éxito eliminar",
                     "Se eliminó con éxito el servicio",
@@ -552,7 +561,7 @@
                     .collection("inseminacion")
                     .update(id, { active: false });
                 inseminaciones = inseminaciones.filter((s) => s.id != id);
-                await setInseminacionesSQL(db,inseminaciones)
+                await setInseminacionesSQL(db, inseminaciones);
                 Swal.fire(
                     "Éxito eliminar",
                     "Se eliminó con éxito la inseminación",
@@ -623,7 +632,9 @@
         cargado = true;
     }
     function onChangeInseminaciones() {
-        inseminacionescab = inseminaciones.filter((s) => s.cab == caboff.id && s.active);
+        inseminacionescab = inseminaciones.filter(
+            (s) => s.cab == caboff.id && s.active,
+        );
     }
     function onChangeServicios() {
         servicioscab = servicios.filter((s) => s.cab == caboff.id && s.active);
@@ -751,23 +762,19 @@
             TIPO: item.fechadesde ? "Servicio" : "Artificial",
         };
     }
-    function getNombrePadre(valor){
-        let lista_padre = padres.filter((p) => p.id == valor)
-        if(lista_padre.length>0){
-            return lista_padre[0].caravana
+    function getNombrePadre(valor) {
+        let lista_padre = padres.filter((p) => p.id == valor);
+        if (lista_padre.length > 0) {
+            return lista_padre[0].caravana;
+        } else {
+            return "Transferido";
         }
-        else{
-            return "Transferido"
-        }
-        
-
     }
     function getNombrePadres(p_padres) {
         let ids = p_padres.split(",");
 
         let nombres = ids.reduce(
-            (acc, valor) =>
-                getNombrePadre(valor) + " , " + acc,
+            (acc, valor) => getNombrePadre(valor) + " , " + acc,
             "",
         );
 
@@ -794,11 +801,15 @@
         usuarioid = useroff.id;
     }
     async function updateLocalSQL() {
-
-        let ultimo_animal = await getUltimoAnimalesSQL(db)
-        let animales = await updateLocalAnimalesSQLUserUltimo(db, pb, usuarioid,ultimo_animal.ultimo);
+        let ultimo_animal = await getUltimoAnimalesSQL(db);
+        let animales = await updateLocalAnimalesSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_animal.ultimo,
+        );
         //await setUltimoAnimalesSQL(db);
- 
+
         animales = animales.filter((a) => a.active && a.cab == caboff.id);
         madres = animales.filter((a) => a.sexo == "H" || a.sexo == "F");
         padres = animales.filter((a) => a.sexo == "M");
@@ -809,14 +820,18 @@
             };
         });
 
-        
-        servicios = await updateLocalServiciosSQLUserUltimo(db, pb, usuarioid,ultimo_servicio.ultimo);
+        servicios = await updateLocalServiciosSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_servicio.ultimo,
+        );
 
         inseminaciones = await updateLocalInseminacionesSQLUserUltimo(
             db,
             pb,
             usuarioid,
-            ultimo_servicio.ultimo
+            ultimo_servicio.ultimo,
         );
 
         caboff = await updatePermisos(pb, usuarioid);
@@ -845,7 +860,6 @@
 
         servicios = resservicios.lista;
 
-        
         let resinseminaciones = await getInseminacionesSQL(db);
         inseminaciones = resinseminaciones.lista;
 
@@ -884,7 +898,7 @@
         setFilters();
 
         db = await openDB();
-        await ultimoLocalStorage()
+        await ultimoLocalStorage();
         //Reviso el internet
         let lastinter = await getInternetSQL(db);
         let rescom = await getComandosSQL(db);
@@ -917,12 +931,12 @@
             }
 
             if (mustUpdate) {
-                nubetoast=true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast=false
+                        nubetoast = false;
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;
@@ -942,16 +956,36 @@
             }
         }
     }
-    async function ultimoLocalStorage(){
+    async function ultimoLocalStorage() {
         const hasUltimo = localStorage.getItem("ultimo") === "si";
-        if(!hasUltimo){
-            await setUltimoCeroAnimalesSQL(db)
-            await setUltimoCeroHistorialAnimalesSQL(db)
-            await setUltimoCeroEventosSQL(db)
-            await setUltimoCeroEstablecimientosSQL(db)
-            localStorage.setItem("ultimo","si")
+        if (!hasUltimo) {
+            await setUltimoCeroAnimalesSQL(db);
+            await setUltimoCeroHistorialAnimalesSQL(db);
+            await setUltimoCeroEventosSQL(db);
+            await setUltimoCeroEstablecimientosSQL(db);
+            localStorage.setItem("ultimo", "si");
         }
-        tieneUltimo = hasUltimo
+        tieneUltimo = hasUltimo;
+    }
+    function onChangeFecha() {
+        if (fechadesdeserv.length > 0) {
+            try {
+                fechaparto = addDays(fechadesdeserv, 280)
+                    .toISOString()
+                    .split("T")[0];
+            } catch (err) {
+                fechaparto = "";
+            }
+        }
+        if (fechainseminacion.length > 0) {
+            try {
+                fechaparto = addDays(fechainseminacion, 280)
+                    .toISOString()
+                    .split("T")[0];
+            } catch (err) {
+                fechaparto = "";
+            }
+        }
     }
     onMount(async () => {
         await initPage();
@@ -1127,84 +1161,36 @@
         </div>
         {#if isOpenFilter}
             <div transition:slide>
-                <div class="grid grid-cols-2 lg:grid-cols-4">
-                    <div class="">
-                        <label
-                            class="block tracking-wide text-base font-medium mb-2"
-                            for="grid-first-name"
-                        >
-                            Servicio desde
-                        </label>
-                        <input
-                            id="fechainseminaciondesde"
-                            type="date"
-                            class={`
-                            w-full md:w-1/2
-                                input input-bordered
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={fechaservdesdefiltro}
-                            onchange={filterUpdate}
-                        />
-                    </div>
-                    <div class="">
-                        <label
-                            class="block tracking-wide text-base font-medium mb-2"
-                            for="grid-first-name"
-                        >
-                            Servicio hasta
-                        </label>
-                        <input
-                            id="fechainseminacionhasta"
-                            type="date"
-                            class={`
-                            w-full md:w-1/2
-                                input input-bordered
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={fechaservhastafiltro}
-                            onchange={filterUpdate}
-                        />
-                    </div>
-                    <div class="">
-                        <label
-                            class="block tracking-wide text-base font-medium mb-2"
-                            for="grid-first-name"
-                        >
-                            Parto desde
-                        </label>
-                        <input
-                            id="fechainseminaciondesde"
-                            type="date"
-                            class={`
-                            w-full md:w-1/2
-                                input input-bordered
-                                ${estilos.bgdark2}
-                            `}
-                            bind:value={fechapartodesde}
-                            onchange={filterUpdate}
-                        />
-                    </div>
-                    <div class="">
-                        <label
-                            class="block tracking-wide text-base font-medium mb-2"
-                            for="grid-first-name"
-                        >
-                            Parto hasta
-                        </label>
-                        <input
-                            id="fechainseminacionhasta"
-                            type="date"
-                            class={`
-                            w-full md:w-1/2
-                                input input-bordered
-                                ${estilos.bgdark2}
-                            `}
-                            onchange={filterUpdate}
-                            bind:value={fechapartohasta}
-                        />
-                    </div>
-                    <div class="">
+                <div class="grid grid-cols-1 lg:grid-cols-3">
+                    <CustomDate
+                        etiqueta="Servicio desde"
+                        bind:fecha={fechaservdesdefiltro}
+                        onchange={filterUpdate}
+                    />
+
+                    <CustomDate
+                        etiqueta="Servicio hasta"
+                        bind:fecha={fechaservhastafiltro}
+                        onchange={filterUpdate}
+                    />
+
+                    <CustomDate
+                        etiqueta="Parto desde"
+                        bind:fecha={fechapartodesde}
+                        onchange={filterUpdate}
+                    />
+                    <CustomDate
+                        etiqueta="Parto hasta"
+                        bind:fecha={fechapartohasta}
+                        onchange={filterUpdate}
+                    />
+                    <SelectFertil
+                        etiqueta="Tipo servicio"
+                        bind:value={filtroservicio}
+                        onchange={filterUpdate}
+                        opciones={opcionservicio}
+                    />
+                    <div class="hidden">
                         <label for="tiposer" class="tracking-wide label">
                             <span class="label-text text-base"
                                 >Tipo servicio</span
@@ -1328,15 +1314,23 @@
                                           ).toLocaleDateString()
                                         : ""}</td
                                 >
-                                
+
                                 <td
                                     class="text-base mx-1 px-1 border-b dark:border-gray-600"
                                 >
                                     {s.fechadesde
-                                        ? shorterWord(s.expand.madre.caravana?s.expand.madre.caravana:"")
-                                        : shorterWord(s.expand.animal.caravana?s.expand.animal.caravana:"")}
+                                        ? shorterWord(
+                                              s.expand.madre.caravana
+                                                  ? s.expand.madre.caravana
+                                                  : "",
+                                          )
+                                        : shorterWord(
+                                              s.expand.animal.caravana
+                                                  ? s.expand.animal.caravana
+                                                  : "",
+                                          )}
                                 </td>
-                                
+
                                 <td
                                     class="text-base mx-1 px-1 border-b dark:border-gray-600"
                                 >
@@ -1356,7 +1350,6 @@
             </div>
             <div class="block w-full md:hidden justify-items-center mx-1">
                 {#each serviciosrow as s}
-                    
                     <div
                         class="card w-full shadow-xl p-2 hover:bg-gray-200 dark:hover:bg-gray-900"
                     >
@@ -1421,7 +1414,7 @@
 
                                     <div class="flex items-start">
                                         <span>Madre:</span>
-                                        
+
                                         <span class="mx-1 font-semibold">
                                             {s.fechadesde
                                                 ? shorterWord(
@@ -1438,7 +1431,7 @@
                                                   )}
                                         </span>
                                     </div>
-                                    
+
                                     <div class="flex items-start">
                                         <span>Padres:</span>
                                         <span class="mx-1 font-semibold">
@@ -1485,12 +1478,13 @@
         </form>
         <h3 class="text-lg font-bold">Ver servicio</h3>
         <div class="form-control">
-            <label for="nombre" class="label">
-                <span class="label-text text-base">Madre</span>
-            </label>
-            <label class="input-group">
-                <select
-                    class={`
+            <div>
+                <label for="nombre" class="label">
+                    <span class="label-text text-base">Madre</span>
+                </label>
+                <label class="input-group">
+                    <select
+                        class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1498,22 +1492,25 @@
                         focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={madre}
-                    disabled
-                >
-                    {#each madres as a}
-                        <option value={a.id}>{a.caravana}</option>
-                    {/each}
-                </select>
-            </label>
-            <label for="nombre" class="label">
-                <span class="label-text text-base">Fecha desde</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fecha"
-                    type="date"
-                    class={`
+                        bind:value={madre}
+                        disabled
+                    >
+                        {#each madres as a}
+                            <option value={a.id}>{a.caravana}</option>
+                        {/each}
+                    </select>
+                </label>
+            </div>
+            <CustomDate etiqueta="Fecha desde" bind:fecha={fechadesdeserv} />
+            <div class="hidden">
+                <label for="nombre" class="label">
+                    <span class="label-text text-base">Fecha desde</span>
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fecha"
+                        type="date"
+                        class={`
                         input input-bordered 
                         w-full
                         border border-gray-300 rounded-md
@@ -1522,17 +1519,20 @@
                         focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={fechadesdeserv}
-                />
-            </label>
-            <label for="nombre" class="label">
-                <span class="label-text text-base">Fecha hasta</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fecha"
-                    type="date"
-                    class={`
+                        bind:value={fechadesdeserv}
+                    />
+                </label>
+            </div>
+            <CustomDate etiqueta="Fecha hasta" bind:fecha={fechahastaserv} />
+            <div class="hidden">
+                <label for="nombre" class="label">
+                    <span class="label-text text-base">Fecha hasta</span>
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fecha"
+                        type="date"
+                        class={`
                         input input-bordered 
                         w-full
                         border border-gray-300 rounded-md
@@ -1541,9 +1541,11 @@
                         focus:border-green-500
                         ${estilos.bgdark2}
                     `}
-                    bind:value={fechahastaserv}
-                />
-            </label>
+                        bind:value={fechahastaserv}
+                    />
+                </label>
+            </div>
+
             <label for="nombre" class="label">
                 <span class="label-text text-base">Fecha parto</span>
             </label>
@@ -1693,14 +1695,29 @@
                     size="w-1/2"
                 />
             {/if}
-            <label for="fechainseminacion" class="label">
-                <span class="label-text text-base">Fecha de inseminacion</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fechainseminacion"
-                    type="date"
-                    class={`
+            <CustomDate
+                etiqueta="Fecha inseminación"
+                bind:fecha={fechainseminacion}
+                onchange={() => oninput("FECHAINSEMINACION")}
+            />
+            {#if malfechainseminacion}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha de inseminacion</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
+                <label for="fechainseminacion" class="label">
+                    <span class="label-text text-base"
+                        >Fecha de inseminacion</span
+                    >
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fechainseminacion"
+                        type="date"
+                        class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1708,17 +1725,19 @@
                         focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={fechainseminacion}
-                    onchange={() => oninput("FECHAINSEMINACION")}
-                />
-                {#if malfechainseminacion}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500"
-                            >Debe seleccionar la fecha de inseminacion</span
-                        >
-                    </div>
-                {/if}
-            </label>
+                        bind:value={fechainseminacion}
+                        onchange={() => oninput("FECHAINSEMINACION")}
+                    />
+                    {#if malfechainseminacion}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500"
+                                >Debe seleccionar la fecha de inseminacion</span
+                            >
+                        </div>
+                    {/if}
+                </label>
+            </div>
+
             <label for="fechaparto" class="label">
                 <span class="label-text text-base">Fecha estimada de parto</span
                 >

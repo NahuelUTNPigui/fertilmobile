@@ -1,5 +1,4 @@
 <script>
-
     import Navbarr from "$lib/components/Navbarr.svelte";
     import Swal from "sweetalert2";
     import PocketBase from "pocketbase";
@@ -39,7 +38,7 @@
     //calendario
     import CustomDate from "$lib/components/CustomDate.svelte";
     //Formularios
-    
+
     import InicioNacimiento from "$lib/components/inicio/Nacimiento.svelte";
     import InicioTacto from "$lib/components/inicio/Tacto.svelte";
     import InicioTratamiento from "$lib/components/inicio/Tratamiento.svelte";
@@ -144,7 +143,6 @@
     import { offliner } from "$lib/stores/logs/coninternet.svelte";
     import { getInternet, getOnlyInternet } from "$lib/stores/offline";
     import { setEstablecimientosAsociadosSQL } from "$lib/stores/sqlite/dbasociados";
-    
 
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
 
@@ -207,18 +205,107 @@
     let classbutton =
         "w-full flex items-center justify-center space-x-4 bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 dark:bg-green-700 dark:hover:bg-green-600";
     //Tacto
-    let tacto = $state({fechatacto:""});
+    let tacto = $state({
+        fechatacto: "",
+        observaciontacto: "",
+        animaltacto: "",
+        cadenatacto: "",
+        //Tipo animal
+        categoriatacto: "",
+        prenadatacto: 0,
+        //tipo tacto
+        tipotacto: "",
+        //Validaciones
+        malfechatacto: false,
+        malanimaltacto: "",
+        botonhabilitadotacto: false,
+    });
     let prenadatacto = $state(0);
     //Nacimiento
-    let nacimiento = $state({});
+    let nacimiento = $state({
+        //Nacimiento
+        caravananac: "",
+        sexonac: "",
+        pesonac: "",
+        fechanac: "",
+        observacionnac: "",
+        //Madre
+        etiquetamadre: "Madre",
+        madrenac: "",
+        nombremadrenac: "",
+
+        //Padre
+        padrenac: "",
+        nombrepadrenac: "",
+        //Validacion
+        malmadrenac: false,
+        malpadrenac: false,
+        malfechanac: false,
+        malcaravananac: false,
+        malsexonac: false,
+        botonhabilitadonac: false,
+    });
     //Tratamiento
-    let tratamiento = $state({});
+    let tratamiento = $state({
+        animaltrat: "",
+        cadenatrat: "",
+        categoriatrat: "",
+        fechatrat: "",
+        tipotrat: "",
+        observaciontrat: "",
+        //Validaciones
+        malanimaltrat: false,
+        malcategoriatrat: false,
+        malfechatrat: false,
+        maltipotrat: false,
+        botonhabilitadotrat: false,
+    });
     //Servicio
-    let servicio = $state({});
-    let inseminacion = $state({});
+    let servicio = $state({
+        idanimalser: "",
+        categoriaser: "",
+        padreser: "",
+        padreserlista: [],
+        fechapartoser: "",
+        fechadesdeserv: "",
+        fechahastaserv: "",
+        madreser: "",
+        observacionser: "",
+        //validacion
+        malanimalser: false,
+        malfechadesdeser: false,
+        malpadreser: false,
+        botonhabilitadoser: false,
+    });
+    let inseminacion = $state({
+        padreins: "",
+        pajuelains: "",
+        idanimalins: "",
+        cadenains: "",
+        categoriains: "",
+        fechainseminacion:"",
+        fechapartoins: "",
+        observacion: "",
+        //Validaciones
+        malanimalins: false,
+        malpadreins: false,
+        malfechainseminacion: false,
+        malfechapartoins: false,
+        botonhabilitadoins: false,
+    });
     let esServicio = $state(true);
     //Observacion
-    let observacion = $state({});
+    let observacion = $state({
+        animalobs: "",
+        cadenaobs: "",
+        categoriaobs: "",
+        fechaobs: "",
+        observacionobs: "",
+        //Validaciones
+        malanimalobs: false,
+        malfechaobs: false,
+        botonhabilitadoobs: false,
+    });
     //Nuevo animal
     let agregaranimal = $state(false);
     let caravana = $state("");
@@ -264,7 +351,7 @@
             //tipo tacto
             tipotacto: "",
             //Validaciones
-            malfechatacto: "",
+            malfechatacto: false,
             malanimaltacto: "",
             botonhabilitadotacto: false,
         };
@@ -322,8 +409,8 @@
             idanimalins: "",
             cadenains: "",
             categoriains: "",
-            fechainseminacion: "",
-            fechapartoins: "",
+            fechainseminacion:"",
+            fechapartoins:"",
             observacion: "",
             //Validaciones
             malanimalins: false,
@@ -504,6 +591,7 @@
             cab: caboff.id,
             active: true,
         };
+
         if (coninternet.connected) {
             let listapermisos = getPermisosList(caboff.permisos);
             if (!listapermisos[4]) {
@@ -587,6 +675,7 @@
                 cab: caboff.id,
                 active: true,
             };
+
             if (coninternet.connected) {
                 //caboff = await updatePermisos(pb, usuarioid);
                 //getpermisos = caboff.permisos;
@@ -1812,10 +1901,12 @@
                 ? -1
                 : 1,
         );
+        
         let animalesuser = await updateLocalAnimalesSQLUserUltimo(
             db,
             pb,
             usuarioid,
+            //me hace ruido este este ultimo, deberia ser el del animal
             lastinter.ultimo,
         );
         animalesuser.sort((a1, a2) =>
@@ -1904,7 +1995,6 @@
         //loger.addTextError(JSON.stringify(data,null,2))
     }
     function onChangeAnimales() {
-        
         animalescab = animales.filter((a) => a.cab == caboff.id && a.active);
         listaanimales = animalescab.map((a) => {
             return { id: a.id, nombre: a.caravana };
@@ -1917,14 +2007,18 @@
         listapadres = padres.map((a) => {
             return { id: a.id, nombre: a.caravana };
         });
-         listamadres.sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+        listamadres.sort((a, b) =>
+            a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
         );
         listaanimales.sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+            a.nombre.localeCompare(b.nombre, undefined, {
+                sensitivity: "base",
+            }),
         );
         listapadres.sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+            a.nombre.localeCompare(b.nombre, undefined, {
+                sensitivity: "base",
+            }),
         );
         cargadoanimales = true;
     }
@@ -2046,6 +2140,7 @@
 
             await getTotales();
             if (modedebug) {
+                
                 getactualizacion = await actualizacion(
                     velocidad,
                     confiabilidad,
@@ -2105,19 +2200,18 @@
 {/if}
 <Navbarr bind:coninternet>
     {#if modedebug}
-        
-        <button onclick={reinicarDB} class="btn">Reiniciar bd</button>
+        <button onclick={reinicarDB} class="hidden btn">Reiniciar bd</button>
         <button
             onclick={() =>
                 setArbitrarioInternet(coninternet.connected ? false : true)}
-            class="btn"
+            class="hidden btn"
         >
             Cambiar conexion a {coninternet.connected
                 ? "sin internet"
                 : "con internet"}
         </button>
         <button onclick={borrarUltimo} class="btn"> bye ultimo </button>
-        <button onclick={borrarUltimo} class="btn"> Limpiar animales </button>
+        
 
         <div class="grid grid-cols-2">
             <span>
@@ -2188,20 +2282,12 @@
                 Ultimo update: {new Date(lastinter.ultimo).toLocaleDateString()}
             </span>
         </div>
-        <label for="calendar">
-            fecha prueba
-        </label>
-        <CustomDate etiqueta="Fecha prueba" fecha={new Date()} />
-
         
     {/if}
     <div class="flex items-center justify-center">
         <h2 class="text-xl font-bold">
             ¡Proximamente Lanzamiento de Preventas!
         </h2>
-        
-    
-    
     </div>
     {#if caboff.exist}
         <CardBase titulo="Bienvenido a Creciente Fértil" cardsize="max-w-5xl">
@@ -2414,7 +2500,7 @@
             bind:prenadatacto
             bind:madres
             bind:listamadres
-            bind:listanimales = {animales}
+            bind:listanimales={animales}
             bind:cargadoanimales
             {guardarTacto}
         ></InicioTacto>

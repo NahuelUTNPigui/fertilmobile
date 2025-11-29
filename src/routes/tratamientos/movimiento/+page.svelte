@@ -15,6 +15,9 @@
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { getSexoNombre } from "$lib/stringutil/lib";
     import { shorterWord } from "$lib/stringutil/lib";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -101,7 +104,7 @@
     let animales = $state([]);
     let animalesrows = $state([]);
     //Filtros
-    
+
     let buscar = $state("");
     let lote = $state("");
     let rodeo = $state("");
@@ -214,24 +217,19 @@
         if (sexo != "") {
             animalesrows = animalesrows.filter((a) => a.sexo == sexo);
         }
-        if(raza != ""){
+        if (raza != "") {
             animalesrows = animalesrows.filter((a) =>
-                a.raza
-                    .toLocaleLowerCase()
-                    .includes(raza.toLocaleLowerCase()),
+                a.raza.toLocaleLowerCase().includes(raza.toLocaleLowerCase()),
             );
         }
-        if(color != ""){
+        if (color != "") {
             animalesrows = animalesrows.filter((a) =>
-                a.color
-                    .toLocaleLowerCase()
-                    .includes(color.toLocaleLowerCase()),
+                a.color.toLocaleLowerCase().includes(color.toLocaleLowerCase()),
             );
         }
         if (rodeoseleccion.length != 0) {
             if (rodeoseleccion.length == 1 && rodeoseleccion[0] == "-1") {
                 animalesrows = animalesrows.filter((a) => !a.rodeo);
-                
             } else {
                 animalesrows = animalesrows.filter((a) =>
                     rodeoseleccion.includes(a.rodeo),
@@ -313,40 +311,8 @@
             selectanimales[i].observacionnuevo = observaciongeneral;
         }
     }
-    async function getLotes() {
-        const records = await pb.collection("lotes").getFullList({
-            filter: `active = true && cab ~ '${cab.id}'`,
-            sort: "nombre",
-        });
-        lotes = records;
-        ordenarNombre(lotes);
-    }
-    async function getRodeos() {
-        const records = await pb.collection("rodeos").getFullList({
-            filter: `active = true && cab ~ '${cab.id}'`,
-            sort: "nombre",
-        });
-        rodeos = records;
-        //ordenarNombre(rodeos)
-    }
-    async function getTiposTratamientos() {
-        const records = await pb.collection("tipotratamientos").getFullList({
-            filter: `(cab='${cab.id}' || generico = true) && active = true`,
-            sort: "-created",
-        });
-        tipotratamientos = records;
-        tipotratamientos.sort((tp1, tp2) => (tp1.nombre > tp2.nombre ? 1 : -1));
-    }
-    async function getAnimales() {
-        const recordsa = await pb.collection("animales").getFullList({
-            filter: `active=true && delete=false && cab='${cab.id}'`,
-            expand: "rodeo,lote",
-        });
-
-        animales = recordsa;
-        animales.sort((a1, a2) => (a1.caravana > a2.caravana ? 1 : -1));
-        animalesrows = animales;
-    }
+    
+    
     function openNewModal() {
         if (ninguno) {
             Swal.fire(
@@ -628,12 +594,7 @@
             }
         }
     }
-    async function onmountoriginal() {
-        await getAnimales();
-        await getLotes();
-        await getRodeos();
-        await getTiposTratamientos();
-    }
+    
     async function initPage() {
         //coninternet = {connected:false} // await Network.getStatus();
         coninternet = await getInternet(
@@ -808,7 +769,13 @@
                 transition:slide
                 class="grid grid-cols-1 lg:grid-cols-4 m-1 gap-2 w-11/12"
             >
-                <div>
+                <SelectFertil
+                    etiqueta="Sexo"
+                    bind:value={sexo}
+                    opciones={[{ id: "", nombre: "Todos" }].concat(sexos)}
+                    onchange={filterUpdate}
+                />
+                <div class="hidden">
                     <label for="sexo" class="label">
                         <span class="label-text text-base">Sexo</span>
                     </label>
@@ -1220,7 +1187,29 @@
         </form>
         <h3 class="text-lg font-bold">Tratamientos</h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
-            <div>
+            <CustomDate
+                etiqueta="Fecha"
+                bind:fecha
+                onchange={() => {
+                    if (fecha == "") {
+                        malfecha = true;
+                        botonhabilitado = false;
+                    } else {
+                        malfecha = false;
+                        if (!maltipo && tipotratamientoselect != "") {
+                            botonhabilitado = true;
+                        }
+                    }
+                }}
+            />
+            {#if malfecha}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del tratamiento</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
                 <label for="fechatrata" class="label">
                     <span class="label-text text-base">Fecha </span>
                 </label>
@@ -1259,7 +1248,24 @@
                     {/if}
                 </label>
             </div>
-            <div>
+            <SelectFertil
+                etiqueta="Tipo tratamiento"
+                bind:value={tipotratamientoselect}
+                onchange={() => {
+                    if (tipotratamientoselect == "") {
+                        maltipo = true;
+
+                        botonhabilitado = false;
+                    } else {
+                        maltipo = false;
+                        if (!malfecha && fecha != "") {
+                            botonhabilitado = true;
+                        }
+                    }
+                }}
+                opciones = {tipotratamientos}
+            />
+            <div class="hidden">
                 <label for="tipo" class="label">
                     <span class="label-text text-base">Tipo tratamiento</span>
                 </label>

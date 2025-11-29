@@ -13,6 +13,9 @@
     import estilos from "$lib/stores/estilos";
     import { goto } from "$app/navigation";
     import { shorterWord } from "$lib/stringutil/lib";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -60,7 +63,7 @@
         updateLocalTiposTratSQLUserUltimo,
         getUltimoTratsSQL,
         getUltimoTiposTratsSQL,
-        setUltimoCeroEventosSQL
+        setUltimoCeroEventosSQL,
     } from "$lib/stores/sqlite/dbeventos";
     import {
         addNewAnimalSQL,
@@ -72,7 +75,7 @@
         setUltimoAnimalesSQL,
         getUltimoAnimalesSQL,
         setUltimoCeroAnimalesSQL,
-        setUltimoCeroHistorialAnimalesSQL
+        setUltimoCeroHistorialAnimalesSQL,
     } from "$lib/stores/sqlite/dbanimales";
     import { generarIDAleatorio } from "$lib/stringutil/lib";
     import {
@@ -88,9 +91,9 @@
     import Nube from "$lib/components/toast/Nube.svelte";
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //Offline
-    let tieneUltimo = $state(false)
+    let tieneUltimo = $state(false);
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -284,7 +287,7 @@
                 : 1,
         );
         tipotratamientoscab = tipotratamientos.filter(
-            (tp) => (tp.cab == caboff.id || tp.generico == true) && tp.active
+            (tp) => (tp.cab == caboff.id || tp.generico == true) && tp.active,
         );
     }
     function onChangeTratamientos() {
@@ -303,7 +306,9 @@
                 id: idtratamiento,
             };
             let tidx = tratamientos.findIndex((t) => t.id == idtratamiento);
-            let tt_idx = tipotratamientoscab.findIndex((ttipo) => ttipo.id == tipo);
+            let tt_idx = tipotratamientoscab.findIndex(
+                (ttipo) => ttipo.id == tipo,
+            );
             if (tidx != -1) {
                 tratamientos[tidx].categoria = data.categoria;
                 tratamientos[tidx].tipo = data.tipo;
@@ -320,8 +325,8 @@
                     prioridad: 2,
                     idprov: idtratamiento,
                     camposprov: ntipo ? "tipo" : "",
-                    show:{...tratamientos[tidx]},
-                    motivo:"Editar tratamiento"
+                    show: { ...tratamientos[tidx] },
+                    motivo: "Editar tratamiento",
                 };
                 comandos.push(comando);
                 await setComandosSQL(db, comandos);
@@ -366,25 +371,24 @@
             };
             let t_idx = tratamientos.findIndex((t) => t.id == idtratamiento);
             await pb.collection("tratamientos").update(idtratamiento, data);
-            
-            let tt_idx = tipotratamientoscab.findIndex((ttipo) => ttipo.id == tipo);
-            tratamientos[t_idx] = {
-                ...tratamientos[t_idx], 
-                ...data,
 
-            }
+            let tt_idx = tipotratamientoscab.findIndex(
+                (ttipo) => ttipo.id == tipo,
+            );
+            tratamientos[t_idx] = {
+                ...tratamientos[t_idx],
+                ...data,
+            };
             if (tt_idx != -1) {
                 tratamientos[t_idx].expand.tipo.id = tipo;
                 tratamientos[t_idx].expand.tipo.nombre =
                     tipotratamientos[tt_idx].nombre;
-            }
-            else{
-                if(modedebug){
-                    loger.addTextLog("modedebug tt_idx: "+tt_idx)
+            } else {
+                if (modedebug) {
+                    loger.addTextLog("modedebug tt_idx: " + tt_idx);
                 }
-                
             }
-            
+
             await setTratsSQL(db, tratamientos);
             actualizarDatos();
             Swal.fire(
@@ -427,7 +431,9 @@
             if (result.value) {
                 let data = { active: false };
                 try {
-                    let eliminartratamiento = tratamientos.filter((t) => t.id = id)[0];
+                    let eliminartratamiento = tratamientos.filter(
+                        (t) => (t.id = id),
+                    )[0];
                     tratamientos = tratamientos.filter((t) => t.id != id);
                     await setTratsSQL(db, tratamientos);
                     actualizarDatos();
@@ -439,8 +445,8 @@
                         prioridad: 2,
                         idprov: id,
                         camposprov: "",
-                        show:{...eliminartratamiento,...data},
-                        motivo:"Eliminar tratamiento"
+                        show: { ...eliminartratamiento, ...data },
+                        motivo: "Eliminar tratamiento",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -586,8 +592,8 @@
                 prioridad: 1,
                 idprov,
                 camposprov: "",
-                show:{...data},
-                motivo:"Nuevo tipo tratamiento"
+                show: { ...data },
+                motivo: "Nuevo tipo tratamiento",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -605,8 +611,8 @@
                 prioridad: 1,
                 idprov: idtipotratamiento,
                 camposprov: "",
-                show:{...data},
-                motivo:"Editar tipo tratamiento"
+                show: { ...data },
+                motivo: "Editar tipo tratamiento",
             };
             comandos.push(comando);
             await setComandosSQL(db, comandos);
@@ -706,7 +712,7 @@
         idtipotratamiento = id;
         let elminartipotrata = tipotratamientos.filter(
             (tp) => tp.id == idtipotratamiento,
-        )[0]
+        )[0];
         tipotratamientos = tipotratamientos.filter(
             (tp) => tp.id != idtipotratamiento,
         );
@@ -723,9 +729,8 @@
             prioridad: 1,
             idprov: idtipotratamiento,
             camposprov: "",
-            show:{...elminartipotrata,...data},
-            motivo:"Eliminar tipo tratamiento"
-
+            show: { ...elminartipotrata, ...data },
+            motivo: "Eliminar tipo tratamiento",
         };
         comandos.push(comando);
         await setComandosSQL(db, comandos);
@@ -861,7 +866,6 @@
         }
         tratamientosrow.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     }
-    
 
     async function initPage() {
         coninternet = await getInternet(
@@ -879,22 +883,31 @@
     // Se supone que los comandos ya fueron flush
 
     async function updateLocalSQL() {
+        let ultimo_animal = await getUltimoAnimalesSQL(db);
 
-        let ultimo_animal = await getUltimoAnimalesSQL(db)
+        let ultimos_tipo = await getUltimoTiposTratsSQL(db);
 
-        let ultimos_tipo = await getUltimoTiposTratsSQL(db)
-
-        tratamientos = await updateLocalTratsSQLUserUltimo(db, pb, usuarioid,ultimo_tratamientos.ultimo);
+        tratamientos = await updateLocalTratsSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimo_tratamientos.ultimo,
+        );
 
         animales = await getUpdateLocalAnimalesSQLUserUltimo(
             db,
             pb,
             usuarioid,
             caboff.id,
-            ultimo_animal.ultimo
+            ultimo_animal.ultimo,
         );
 
-        tipotratamientos = await updateLocalTiposTratSQLUserUltimo(db, pb, usuarioid,ultimos_tipo.ultimo);
+        tipotratamientos = await updateLocalTiposTratSQLUserUltimo(
+            db,
+            pb,
+            usuarioid,
+            ultimos_tipo.ultimo,
+        );
 
         onChangeTratamientos();
 
@@ -931,18 +944,18 @@
             }
         }
     }
-    
-    async function ultimoLocalStorage(){
+
+    async function ultimoLocalStorage() {
         const hasUltimo = localStorage.getItem("ultimo") === "si";
-        if(!hasUltimo){
-            await setUltimoCeroAnimalesSQL(db)
-            
-            await setUltimoCeroHistorialAnimalesSQL(db)
-            await setUltimoCeroEventosSQL(db)
-            await setUltimoCeroEstablecimientosSQL(db)
-            localStorage.setItem("ultimo","si")
+        if (!hasUltimo) {
+            await setUltimoCeroAnimalesSQL(db);
+
+            await setUltimoCeroHistorialAnimalesSQL(db);
+            await setUltimoCeroEventosSQL(db);
+            await setUltimoCeroEstablecimientosSQL(db);
+            localStorage.setItem("ultimo", "si");
         }
-        tieneUltimo = hasUltimo
+        tieneUltimo = hasUltimo;
     }
     async function getDataSQL() {
         proxyfiltros = proxy.load();
@@ -980,12 +993,12 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
                         setTimeout(() => {
                             infotoast = false;
@@ -1139,7 +1152,12 @@
         {#if isOpenFilter}
             <div transition:slide>
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha desde"
+                        bind:fecha={fechadesde}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1158,7 +1176,12 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha hasta"
+                        bind:fecha={fechahasta}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1177,7 +1200,15 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div>
+                    <SelectFertil
+                        etiqueta="Categoría"
+                        bind:value={buscarcategoria}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(
+                            categorias,
+                        )}
+                    />
+                    <div class="hidden">
                         <label for="categoria" class="tracking-wide label">
                             <span class="label-text text-base">Categoria</span>
                         </label>
@@ -1201,6 +1232,14 @@
                             </select>
                         </label>
                     </div>
+                    <SelectFertil
+                        etiqueta="Tipo"
+                        bind:value={buscartipo}
+                        onchange={filterUpdate}
+                        opciones={[{ id: "", nombre: "Todos" }].concat(
+                            tipotratamientoscab,
+                        )}
+                    />
                     <div>
                         <label for="tipo" class="tracking-wide label">
                             <span class="label-text text-base">Tipo</span>
@@ -1330,7 +1369,7 @@
     <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"
@@ -1385,84 +1424,26 @@
                     <span class="label-text text-base">{caravaedit}</span>
                 </label>
             {/if}
-            {#if animal == "agregar"}
-                <form method="dialog">
-                    <button
-                        class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 rounded-xl"
-                        >✕</button
-                    >
-                </form>
-                <label for="nombre" class="label">
-                    <span class="label-text text-base">Caravana</span>
+            <CustomDate
+                etiqueta="Fecha"
+                bind:fecha
+                onchange={() => oninput("FECHA")}
+            />
+            <div class={`label ${malfecha ? "" : "hidden"}`}>
+                <span class="label-text-alt text-red-400"
+                    >Debe seleccionar la fecha</span
+                >
+            </div>
+            <div class="hidden">
+                <label for="fecha" class="label">
+                    <span class="label-text text-base">Fecha</span>
                 </label>
                 <label class="input-group">
                     <input
-                        id="nombre"
-                        type="text"
+                        id="fecha"
+                        type="date"
+                        max={HOY}
                         class={`
-                            input 
-                            input-bordered 
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
-                            w-full
-                            ${estilos.bgdark2} 
-                            ${malcaravana ? "input-error" : ""}
-                        `}
-                        bind:value={caravana}
-                        oninput={() => oninput("NOMBRE")}
-                    />
-                    <div class={`label ${malcaravana ? "" : "hidden"}`}>
-                        <span class="label-text-alt text-red-400"
-                            >Error debe escribir la caravana del animal</span
-                        >
-                    </div>
-                </label>
-                <label for="sexo" class="label">
-                    <span class="label-text text-base">Sexo</span>
-                </label>
-                <label class="input-group">
-                    <select
-                        class={`
-                            select select-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={sexo}
-                    >
-                        {#each sexos as s}
-                            <option value={s.id}>{s.nombre}</option>
-                        {/each}
-                    </select>
-                </label>
-                <label for="peso" class="label">
-                    <span class="label-text text-base">Peso (KG)</span>
-                </label>
-                <label class="input-group">
-                    <input
-                        id="peso"
-                        type="number"
-                        class={`
-                            input input-bordered w-full
-                            border border-gray-300 rounded-md
-                            focus:outline-none focus:ring-2 
-                            focus:ring-green-500 focus:border-green-500
-                            ${estilos.bgdark2}
-                        `}
-                        bind:value={peso}
-                    />
-                </label>
-            {/if}
-            <label for="fecha" class="label">
-                <span class="label-text text-base">Fecha</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fecha"
-                    type="date"
-                    max={HOY}
-                    class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1470,49 +1451,30 @@
                         focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={fecha}
-                    onchange={() => oninput("FECHA")}
-                />
-                <div class={`label ${malfecha ? "" : "hidden"}`}>
-                    <span class="label-text-alt text-red-400"
-                        >Debe seleccionar la fecha</span
-                    >
-                </div>
-            </label>
-            <label for="categoria" class="label">
-                <span class="label-text text-base">Categoria</span>
-            </label>
-            <label class="input-group">
-                <select
-                    class={`
-                        select select-bordered w-full
-                        border border-gray-300 rounded-md
-                        focus:outline-none focus:ring-2 
-                        focus:ring-green-500 
-                        focus:border-green-500
-                        ${estilos.bgdark2} 
-                    `}
-                    bind:value={categoria}
-                    read
-                    onchange={() => oninput("CATEGORIA")}
-                >
-                    {#each categorias as c}
-                        <option value={c.id}>{c.nombre}</option>
-                    {/each}
-                </select>
-                <div class={`label ${malcategoria ? "" : "hidden"}`}>
-                    <span class="label-text-alt text-red-400"
-                        >Debe seleccionar la categoria</span
-                    >
-                </div>
-            </label>
+                        bind:value={fecha}
+                        onchange={() => oninput("FECHA")}
+                    />
+                    <div class={`label ${malfecha ? "" : "hidden"}`}>
+                        <span class="label-text-alt text-red-400"
+                            >Debe seleccionar la fecha</span
+                        >
+                    </div>
+                </label>
+            </div>
+            <SelectFertil
+                etiqueta="Categoría"
+                bind:value={categoria}
+                onchange={() => oninput("CATEGORIA")}
+                opciones={categorias}
+            />
 
-            <label for="tipo" class="label">
-                <span class="label-text text-base">Tipo tratamiento</span>
-            </label>
-            <label class="input-group">
-                <select
-                    class={`
+            <div class="hidden">
+                <label for="categoria" class="label">
+                    <span class="label-text text-base">Categoria</span>
+                </label>
+                <label class="input-group">
+                    <select
+                        class={`
                         select select-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1520,19 +1482,61 @@
                         focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={tipo}
-                    onchange={() => oninput("TIPO")}
-                >
-                    {#each tipotratamientoscab as t}
-                        <option value={t.id}>{t.nombre}</option>
-                    {/each}
-                </select>
-                <div class={`label ${maltipo ? "" : "hidden"}`}>
-                    <span class="label-text-alt text-red-400"
-                        >Debe seleccionar un tipo</span
+                        bind:value={categoria}
+                        read
+                        onchange={() => oninput("CATEGORIA")}
                     >
-                </div>
-            </label>
+                        {#each categorias as c}
+                            <option value={c.id}>{c.nombre}</option>
+                        {/each}
+                    </select>
+                    <div class={`label ${malcategoria ? "" : "hidden"}`}>
+                        <span class="label-text-alt text-red-400"
+                            >Debe seleccionar la categoria</span
+                        >
+                    </div>
+                </label>
+            </div>
+            <SelectFertil
+                etiqueta="Tipo tratamiento"
+                bind:value={tipo}
+                onchange={() => oninput("TIPO")}
+                opciones={tipotratamientoscab}
+            />
+            <div class={`label ${maltipo ? "" : "hidden"}`}>
+                <span class="label-text-alt text-red-400"
+                    >Debe seleccionar un tipo</span
+                >
+            </div>
+            <div class="hidden">
+                <label for="tipo" class="label">
+                    <span class="label-text text-base">Tipo tratamiento</span>
+                </label>
+                <label class="input-group">
+                    <select
+                        class={`
+                        select select-bordered w-full
+                        border border-gray-300 rounded-md
+                        focus:outline-none focus:ring-2 
+                        focus:ring-green-500 
+                        focus:border-green-500
+                        ${estilos.bgdark2} 
+                    `}
+                        bind:value={tipo}
+                        onchange={() => oninput("TIPO")}
+                    >
+                        {#each tipotratamientoscab as t}
+                            <option value={t.id}>{t.nombre}</option>
+                        {/each}
+                    </select>
+                    <div class={`label ${maltipo ? "" : "hidden"}`}>
+                        <span class="label-text-alt text-red-400"
+                            >Debe seleccionar un tipo</span
+                        >
+                    </div>
+                </label>
+            </div>
+
             <label class="form-control">
                 <div class="label">
                     <span class="label-text">Observacion</span>

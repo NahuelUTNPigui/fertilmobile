@@ -12,6 +12,9 @@
     import * as XLSX from "xlsx";
     import { isEmpty } from "$lib/stringutil/lib";
     import { goto } from "$app/navigation";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -175,10 +178,10 @@
                 prioridad: 2,
                 idprov: idpesaje,
                 camposprov: nanimal ? "animal" : "",
-                show:{...data},
-                motivo:"Editar pesaje"
+                show: { ...data },
+                motivo: "Editar pesaje",
             };
-            comandos.push(comando)
+            comandos.push(comando);
             Swal.fire(
                 "Éxito editar pesaje",
                 "Se pudo editar el pesaje",
@@ -275,8 +278,8 @@
                         prioridad: 2,
                         idprov: idpesaje,
                         camposprov: "",
-                        show:{...pes},
-                        motivo:"Eliminar pesaje"
+                        show: { ...pes },
+                        motivo: "Eliminar pesaje",
                     };
                     comandos.push(comando);
                     await setComandosSQL(db, comandos);
@@ -508,7 +511,12 @@
         {#if isOpenFilter}
             <div transition:slide>
                 <div class="grid grid-cols-1 lg:grid-cols-3 mb-2 lg:mb-3 gap-1">
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha desde"
+                        bind:fecha={fechadesde}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -526,7 +534,12 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        etiqueta="Fecha hasta"
+                        bind:fecha={fechahasta}
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -650,9 +663,10 @@
 >
     <div
         class="
-        modal-box w-11/12 max-w-xl
-        bg-gradient-to-br from-white to-gray-100
-        dark:from-gray-900 dark:to-gray-800
+            modal-box w-11/12 max-w-xl
+            bg-gradient-to-br from-white to-gray-100
+            dark:from-gray-900 dark:to-gray-800
+            h-[80vh]
         "
     >
         <form method="dialog">
@@ -663,7 +677,9 @@
         </form>
         <h3 class="text-lg font-bold">Ver pesaje</h3>
         <div class="form-control">
-            <div class="grid grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2">
+            <div
+                class="grid grid-cols-1 md:grid-cols-2 gap-1 lg:gap-6 mx-1 mb-2"
+            >
                 <div class="mb-1 lg:mb-0">
                     <label for="caravana" class="label">
                         <span class="label-text text-base">Caravana</span>
@@ -675,7 +691,10 @@
                         {caravana}
                     </label>
                 </div>
-                <div class="mb-1 lg:mb-0">
+                <div>
+                    <CustomDate etiqueta="Fecha" bind:fecha />
+                </div>
+                <div class="hidden mb-1 lg:mb-0">
                     <label for="caravana" class="label">
                         <span class="label-text text-base">Fecha</span>
                     </label>

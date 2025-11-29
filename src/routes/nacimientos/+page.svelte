@@ -15,6 +15,9 @@
         verificarNivelOffline,
     } from "$lib/permisosutil/lib";
     import AgregarAnimal from "$lib/components/eventos/AgregarAnimal.svelte";
+    //formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -79,7 +82,7 @@
     let modedebug = import.meta.env.VITE_MODO_DEV == "si";
     //offline
     let infotoast = $state(false);
-    let nubetoast = $state(false)
+    let nubetoast = $state(false);
     let db = $state(null);
     let usuarioid = $state("");
     let useroff = $state({});
@@ -166,39 +169,7 @@
     function isEmpty(str) {
         return !str || str.length === 0;
     }
-    async function getAnimales() {
-        const recordsa = await pb.collection("animales").getFullList({
-            filter: `active=true && cab='${cab.id}' && delete = false`,
-            expand: "nacimiento",
-        });
-        animales = recordsa;
-        madres = recordsa.filter((a) => a.sexo == "H" || a.sexo == "F");
-        padres = recordsa.filter((a) => a.sexo == "M");
-        cargadoanimales = true;
-        listamadres = madres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-                active: item.active,
-            };
-        });
-        listapadres = padres.map((item) => {
-            return {
-                id: item.id,
-                nombre: item.caravana,
-                active: item.active,
-            };
-        });
-    }
-    async function getNacimientos() {
-        const recordsn = await pb.collection("nacimientosall").getFullList({
-            filter: `cab='${cab.id}'`,
-            sort: "-fecha",
-            expand: "madre,padre",
-        });
-        nacimientos = recordsn;
-        nacimientosrow = nacimientos;
-    }
+    
     async function guardarOffline() {
         if (agregaranimal) {
             let verificar = true;
@@ -471,6 +442,7 @@
             onChangeNacimiento();
             filterUpdate();
             await setNacimientosSQL(db, nacimientos);
+
             Swal.fire(
                 "Éxito guardar",
                 "Se pudo guardar el nacimiento con exito",
@@ -694,7 +666,7 @@
                     return {
                         id: item.id,
                         nombre: item.caravana,
-                        active:item.active
+                        active: item.active,
                     };
                 });
                 listapadres = padres.map((item) => {
@@ -704,6 +676,8 @@
                         active: item.active,
                     };
                 });
+                listamadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
+        listapadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
                 await setAnimalesSQL(db, animales);
             }
 
@@ -775,30 +749,33 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
-        nacimientoscab.sort((n1, n2) =>
+        nacimientos.sort((n1, n2) =>
             new Date(n1.fecha) > new Date(n2.fecha) ? -1 : 1,
         );
+        nacimientoscab = nacimientos.filter((a) => a.cab == caboff.id);
+        
+
         nacimientosrow = nacimientoscab;
-        totalNacimientosEncontrados = nacimientosrow.length;
+        
         if (buscar != "") {
             nacimientosrow = nacimientosrow.filter((n) =>
                 n.caravana
                     .toLocaleLowerCase()
                     .includes(buscar.toLocaleLowerCase()),
             );
-            totalNacimientosEncontrados = nacimientosrow.length;
+            
         }
         if (fechadesde != "") {
             nacimientosrow = nacimientosrow.filter(
                 (t) => t.fecha >= fechadesde,
             );
-            totalNacimientosEncontrados = nacimientosrow.length;
+            
         }
         if (fechahasta != "") {
             nacimientosrow = nacimientosrow.filter(
                 (t) => t.fecha <= fechahasta,
             );
-            totalNacimientosEncontrados = nacimientosrow.length;
+            
         }
         if (buscarmadre != "") {
             nacimientosrow = nacimientosrow.filter((t) =>
@@ -806,7 +783,7 @@
                     .toLocaleLowerCase()
                     .includes(buscarmadre.toLocaleLowerCase()),
             );
-            totalNacimientosEncontrados = nacimientosrow.length;
+            
         }
         if (buscarpadre != "") {
             nacimientosrow = nacimientosrow.filter((t) =>
@@ -816,8 +793,9 @@
                           .toLocaleLowerCase()
                           .includes(buscarpadre.toLocaleLowerCase()),
             );
-            totalNacimientosEncontrados = nacimientosrow.length;
+            
         }
+        totalNacimientosEncontrados = nacimientosrow.length;
     }
     function openNewModal() {
         idnacimiento = "";
@@ -863,7 +841,9 @@
         } else {
             madre = "";
         }
+        
         fecha = nacimiento.fecha.split(" ")[0];
+        
         nombremadre = nacimiento.nombremadre;
         nombrepadre = nacimiento.nombrepadre;
         observacion = nacimiento.observacion;
@@ -1020,13 +1000,7 @@
             eliminarOffline();
         }
     }
-    async function onMountOriginal() {
-        let pb_json = await JSON.parse(localStorage.getItem("pocketbase_auth"));
-        usuarioid = pb_json.record.id;
-        await getNacimientos();
-        filterUpdate();
-        await getAnimales();
-    }
+    
 
     async function getLocalSQL() {
         let resanimales = await getAnimalesSQL(db);
@@ -1045,7 +1019,7 @@
             return {
                 id: item.id,
                 nombre: item.caravana,
-                active:item.active
+                active: item.active,
             };
         });
         listapadres = padres.map((item) => {
@@ -1055,12 +1029,12 @@
                 active: item.active,
             };
         });
+        listamadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
+        listapadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
         filterUpdate();
         cargado = true;
     }
     async function updateLocalSQL() {
-
-        
         let lotesrodeos = await getUpdateLocalRodeosLotesSQLUser(
             db,
             pb,
@@ -1082,16 +1056,18 @@
             return {
                 id: item.id,
                 nombre: item.caravana,
-                active:item.active
+                active: item.active,
             };
         });
         listapadres = padres.map((item) => {
             return {
                 id: item.id,
                 nombre: item.caravana,
-            active: item.active,
+                active: item.active,
             };
         });
+        listamadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
+        listapadres.sort((a1,a2)=>a1.nombre.toLocaleLowerCase()<a2.nombre.toLocaleLowerCase()?-1:1)
         cargadoanimales = true;
         caboff = await updatePermisos(pb, usuarioid);
         getpermisos = caboff.permisos;
@@ -1152,7 +1128,7 @@
         let ahora = Date.now();
         let antes = ultimo_nacimiento.ultimo;
         await getLocalSQL();
-        
+
         if (coninternet.connected) {
             await updateComandos();
             let velocidad = await velocidader.medirVelocidadInternet();
@@ -1177,14 +1153,14 @@
             }
 
             if (mustUpdate) {
-                nubetoast = true
+                nubetoast = true;
                 setTimeout(async () => {
                     try {
                         await updateLocalSQL();
                         // Notificar cambios solo si hay diferencias
-                        nubetoast = false
+                        nubetoast = false;
                         infotoast = true;
-                        
+
                         setTimeout(() => {
                             infotoast = false;
                             if (modedebug) {
@@ -1257,6 +1233,7 @@
             } else {
                 malfecha = false;
             }
+            
         }
         if (nombreCampo == "MADRE") {
             if (isEmpty(madre)) {
@@ -1375,7 +1352,12 @@
         {#if isOpenFilter}
             <div transition:slide>
                 <div class="grid grid-cols-1 lg:grid-cols-2 mb-2 lg:mb-3 gap-1">
-                    <div class="">
+                    <CustomDate
+                        bind:fecha={fechadesde}
+                        etiqueta="Fecha desde"
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1394,7 +1376,12 @@
                             onchange={filterUpdate}
                         />
                     </div>
-                    <div class="">
+                    <CustomDate
+                        bind:fecha={fechahasta}
+                        etiqueta="Fecha hasta"
+                        onchange={filterUpdate}
+                    />
+                    <div class="hidden">
                         <label
                             class="block tracking-wide mb-2"
                             for="grid-first-name"
@@ -1576,7 +1563,7 @@
     <Info />
 {/if}
 {#if nubetoast}
-    <Nube/>
+    <Nube />
 {/if}
 <dialog
     id="nuevoModal"
@@ -1624,15 +1611,28 @@
                     />
                 </label>
             {/if}
-            <label for="fechanacimiento" class="label">
-                <span class={estilos.labelForm}>Fecha nacimiento</span>
-            </label>
-            <label class="input-group">
-                <input
-                    id="fechanacimiento"
-                    type="date"
-                    max={HOY}
-                    class={`
+            <CustomDate
+                etiqueta="Fecha nacimiento"
+                bind:fecha = {fecha}
+                onchange={() => onchange("FECHA")}
+            />
+            {#if malfecha}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha del nacimiento</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
+                <label for="fechanacimiento" class="label">
+                    <span class={estilos.labelForm}>Fecha nacimiento</span>
+                </label>
+                <label class="input-group">
+                    <input
+                        id="fechanacimiento"
+                        type="date"
+                        max={HOY}
+                        class={`
                         input input-bordered w-full
                         border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 
@@ -1640,17 +1640,19 @@
                         focus:border-green-500
                         ${estilos.bgdark2} 
                     `}
-                    bind:value={fecha}
-                    onchange={() => onchange("FECHA")}
-                />
-                {#if malfecha}
-                    <div class="label">
-                        <span class="label-text-alt text-red-500"
-                            >Debe seleccionar la fecha del nacimiento</span
-                        >
-                    </div>
-                {/if}
-            </label>
+                        bind:value={fecha}
+                        onchange={() => onchange("FECHA")}
+                    />
+                    {#if malfecha}
+                        <div class="label">
+                            <span class="label-text-alt text-red-500"
+                                >Debe seleccionar la fecha del nacimiento</span
+                            >
+                        </div>
+                    {/if}
+                </label>
+            </div>
+
             {#if cargadoanimales}
                 {#if idnacimiento == ""}
                     <PredictSelect

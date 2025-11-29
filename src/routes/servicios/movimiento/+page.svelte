@@ -23,6 +23,9 @@
     import PredictSelect from "$lib/components/PredictSelect.svelte";
     import MultiSelect from "$lib/components/MultiSelect.svelte";
     import { shorterWord } from "$lib/stringutil/lib";
+    //Formulario
+    import CustomDate from "$lib/components/CustomDate.svelte";
+    import SelectFertil from "$lib/components/SelectFertil.svelte";
     //FILTROS
     import { createStorageProxy } from "$lib/filtros/filtros";
     import Limpiar from "$lib/filtros/Limpiar.svelte";
@@ -266,18 +269,14 @@
                     .includes(buscar.toLocaleLowerCase()),
             );
         }
-        if(raza != ""){
+        if (raza != "") {
             animalesrows = animalesrows.filter((a) =>
-                a.raza
-                    .toLocaleLowerCase()
-                    .includes(raza.toLocaleLowerCase()),
+                a.raza.toLocaleLowerCase().includes(raza.toLocaleLowerCase()),
             );
         }
-        if(color != ""){
+        if (color != "") {
             animalesrows = animalesrows.filter((a) =>
-                a.color
-                    .toLocaleLowerCase()
-                    .includes(color.toLocaleLowerCase()),
+                a.color.toLocaleLowerCase().includes(color.toLocaleLowerCase()),
             );
         }
         if (sexo != "") {
@@ -316,7 +315,6 @@
         if (estado != "") {
             animalesrows = animalesrows.filter((a) => a.prenada == estado);
         }
-        
     }
     function ordenarNombre(lista) {
         lista.sort((r1, r2) =>
@@ -475,6 +473,7 @@
         validarBoton();
         if (esservicio) {
             if (campo == "DESDE") {
+                
                 if (fechadesdeserv == "") {
                     malfechadese = true;
                 } else {
@@ -482,6 +481,7 @@
                     fechaparto = addDays(fechadesdeserv, 280)
                         .toISOString()
                         .split("T")[0];
+                    
                 }
             }
         }
@@ -1113,6 +1113,7 @@
         if (esservicio) {
             if (fechadesdeserv == "") {
                 botonhabilitado = false;
+            
             }
         }
         if (esinseminacion) {
@@ -1725,7 +1726,19 @@
         </form>
         <h3 class="text-lg font-bold">Servicios</h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
-            <div>
+            <CustomDate
+                etiqueta="Fecha desde"
+                bind:fecha={fechadesdeserv}
+                onchange={() => input("DESDE")}
+            />
+            {#if malfechadese}
+                <div class="label">
+                    <span class="label-text-alt text-red-500"
+                        >Debe seleccionar la fecha inicial del servicio</span
+                    >
+                </div>
+            {/if}
+            <div class="hidden">
                 <label for="fechadesde" class="label">
                     <span class="label-text text-base">Fecha desde</span>
                 </label>
@@ -1753,7 +1766,12 @@
                     {/if}
                 </label>
             </div>
-            <div>
+             <CustomDate
+                etiqueta="Fecha hasta"
+                bind:fecha={fechahastaserv}
+                
+            />
+            <div class="hidden">
                 <label for="fechahasta" class="label">
                     <span class="label-text text-base">Fecha hasta</span>
                 </label>
@@ -1921,7 +1939,12 @@
         </form>
         <h3 class="text-xl font-bold">Inseminaciones múltiples</h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-1">
-            <div>
+            <CustomDate
+                etiqueta = "Fecha inseminación"
+                bind:fecha={fechainseminacion}
+                onchange={() => onInput("FECHA")}
+            />
+            <div class="hidden">
                 <label for="fechains" class="label">
                     <span class="label-text text-base">Fecha inseminación</span>
                 </label>

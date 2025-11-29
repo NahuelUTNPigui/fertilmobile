@@ -127,6 +127,10 @@
 
     let prenada = $state(0)
     let modohistoria = $state(false)
+    //Servicio e inseminacion
+    let fechaservicio = $state("")
+    let fechahasta = $state("")
+    let fechainseminacion = $state("")
     //Geneologia
     const genealogiaStorage = createStorageProxy('genealogia_arbol', {
         progenitores: [],
@@ -380,6 +384,7 @@
         servicios = servistodos.lista.filter(s=>s.madre  == slug)
         inseminaciones = inseminacionestodos.lista.filter(i=>i.animal == slug)
         tipostrat = tipostratodos.lista.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
+        tipostrat.sort((t1,t2)=>t1.nombre.toLocaleLowerCase()<t2.nombre.toLocaleLowerCase()?-1:1)
         nacimientoscab = nacimientostodos.lista
         pariciones = nacimientostodos.lista.filter(n=>n.madre == slug ||  n.padre == slug)
         tactos = tactostodos.lista.filter(t=>t.animal == slug)
@@ -418,6 +423,7 @@
         servicios = servistodos.filter(s=>s.madre  == slug)
         inseminaciones = inseminacionestodos.filter(i=>i.animal == slug)
         tipostrat = tipostratodos.filter(tt=>(tt.cab == caboff.id || tt.generico) && tt.active)
+        tipostrat.sort((t1,t2)=>t1.nombre.toLocaleLowerCase()<t2.nombre.toLocaleLowerCase()?-1:1)
         nacimientoscab = nacimientostodos
 
         pariciones = nacimientostodos.filter(n=>n.madre == slug ||  n.padre == slug)
@@ -703,6 +709,9 @@
                     bind:caravana bind:comandos 
                     bind:servicios bind:inseminaciones 
                     bind:animales cabid={cab.id} 
+                    bind:fechainseminacion
+                    bind:fechaservicio
+                    bind:fechahasta
                     {categoria} {usuarioid}
                 />
                 <!--<Servicios {db} {coninternet} bind:caravana bind:comandos  cabid={cab.id} {categoria}/>-->
