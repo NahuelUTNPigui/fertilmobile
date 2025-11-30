@@ -670,7 +670,22 @@
         setFilters();
         filterUpdate();
     }
-
+    function incluidoPadre(cadena, p_padres) {
+    
+        if (!cadena || !p_padres || p_padres.length === 0) {
+            return false;
+        }
+        
+        const lowerCadena = cadena.toLowerCase();
+        
+        for (const str of p_padres) {
+            if (str.toLowerCase().includes(lowerCadena)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);

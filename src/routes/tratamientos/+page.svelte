@@ -1240,7 +1240,7 @@
                             tipotratamientoscab,
                         )}
                     />
-                    <div>
+                    <div class="hidden">
                         <label for="tipo" class="tracking-wide label">
                             <span class="label-text text-base">Tipo</span>
                         </label>

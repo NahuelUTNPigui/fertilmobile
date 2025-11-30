@@ -1,8 +1,9 @@
 <script>
     import { loger } from "$lib/stores/logs/logs.svelte";
+    import { addDays } from "$lib/stringutil/lib";
 
     import { onDestroy, onMount } from "svelte";
-
+    
     let {
         fecha = $bindable(""),
         etiqueta = "etiqueta",
@@ -54,7 +55,7 @@
             fecha.length>0
                 ? new Date(fechaSeleccionada.getFullYear(), fechaSeleccionada.getMonth(), 1)
                 : new Date()
-        
+            
     });
     onDestroy(() => {
         document.removeEventListener("click", handleClickOutside);
@@ -76,6 +77,7 @@
     const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const formatDate = (date) => {
         if (!date) return "";
+        //return addDays(date,1).toLocaleDateString();
         return date.toLocaleDateString();
     };
     const isToday = (day) => {
