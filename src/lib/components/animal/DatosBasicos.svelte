@@ -247,6 +247,7 @@
             let recordparicion = await pb
                 .collection("nacimientos")
                 .create(dataparicion);
+                
             recordparicion = {
                 animalid: id,
                 caravana: caravana,

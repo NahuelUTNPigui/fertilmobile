@@ -206,6 +206,7 @@
     function filterUpdate() {
         setProxyFilter();
         proxy.save(proxyfiltros);
+        animales.sort((a1,a2)=>a1.caravana.toLocaleLowerCase()<a2.caravana.toLocaleLowerCase()?-1:1)
         animalesrows = animales;
         if (buscar != "") {
             animalesrows = animalesrows.filter((a) =>
@@ -618,6 +619,7 @@
         tipotratamientos = restipos.lista.filter(
             (tt) => tt.generico || tt.cab == caboff.id,
         );
+        tipotratamientos.sort((t1,t2)=>t1.nombre.toLocaleLowerCase()<t2.nombre.toLocaleLowerCase()?-1:1)
         animales = resanimales.lista.filter(
             (a) => a.active && a.cab == caboff.id,
         );

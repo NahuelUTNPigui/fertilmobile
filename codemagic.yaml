@@ -50,7 +50,7 @@ workflows:
         script: | 
           ls -la ios/App/
           cd ios/App
-          agvtool new-version -all 201
+          agvtool new-version -all 301
       - name: Build ipa for distribution
         script: | 
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"

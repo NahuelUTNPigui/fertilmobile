@@ -274,7 +274,7 @@
             sort: "-created",
         });
         tipotratamientos = records;
-        tipotratamientos.sort((tp1, tp2) => (tp1.nombre > tp2.nombre ? 1 : -1));
+        tipotratamientos.sort((t1,t2)=>t1.nombre.toLocaleLowerCase()<t2.nombre.toLocaleLowerCase()?-1:1)
     }
     function actualizarDatos() {
         onChangeTratamientos();
@@ -289,6 +289,7 @@
         tipotratamientoscab = tipotratamientos.filter(
             (tp) => (tp.cab == caboff.id || tp.generico == true) && tp.active,
         );
+        
     }
     function onChangeTratamientos() {
         tratamientoscab = tratamientos.filter(
@@ -559,9 +560,9 @@
                     .create(data);
 
                 tipotratamientos.push(record);
-                tipotratamientos.sort((tp1, tp2) =>
-                    tp1.nombre > tp2.nombre ? 1 : -1,
-                );
+                //tipotratamientos.sort((tp1, tp2) =>
+                //    tp1.nombre > tp2.nombre ? 1 : -1,
+                //);
                 onChangeTipos();
                 await setTiposTratSQL(db, tipotratamientos);
 
@@ -625,9 +626,9 @@
                 ...data,
             };
 
-            tipotratamientos.sort((tp1, tp2) =>
-                tp1.nombre > tp2.nombre ? 1 : -11,
-            );
+            //tipotratamientos.sort((tp1, tp2) =>
+            //    tp1.nombre > tp2.nombre ? 1 : -11,
+            //);
             onChangeTipos();
             await setTiposTratSQL(db, tipotratamientos);
             cerrarTipoModal();
@@ -679,9 +680,9 @@
                 ...data,
             };
 
-            tipotratamientos.sort((tp1, tp2) =>
-                tp1.nombre > tp2.nombre ? 1 : -11,
-            );
+            //tipotratamientos.sort((tp1, tp2) =>
+            //    tp1.nombre > tp2.nombre ? 1 : -11,
+            //);
             onChangeTipos();
             await setTiposTratSQL(db, tipotratamientos);
             cerrarTipoModal();
@@ -716,9 +717,9 @@
         tipotratamientos = tipotratamientos.filter(
             (tp) => tp.id != idtipotratamiento,
         );
-        tipotratamientos.sort((tp1, tp2) =>
-            tp1.nombre > tp2.nombre ? 1 : -11,
-        );
+        //tipotratamientos.sort((tp1, tp2) =>
+        //    tp1.nombre > tp2.nombre ? 1 : -11,
+        //);
         onChangeTipos();
 
         let comando = {

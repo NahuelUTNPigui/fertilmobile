@@ -3,16 +3,21 @@
     import { addDays } from "$lib/stringutil/lib";
 
     import { onDestroy, onMount } from "svelte";
-    
+
     let {
         fecha = $bindable(""),
         etiqueta = "etiqueta",
         onchange = () => {},
     } = $props();
     let isOpen = $state(false);
-    let fechaSeleccionada = $derived(fecha.length>0?new Date(fecha):new Date());
-    
-    
+    const CUATRO_HORAS = 4 * 60 * 60 * 1000;
+
+    let fechaSeleccionada = $derived(
+        fecha.length > 0
+            ? new Date(new Date(fecha).getTime() + CUATRO_HORAS)
+            : new Date(Date.now() + CUATRO_HORAS),
+    );
+
     let mesActual = $state();
     let containerRef = $state(null);
     let days = $derived(daysInMonth(mesActual));
@@ -50,12 +55,15 @@
 
     onMount(() => {
         document.addEventListener("click", handleClickOutside);
-        
-        mesActual = 
-            fecha.length>0
-                ? new Date(fechaSeleccionada.getFullYear(), fechaSeleccionada.getMonth(), 1)
-                : new Date()
-            
+
+        mesActual =
+            fecha.length > 0
+                ? new Date(
+                      fechaSeleccionada.getFullYear(),
+                      fechaSeleccionada.getMonth(),
+                      1,
+                  )
+                : new Date();
     });
     onDestroy(() => {
         document.removeEventListener("click", handleClickOutside);
@@ -94,9 +102,9 @@
             mesActual.getMonth(),
             day,
         );
-        
-        fecha = newDate.toISOString().split("T")[0]
-        
+
+        fecha = newDate.toISOString().split("T")[0];
+
         onchange();
         isOpen = false;
     };
@@ -130,7 +138,7 @@
             transition
         `}
     >
-        {fecha.length>0
+        {fecha.length > 0
             ? formatDate(fechaSeleccionada)
             : "Selecciona una fecha"}
     </button>
@@ -215,19 +223,15 @@
                             focus:outline-none focus:ring-2 
                             focus:ring-ring min-h-[40px] flex items-center justify-center
                             ${
-                                isSelected(day) ? 
-                                "hover:bg-green-500/90 bg-green-500/20 text-green-700 dark:text-green-300" :
-                                "text-foreground"
+                                isSelected(day)
+                                    ? "hover:bg-green-500/90 bg-green-500/20 text-green-700 dark:text-green-300"
+                                    : "text-foreground"
                             }
-                            ${  
-                                isToday(day)?
-                                "":
-                                ""
-                            }
+                            ${isToday(day) ? "" : ""}
                             ${
-                                isToday(day) && !isSelected(day)?
-                                "border-2 border-green-500/50":
-                                ""
+                                isToday(day) && !isSelected(day)
+                                    ? "border-2 border-green-500/50"
+                                    : ""
                             }
 
                         `}

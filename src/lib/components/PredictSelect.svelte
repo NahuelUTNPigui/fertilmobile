@@ -12,7 +12,15 @@
         validarAnimal=()=>{},
         size="w-4/5"
     } = $props()
-    let listarow = $state(lista)
+    function filterItems(item){
+        if(cadena.length>0){
+            return item.nombre.toLowerCase().includes(cadena.toLowerCase())
+        }
+        else{
+            return true
+        }
+    }
+    let listarow = $derived(lista.filter(item=>filterItems(item)))
     let isOpen = $state(false)
     let nombre = $state("")
 
@@ -24,24 +32,25 @@
             onwrite(cadena)
         }
         
-        if(cadena.length == 0){
-            listarow = lista
+        //if(cadena.length == 0){
+        //    listarow = lista
+        //    valor = ""
+        //}
+        //else{
+        //    isOpen = true
+        //    listarow = lista.filter(e=>e.nombre.toLowerCase().includes(cadena.toLowerCase()))
+        //    //if(listarow.length == 1){
+        //    //    valor = listarow[0].id
+        //    //    if(onelegir){
+        //    //        onelegir(valor)
+        //    //    }
+        //    //    
+        //    //    nombre = listarow[0].nombre
+        //    //}
+        //    
+        //}
+        if(listarow.length == 0){
             valor = ""
-        }
-        else{
-            isOpen = true
-            listarow = lista.filter(e=>e.nombre.toLowerCase().includes(cadena.toLowerCase()))
-            //if(listarow.length == 1){
-            //    valor = listarow[0].id
-            //    if(onelegir){
-            //        onelegir(valor)
-            //    }
-            //    
-            //    nombre = listarow[0].nombre
-            //}
-            if(listarow.length == 0){
-                valor = ""
-            }
         }
     }
     function clickOption(id){
