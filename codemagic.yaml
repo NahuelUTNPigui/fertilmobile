@@ -19,7 +19,7 @@ workflows:
       vars:
         VITE_RUTA: "https://testing.crecientefertil.com.ar"
         VITE_MODO_DEV: "no"
-        VITE_VERSION: "2.32"
+        VITE_VERSION: "2.36"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         APP_STORE_APPLE_ID: 6753952579
@@ -51,6 +51,10 @@ workflows:
           ls -la ios/App/
           cd ios/App
           agvtool new-version -all 301
+      - name: Set the app version (CFBundleShortVersionString from VITE_VERSION)
+        script: |
+          echo "Setting CFBundleShortVersionString to $VITE_VERSION"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VITE_VERSION" ios/App/App/Info.plist
       - name: Build ipa for distribution
         script: | 
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
